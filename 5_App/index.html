@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finding gap — 국가 생물종 발견공백</title>
+<style>
+  :root{
+    --ink:#1b201d; --muted:#6b7280; --faint:#9aa0a6; --line:#e7e7e2; --bg:#fafaf8; --card:#fff;
+    --accent:#2f6f5e;
+    --r-ex:#000000; --r-ew:#3D2645; --r-re:#6B4E71; --r-cr:#D81E05; --r-en:#FC7F3F;
+    --r-vu:#F2DC00; --r-nt:#C3D838; --r-lc:#5CB85C; --r-dd:#CFCFC4; --r-na:#EAEAE2; --r-ne:#F7F7F4;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.5}
+  .wrap{max-width:1160px;margin:0 auto;padding:28px 16px 72px}
+  a{color:inherit}
+  /* ── header ── */
+  header h1{margin:0 0 4px;font-size:24px;letter-spacing:-.01em}
+  header h1 b{color:var(--accent)}
+  header .sub{color:var(--muted);font-size:13.5px;margin:0;max-width:60ch}
+  /* ── hero tiles ── */
+  .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:24px 0 8px}
+  @media(max-width:900px){.tiles{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:520px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:8px;
+    transition:border-color .12s, box-shadow .12s, transform .12s;position:relative}
+  .tile:hover{border-color:#cfcfc7;box-shadow:0 4px 14px rgba(0,0,0,.05);transform:translateY(-1px)}
+  .tile.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .tile .chip{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff}
+  .tile .nm{font-weight:700;font-size:14.5px}
+  .tile .meta{font-size:11.5px;color:var(--muted)}
+  .tile.nodata{opacity:.62}
+  .tile.nodata .chip{filter:grayscale(.35)}
+  .tile .soon{position:absolute;top:10px;right:10px;font-size:9.5px;font-weight:700;color:#9a7b2e;
+    background:#fdf6e3;border:1px solid #efe3bf;border-radius:999px;padding:1px 6px}
+  /* ── dashboard ── */
+  .dash{margin-top:18px}
+  .dhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 14px}
+  .dhead .chip{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff}
+  .dhead h2{margin:0;font-size:18px}
+  .dhead .scope{margin-left:auto;display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}
+  .dhead .scope button{border:0;background:#fff;padding:7px 14px;font-size:12.5px;cursor:pointer;color:#555}
+  .dhead .scope button.on{background:var(--accent);color:#fff;font-weight:600}
+  .dhead .scope button:disabled{cursor:not-allowed;color:#b6b6b0}
+  /* cards */
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  @media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+  .card .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .card .l{font-size:12px;color:var(--muted);margin-top:1px}
+  .card .s{font-size:11px;color:var(--faint);margin-top:5px}
+  .card.gap .v{color:#b8541f}
+  /* panel */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px}
+  .panel h3{margin:0;font-size:14.5px;display:flex;align-items:center;gap:7px}
+  .q{width:17px;height:17px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);
+    font-size:11px;line-height:1;cursor:pointer;padding:0;font-weight:700}
+  .q:hover{border-color:var(--accent);color:var(--accent)}
+  .help{margin:10px 0 2px;padding:10px 12px;background:#f6f7f5;border:1px solid #eceee9;border-radius:8px;
+    font-size:12px;color:#54585a;line-height:1.55}
+  .help[hidden]{display:none}
+  /* chart1 bars */
+  .bars{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+  .bar{display:grid;grid-template-columns:96px 1fr 40px;align-items:center;gap:10px;cursor:pointer;
+    padding:2px 4px;border-radius:7px}
+  .bar:hover{background:#f6f7f5}
+  .bar .bl{font-size:12px;color:#3a3f3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar .track{height:16px;display:flex;border-radius:4px;overflow:hidden;background:#f1f1ec}
+  .bar .track i{height:100%}
+  .bar .bn{font-size:12px;font-variant-numeric:tabular-nums;text-align:right;color:#444;font-weight:600}
+  .bar .go{font-size:10px;color:var(--faint);margin-left:4px}
+  /* encoding legend */
+  .enc{display:flex;flex-wrap:wrap;gap:14px;margin:12px 0 2px;padding:9px 12px;background:#f7f8f6;
+    border:1px solid #ecefe9;border-radius:8px;font-size:12px;color:#4a4f4c}
+  .enc span{display:inline-flex;align-items:center}
+  .stack-leg{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:11px;font-size:11px;color:#666}
+  .stack-leg span{display:inline-flex;align-items:center;gap:4px}
+  .sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+  .g{display:inline-block;width:11px;height:11px;border-radius:2px;vertical-align:middle;margin-right:5px;border:0}
+  .g.hatch{background:repeating-linear-gradient(45deg,var(--c,#888) 0 1.6px,#fff 1.6px 3.4px)}
+  .g.out{background:#fff;border:1.4px solid #999}
+  /* donut small multiples */
+  .donuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px;margin-top:14px}
+  @media(max-width:520px){.donuts{grid-template-columns:repeat(2,1fr)}}
+  .dcard{text-align:center}
+  .dcard .dt{font-size:12.5px;margin-bottom:4px}
+  .dcard .dt b{font-size:13px}
+  .dcard .dn{font-size:10.5px;color:#5a5f5c;display:flex;flex-direction:column;gap:1px;margin-bottom:6px}
+  .dcard .dn span{display:inline-flex;align-items:center;justify-content:center}
+  .dcard .dn i{width:9px;height:9px;margin-right:4px}
+  .donut{width:104px;height:104px}
+  .note{font-size:11.5px;color:var(--faint);margin-top:10px}
+  /* coming soon */
+  .soonbox{background:var(--card);border:1px dashed var(--line);border-radius:var(--radius);padding:28px 20px;text-align:center}
+  .soonbox .v{font-size:30px;font-weight:800}
+  .soonbox .l{color:var(--muted);font-size:13px;margin-top:4px}
+  .soonbox .msg{margin-top:14px;font-size:12.5px;color:#7a7f7c;max-width:46ch;margin-left:auto;margin-right:auto}
+  footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><b>Finding gap</b> · 국가 생물종 발견공백</h1>
+    <p class="sub">국가생물종목록(KTSN)을 기준으로, 국내 조사자료에서 <b>아직 발견되지 않은 종</b>을 분류군·지역·시기로 조회합니다.</p>
+  </header>
+
+  <section class="tiles" id="tiles" aria-label="관리분류군 선택"></section>
+
+  <section class="dash" id="dash"></section>
+
+  <footer id="foot"></footer>
+</div>
+
+<!-- 해치 패턴 정의(범주색 빗금) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+
+<script src="demo/data/taxa_summary.js"></script>
+<script src="demo/data/demo_mm.js"></script>
+<script>
+/* ── 디자인 토큰(범주색) ── */
+const RL_FILL={EX:'#000000',EW:'#3D2645',RE:'#6B4E71',CR:'#D81E05',EN:'#FC7F3F',
+  VU:'#F2DC00',NT:'#C3D838',LC:'#5CB85C',DD:'#CFCFC4',NENA:'#E6E6DE'};
+const RL_FG={EX:'#fff',EW:'#fff',RE:'#fff',CR:'#fff',EN:'#4A1B0C',VU:'#5C5300',
+  NT:'#3B4D00',LC:'#103D17',DD:'#3F3F38',NENA:'#44443E'};
+const RL_KOR={EX:'절멸',EW:'야생절멸',RE:'지역절멸',CR:'위급',EN:'위기',VU:'취약',
+  NT:'준위협',LC:'최소관심',DD:'정보부족',NENA:'미평가·미적용'};
+const CAT_ORDER=['EX','EW','RE','CR','EN','VU','NT','LC','DD','NENA'];     // 도넛: 캐노니컬(NE·NA 병합)
+const STACK_ORDER=['EX','EW','RE','CR','EN','VU','NT','DD','LC','NENA','BLANK']; // 막대: 위협 우선
+const LIGHT=new Set(['DD','NENA']);   // 연한 범주 → 외곽선은 글자색(진한)으로
+const normCat=r=>(r==='NE'||r==='NA')?'NENA':r;   // NE·NA → 단일 범주(색·의미 구분 어려워 병합)
+const CODE_DISP=c=>c==='NENA'?'NE/NA':c;
+const BLANK_COLOR='#D9D9D2';
+
+/* ── 분류군 아이콘(흰 실루엣) ── */
+const TAXON_META={MM:['mammal','#8B5E3C'],AV:['bird','#2F6FB0'],RP:['reptile','#4F8F3F'],
+  AM:['amphibian','#3FA796'],'-P':['fish','#2C7BA6'],UC:['tunicate','#9C6FB0'],
+  IV:['invertebrate','#C2667A'],IN:['insect','#D98C36'],VP:['vascular','#5C9A3A'],MS:['bryophyte','#7FA05C']};
+const ICON={
+  mammal:`<ellipse cx="7" cy="9.5" rx="1.7" ry="2.3"/><ellipse cx="11.2" cy="7.8" rx="1.7" ry="2.4"/><ellipse cx="15.4" cy="8" rx="1.7" ry="2.4"/><ellipse cx="18.7" cy="10.4" rx="1.6" ry="2.1"/><path d="M12.5 12.2c-3 0-5.5 2.1-6 4.5-.4 2 1.1 3.2 3.1 3 1-.1 2-.6 2.9-.6s1.9.5 2.9.6c2 .2 3.5-1 3.1-3-.5-2.4-3-4.5-6-4.5z"/>`,
+  bird:`<ellipse cx="10.5" cy="13" rx="5.2" ry="3.5" transform="rotate(-16 10.5 13)"/><circle cx="15.8" cy="8.9" r="2.5"/><path d="M17.8 7.2l3.2-1-2 2.6z"/><path d="M5.3 14.8 2.5 17.6l3.6-.5z"/><path d="M8.8 16.6l-.7 2.6M11.4 16.8l-.3 2.5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/>`,
+  reptile:`<path d="M4.5 15.2c0-3.7 3.4-6.4 7.5-6.4s7.5 2.7 7.5 6.4c0 .6-.5 1.1-1.1 1.1H5.6c-.6 0-1.1-.5-1.1-1.1z"/><circle cx="20" cy="13.2" r="1.7"/><path d="M4 13.4 2 12.7l2-.8z"/><rect x="6.2" y="16" width="2.4" height="2.8" rx="1.2"/><rect x="15.4" y="16" width="2.4" height="2.8" rx="1.2"/>`,
+  amphibian:`<path d="M12 3.6C9.9 3.6 8.4 5.2 8.4 7.1c0 .8.3 1.5.7 2C7.5 9.9 6.8 11.5 6.8 13.4c0 2.7 2.2 4.9 5.2 4.9s5.2-2.2 5.2-4.9c0-1.9-.7-3.5-2.3-4.3.4-.5.7-1.2.7-2C15.6 5.2 14.1 3.6 12 3.6z"/><path d="M9.1 8.4C7.6 7.4 5.9 6.2 4.7 5.8 4.2 5.6 3.8 6.1 4.1 6.6 5 8 6.7 9.6 8.5 10.2z"/><path d="M14.9 8.4c1.5-1 3.2-2.2 4.4-2.6.5-.2.9.3.6.8-.9 1.4-2.6 3-4.4 3.6z"/><path d="M10 12.9C7.8 13.2 5.6 14 4.9 15.6 4.4 17 4.3 18.8 4.5 20.2 4.5 20.7 4.9 21 5.4 21 6 21 6.4 20.6 6.5 20 6.7 18.6 6.9 17 7.5 15.9 8.1 14.9 9 14.1 10 13.8Z"/><path d="M14 12.9C16.2 13.2 18.4 14 19.1 15.6 19.6 17 19.7 18.8 19.5 20.2 19.5 20.7 19.1 21 18.6 21 18 21 17.6 20.6 17.5 20 17.3 18.6 17.1 17 16.5 15.9 15.9 14.9 15 14.1 14 13.8Z"/><circle cx="9.5" cy="4.8" r="1.7"/><circle cx="14.5" cy="4.8" r="1.7"/><circle cx="9.5" cy="4.8" r="0.7" fill="var(--chip-bg)"/><circle cx="14.5" cy="4.8" r="0.7" fill="var(--chip-bg)"/>`,
+  fish:`<path d="M3 12c2.5-3.4 6.4-5 9.8-5 2.6 0 4.9 1.1 6.4 2.8l2.3-2.6v9.6l-2.3-2.6c-1.5 1.7-3.8 2.8-6.4 2.8-3.4 0-7.3-1.6-9.8-5z"/><circle cx="8.4" cy="11.6" r="1" fill="var(--chip-bg)"/>`,
+  tunicate:`<path d="M7 20.5c-.9 0-1.5-.8-1.5-2.2C5.5 12.7 8.2 7.6 11 5.5c.6-.5 1-.7 1-.7s.4.2 1 .7c2.8 2.1 5.5 7.2 5.5 12.8 0 1.4-.6 2.2-1.5 2.2z"/><circle cx="9.7" cy="7.1" r="0.7" fill="var(--chip-bg)"/><circle cx="14.3" cy="7.1" r="0.7" fill="var(--chip-bg)"/>`,
+  invertebrate:`<path d="M3 17.5c0-1 .8-1.8 1.8-1.8h6.7c.6 0 1 .5 1 1.1 0 1.3-1.1 2.4-2.4 2.4H4.9C3.8 19.2 3 18.4 3 17.5z"/><circle cx="14.5" cy="11" r="5"/><circle cx="14.5" cy="11" r="1.7" fill="var(--chip-bg)"/><path d="M18.4 7.4l1.4-1.8M20 9l1.9-1" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round"/>`,
+  insect:`<ellipse cx="7" cy="9.2" rx="4.2" ry="3.2"/><ellipse cx="17" cy="9.2" rx="4.2" ry="3.2"/><ellipse cx="7.8" cy="15" rx="3.4" ry="2.8"/><ellipse cx="16.2" cy="15" rx="3.4" ry="2.8"/><rect x="11.3" y="6.5" width="1.4" height="11" rx="0.7"/><path d="M12 6.6l-1.6-2M12 6.6l1.6-2" stroke="currentColor" fill="none" stroke-width="1.2" stroke-linecap="round"/>`,
+  vascular:`<path d="M4.5 19.5c-1.2-6.5 2.2-12.5 9.5-13.7 1.6-.3 3.2-.2 4.3.1.4 7.2-3.1 13.4-9.6 14.6-1.6.3-3.1 0-4.2-1z"/><path d="M4 20.2 6.4 18" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round"/>`,
+  bryophyte:`<path d="M3 18.6c.8 0 1.2-1.5 2.4-1.5S6.6 18.6 7.8 18.6 9 17.1 10.2 17.1s1.2 1.5 2.4 1.5S13.8 17.1 15 17.1s1.2 1.5 2.4 1.5S18.6 17.1 19.8 17.1 21 18.6 21 18.6V20H3z"/><rect x="6.4" y="11" width="1.2" height="6" rx="0.6"/><ellipse cx="7" cy="10.4" rx="1.1" ry="1.6"/><rect x="11.4" y="9" width="1.2" height="8" rx="0.6"/><ellipse cx="12" cy="8.2" rx="1.1" ry="1.6"/><rect x="16.4" y="11.5" width="1.2" height="5.5" rx="0.6"/><ellipse cx="17" cy="10.9" rx="1.1" ry="1.6"/>`,
+};
+const nf=n=>Number(n).toLocaleString('ko-KR');
+function iconSVG(group,size){const [key,color]=TAXON_META[group]||['mammal','#888'];
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor" style="--chip-bg:${color};color:#fff">${ICON[key]}</svg>`;}
+
+/* ── 도넛 기하 ── */
+function pol(cx,cy,r,a){return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}
+function ringArc(cx,cy,rO,rI,a0,a1){
+  const large=(a1-a0)>Math.PI?1:0;
+  const [xo0,yo0]=pol(cx,cy,rO,a0),[xo1,yo1]=pol(cx,cy,rO,a1);
+  const [xi1,yi1]=pol(cx,cy,rI,a1),[xi0,yi0]=pol(cx,cy,rI,a0);
+  return `M${xo0.toFixed(2)} ${yo0.toFixed(2)} A${rO} ${rO} 0 ${large} 1 ${xo1.toFixed(2)} ${yo1.toFixed(2)} `
+       + `L${xi1.toFixed(2)} ${yi1.toFixed(2)} A${rI} ${rI} 0 ${large} 0 ${xi0.toFixed(2)} ${yi0.toFixed(2)} Z`;
+}
+function donutSVG(cat,d){
+  const total=d.recent+d.dormant+d.none; if(!total)return'';
+  const fill=RL_FILL[cat], outline=LIGHT.has(cat)?RL_FG[cat]:fill;
+  const cx=50,cy=50,rO=40,rI=23; let a=-Math.PI/2;
+  let s=`<circle cx="50" cy="50" r="${(rO+rI)/2}" fill="none" stroke="#ECECE6" stroke-width="${rO-rI}"/>`;
+  for(const [st,n] of [['recent',d.recent],['dormant',d.dormant],['none',d.none]]){
+    if(!n)continue;
+    let frac=n/total, a1=a+frac*Math.PI*2; if(frac>=0.9999)a1=a+Math.PI*1.9999;
+    const p=ringArc(cx,cy,rO,rI,a,a1);
+    if(st==='recent')      s+=`<path d="${p}" fill="${fill}"/>`;
+    else if(st==='dormant')s+=`<path d="${p}" fill="url(#h_${cat})" stroke="${fill}" stroke-width="0.5"/>`;
+    else                   s+=`<path d="${p}" fill="#fff" stroke="${outline}" stroke-width="1.4"/>`;
+    a=a1;
+  }
+  return `<svg viewBox="0 0 100 100" class="donut" role="img" aria-label="${cat} ${RL_KOR[cat]} 총 ${total}종">${s}</svg>`;
+}
+
+/* ── 상태 계산 ── */
+function computeStates(D){
+  const cur=+(String(D.generated||'2026').slice(0,4)), fresh=cur-10;
+  const maxY=new Map();
+  for(const o of D.obs){const k=o[0], yy=+o[2]; if(!yy)continue; if(!maxY.has(k)||yy>maxY.get(k))maxY.set(k,yy);}
+  const states=D.species.map(sp=>{
+    let st; if(!maxY.has(sp.k))st='none'; else if(maxY.get(sp.k)>fresh)st='recent'; else st='dormant';
+    return {k:sp.k,r:sp.r||'',st};
+  });
+  return {states,cur,fresh};
+}
+
+/* ── 렌더: 대시보드(MM) ── */
+function renderDashMM(group){
+  const D=window.__DEMO_MM__; const {states,fresh}=computeStates(D);
+  const recent=states.filter(s=>s.st==='recent').length;
+  const dormant=states.filter(s=>s.st==='dormant').length;
+  const none=states.filter(s=>s.st==='none').length;
+  const observed=recent+dormant, total=states.length;
+  const nrec=(D.meta&&D.meta.n_records)||0;
+
+  // 범주별 상태
+  const cat={}; for(const s of states){ const r=normCat(s.r); if(!r)continue; (cat[r]=cat[r]||{recent:0,dormant:0,none:0})[s.st]++; }
+  const present=CAT_ORDER.filter(c=>cat[c]);
+  const blankN=states.filter(s=>!s.r).length;
+  // 해치 패턴 주입
+  document.getElementById('defs').innerHTML=present.map(c=>
+    `<pattern id="h_${c}" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">`+
+    `<rect width="5" height="5" fill="#fff"/><line x1="0" y1="0" x2="0" y2="5" stroke="${RL_FILL[c]}" stroke-width="2.4"/></pattern>`).join('');
+
+  // 지역 막대(시도별 발견 종수, 범주 스택, 미상 제외)
+  const spCat=new Map(D.species.map(sp=>[sp.k, normCat(sp.r)||'BLANK']));
+  const sidoSp={};
+  for(const o of D.obs){ const s=o[1]; if(s==='미상')continue; (sidoSp[s]=sidoSp[s]||new Set()).add(o[0]); }
+  const rows=Object.entries(sidoSp).map(([s,set])=>{
+    const cc={}; set.forEach(k=>{const c=spCat.get(k)||'BLANK'; cc[c]=(cc[c]||0)+1;});
+    return {sido:s,total:set.size,cc};
+  }).sort((a,b)=>b.total-a.total);
+  const maxTot=Math.max(1,...rows.map(r=>r.total));
+  const stackCats=STACK_ORDER.filter(c=>rows.some(r=>r.cc[c]));
+
+  const barHTML=rows.map(r=>{
+    const segs=STACK_ORDER.filter(c=>r.cc[c]).map(c=>{
+      const col=c==='BLANK'?BLANK_COLOR:RL_FILL[c]; const lab=c==='BLANK'?'미분류':CODE_DISP(c);
+      return `<i style="width:${(r.cc[c]/maxTot*100).toFixed(2)}%;background:${col}" title="${lab} ${r.cc[c]}종"></i>`;
+    }).join('');
+    const url=`service.html?taxon=${group}&sido=${encodeURIComponent(r.sido)}`;
+    return `<div class="bar" onclick="location.href='${url}'" title="${r.sido} 상세 조회로 이동">`+
+      `<span class="bl">${r.sido}</span><span class="track">${segs}</span>`+
+      `<span class="bn">${r.total}</span></div>`;
+  }).join('');
+  const stackLeg=stackCats.map(c=>{const col=c==='BLANK'?BLANK_COLOR:RL_FILL[c]; const lab=c==='BLANK'?'미분류':`${CODE_DISP(c)} ${RL_KOR[c]}`;
+    return `<span><i class="sw" style="background:${col}"></i>${lab}</span>`;}).join('');
+
+  // 도넛 small-multiples
+  const donutHTML=present.map(c=>{const d=cat[c],t=d.recent+d.dormant+d.none, fill=RL_FILL[c], outline=LIGHT.has(c)?RL_FG[c]:fill;
+    return `<div class="dcard"><div class="dt"><b>${CODE_DISP(c)}</b> ${RL_KOR[c]} · 총 ${t}종</div>`+
+      `<div class="dn">`+
+        `<span><i class="g" style="background:${fill};border-radius:2px"></i>발견 ${d.recent}</span>`+
+        `<span><i class="g hatch" style="--c:${fill}"></i>휴면 ${d.dormant}</span>`+
+        `<span><i class="g out" style="border-color:${outline}"></i>미발견 ${d.none}</span>`+
+      `</div>${donutSVG(c,d)}</div>`;
+  }).join('');
+
+  const html=`
+  <div class="dhead">
+    <span class="chip">${iconSVG(group,22)}</span>
+    <h2>${D.taxon_kor} <span style="font-size:13px;color:var(--muted);font-weight:500">(${group})</span></h2>
+    <div class="scope">
+      <button class="on">서비스 전체</button>
+      <button disabled title="준비중 · 로그인 후 내 관측자료 종합">내 데이터</button>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="v">${nf(total)}</div><div class="l">대상 종(국가생물종목록)</div></div>
+    <div class="card"><div class="v">${nf(observed)}</div><div class="l">발견 (기록 있음)</div><div class="s">최근10년 ${recent} · 휴면 ${dormant}</div></div>
+    <div class="card gap"><div class="v">${nf(none)}</div><div class="l">미발견 (조사자료 관측 0)</div><div class="s">발견공백</div></div>
+    <div class="card"><div class="v">${nf(nrec)}</div><div class="l">누적 관측</div><div class="s">고유 좌표 기준</div></div>
+  </div>
+
+  <div class="panel">
+    <h3>지역별 발견 종 수 <button class="q" data-h="h1">?</button></h3>
+    <div class="help" id="h1" hidden>각 시도에서 한 번이라도 관측된 종 수입니다. 막대 색은 국가적색목록 범주이며, 적색목록에 범주가 지정되지 않은 종은 ‘미분류’(회색)입니다. 막대를 누르면 해당 지역 상세 조회로 이동합니다. 좌표가 행정구역 밖이라 시도를 특정할 수 없는 관측(미상)은 제외했습니다.</div>
+    <div class="bars">${barHTML}</div>
+    <div class="stack-leg">${stackLeg}</div>
+  </div>
+
+  <div class="panel">
+    <h3>국가적색목록 현황 <button class="q" data-h="h2">?</button></h3>
+    <div class="help" id="h2" hidden>적색목록 평가 범주별로, 그 범주의 종들이 조사자료에서 어떤 상태인지 보여줍니다. <b>발견</b>=최근 10년 내 기록 · <b>휴면</b>=기록은 있으나 최신 기록이 ${fresh}년 이전(10년 이상 미보고) · <b>미발견</b>=관측 0. NE(미평가)·NA(미적용)는 색·의미 구분이 어려워 하나로 합쳐 표시합니다. 적색목록에 범주가 지정되지 않은 ${blankN}종(미수록)은 이 차트에 포함되지 않습니다.</div>
+    <div class="enc">
+      <span><i class="g" style="background:#8a8a82;border-radius:2px"></i>발견 (채움)</span>
+      <span><i class="g hatch" style="--c:#8a8a82"></i>10년+ 미발견·휴면 (빗금)</span>
+      <span><i class="g out"></i>미발견 (외곽선)</span>
+    </div>
+    <div class="donuts">${donutHTML}</div>
+    <div class="note">적색목록 범주 미지정 ${blankN}종 미포함 · 평가 범주 ${present.length}종류 표시</div>
+  </div>`;
+  document.getElementById('dash').innerHTML=html;
+  bindHelp();
+}
+
+/* ── 렌더: 비-MM 분류군 요약 + 지도 서비스 안내 ── */
+function renderSoon(t){
+  document.getElementById('defs').innerHTML='';
+  const obs=t.n_obs_species||0, gap=(t.n_species||0)-obs;
+  const box=(v,l)=>`<div style="flex:1;min-width:118px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px">`+
+    `<div style="font-size:24px;font-weight:800;letter-spacing:-.02em">${nf(v)}</div>`+
+    `<div style="font-size:11.5px;color:var(--muted);margin-top:2px">${l}</div></div>`;
+  document.getElementById('dash').innerHTML=`
+  <div class="dhead">
+    <span class="chip">${iconSVG(t.group,22)}</span>
+    <h2>${t.kor} <span style="font-size:13px;color:var(--muted);font-weight:500">(${t.group})</span></h2>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px">
+    ${box(t.n_species,'대상 종(국가생물종목록)')}
+    ${box(obs,'발견 (조사기록 있음)')}
+    ${box(gap,'미발견 (발견공백)')}
+    ${box(t.n_records||0,'누적 관측(고유 좌표)')}
+  </div>
+  <div class="soonbox" style="margin-top:14px">
+    <div class="msg">${t.kor} 발견공백을 <b>지도·지역·시기·국가적색목록</b>으로 조회하려면 지도 서비스로 이동하세요. 포유류 상세 대시보드는 위에서 포유류 타일을 선택하면 표시됩니다.</div>
+    <a href="service.html?taxon=${t.group}" style="display:inline-block;margin-top:10px;padding:9px 16px;border-radius:10px;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;font-size:13px">${t.kor} 지도 서비스 열기 →</a>
+  </div>`;
+}
+
+/* ── 도움말 토글 ── */
+function bindHelp(){
+  document.querySelectorAll('#dash .q').forEach(b=>b.onclick=()=>{
+    const el=document.getElementById(b.dataset.h); if(el)el.hidden=!el.hidden;});
+}
+
+/* ── 타일 ── */
+let TAXA=[];
+function renderTiles(){
+  const wrap=document.getElementById('tiles');
+  wrap.innerHTML=TAXA.map(t=>{
+    const [,color]=TAXON_META[t.group]||['',''];
+    return `<button class="tile ${t.has_data?'':'nodata'}" data-g="${t.group}">`+
+      (t.has_data?'':'<span class="soon">수집예정</span>')+
+      `<span class="chip" style="background:${color}">${iconSVG(t.group,22)}</span>`+
+      `<span class="nm">${t.kor}</span>`+
+      `<span class="meta">${nf(t.n_species)}종${t.has_data?' · 데이터 있음':''}</span></button>`;
+  }).join('');
+  wrap.querySelectorAll('.tile').forEach(el=>el.onclick=()=>select(el.dataset.g));
+}
+function select(group){
+  document.querySelectorAll('.tile').forEach(el=>el.classList.toggle('active',el.dataset.g===group));
+  const t=TAXA.find(x=>x.group===group);
+  if(group==='MM'&&window.__DEMO_MM__) renderDashMM(group); else renderSoon(t);
+  document.getElementById('dash').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ── 푸터 ── */
+function renderFoot(){
+  const D=window.__DEMO_MM__||{}; const m=D.meta||{};
+  const src=(m.sources||[]).map(s=>`${s.name}(${nf(s.records)})`).join(' · ');
+  document.getElementById('foot').innerHTML=
+    `출처: ${m.citation||'국가생물종목록(KTSN)'}<br>`+
+    `포유류 데모 — 생성 ${D.generated||'-'} · 좌표계 ${m.crs||'-'} · 갱신주기 6개월 · 누적관측 ${nf(m.n_records||0)} (${src||'-'})<br>`+
+    `gap = 국가생물종목록(마스터) − 관측(동적 complement). 데이터는 정기 수집으로 갱신됩니다.`;
+}
+
+/* ── 부트 ── */
+function boot(){
+  TAXA=window.__TAXA__||[];
+  if(!TAXA.length){document.getElementById('dash').innerHTML='<div class="soonbox"><div class="l">데이터를 불러오지 못했습니다. <code>demo/data/taxa_summary.js</code> 생성 또는 로컬 서버로 여세요.</div></div>';return;}
+  renderTiles(); renderFoot();
+  const first=(TAXA.find(t=>t.has_data)||TAXA[0]).group;
+  select(first);
+  document.getElementById('dash').scrollIntoView=()=>{}; // 초기엔 스크롤 억제
+  setTimeout(()=>{document.querySelector('.dash').scrollIntoView=Element.prototype.scrollIntoView;},0);
+}
+if(window.__TAXA__) boot();
+else Promise.all([
+  fetch('demo/data/taxa_summary.json').then(r=>r.json()).then(d=>window.__TAXA__=d),
+  fetch('demo/data/demo_mm.json').then(r=>r.json()).then(d=>window.__DEMO_MM__=d).catch(()=>{})
+]).then(boot).catch(()=>{document.getElementById('dash').innerHTML='<div class="soonbox"><div class="l">데이터 로딩 실패 — 로컬 서버로 여세요.</div></div>';});
+</script>
+</body>
+</html>

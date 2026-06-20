@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finding gap — 서비스</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@9.2.4/ol.css">
+<style>
+  :root{
+    --ink:#1b201d;--muted:#6b7280;--faint:#9aa0a6;--line:#e7e7e2;--bg:#fafaf8;--card:#fff;--accent:#2f6f5e;
+    --r-ex:#000;--r-ew:#3D2645;--r-re:#6B4E71;--r-cr:#D81E05;--r-en:#FC7F3F;--r-vu:#F2DC00;
+    --r-nt:#C3D838;--r-lc:#5CB85C;--r-dd:#CFCFC4;--r-nena:#E6E6DE;--eg1:#7F1D1D;--eg2:#C2410C;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.5}
+  .wrap{max-width:1280px;margin:0 auto;padding:20px 16px 64px}
+  a{color:inherit}
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{margin:0;font-size:20px;letter-spacing:-.01em}
+  header h1 b{color:var(--accent)}
+  header .back{font-size:12.5px;color:var(--muted);text-decoration:none;border:1px solid var(--line);
+    border-radius:8px;padding:6px 11px;background:#fff}
+  header .back:hover{border-color:var(--accent);color:var(--accent)}
+  .tabs{display:flex;gap:6px;margin:16px 0 14px;border-bottom:1px solid var(--line)}
+  .tabs button{border:0;background:none;padding:10px 16px;font-size:14px;cursor:pointer;color:#666;
+    border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:600}
+  .tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+  select,input[type=search]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px}
+  select{min-width:130px}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+  .seg button{border:0;background:#fff;padding:8px 12px;font-size:12.5px;cursor:pointer;color:#555}
+  .seg button.on{background:var(--accent);color:#fff;font-weight:600}
+  .selchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:#555}
+  .selchips .c{background:#eef3f1;border:1px solid #d7e3df;border-radius:999px;padding:3px 9px}
+  .selchips .clr{cursor:pointer;color:var(--accent);text-decoration:underline;background:none;border:0;font-size:12px}
+  .split{display:grid;grid-template-columns:1.15fr 1fr;gap:16px}
+  @media(max-width:880px){.split{grid-template-columns:1fr}}
+  #map,#mapB{width:100%;height:560px;border:1px solid var(--line);border-radius:var(--radius);background:#eef0ee;position:relative}
+  @media(max-width:880px){#map,#mapB{height:400px}}
+  .mapmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+    padding:20px;color:#777;font-size:13px;pointer-events:none}
+  .legend{display:flex;align-items:center;gap:8px;font-size:11px;color:#666;margin-top:8px}
+  .ramp{height:10px;width:120px;border-radius:3px;background:linear-gradient(90deg,#E0EEE8,#216F5E)}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+    display:flex;flex-direction:column;max-height:560px}
+  @media(max-width:880px){.panel{max-height:none}}
+  .panel h2{margin:0;padding:11px 14px;font-size:13.5px;border-bottom:1px solid var(--line);background:#fcfcfb;
+    display:flex;align-items:center;gap:8px}
+  .panel h2 .cnt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500}
+  .panel h2 .dl{font-size:12px;border:1px solid var(--line);border-radius:7px;padding:5px 9px;background:#fff;cursor:pointer}
+  .tblwrap{overflow:auto}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{padding:7px 10px;text-align:left;border-bottom:1px solid #f1f1ee;white-space:nowrap}
+  th{position:sticky;top:0;background:#fbfbfa;cursor:pointer;font-size:11.5px;color:#555;user-select:none;z-index:1}
+  th:hover{color:var(--accent)}
+  th .ar{font-size:10px;margin-left:3px}
+  th .ar.on{color:var(--accent)}
+  th .ar.off{color:#c6cac6}
+  th:hover .ar.off{color:#9aa0a6}
+  .panel h2 .hint{margin-left:8px;font-size:10.5px;color:var(--faint);font-weight:400}
+  td .sci{font-style:italic;color:var(--muted)}
+  .badge{font-size:10px;font-weight:700;border-radius:999px;padding:1px 6px;white-space:nowrap}
+  .st{display:inline-flex;align-items:center;gap:4px;font-size:11.5px}
+  .dot{width:7px;height:7px;border-radius:999px;display:inline-block}
+  .num{font-variant-numeric:tabular-nums;text-align:right}
+  /* mode B */
+  .searchrow{display:flex;gap:10px;align-items:center;margin-bottom:6px}
+  .searchrow input{flex:1;max-width:440px}
+  .scount{font-size:12px;color:var(--muted)}
+  .sresults{border:1px solid var(--line);border-radius:var(--radius);max-height:300px;overflow:auto;background:#fff;margin-bottom:16px}
+  .sresults .r{padding:9px 14px;border-bottom:1px solid #f1f1ee;cursor:pointer;display:flex;align-items:center;gap:9px}
+  .sresults .r:hover{background:#f6f7f5}
+  .sresults .r:last-child{border-bottom:0}
+  .sresults .nm{font-weight:600}.sresults .sci{font-style:italic;color:var(--muted);font-size:12px}
+  .sresults .tg{margin-left:auto;font-size:11px;color:var(--faint)}
+  .scard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;max-width:720px}
+  .scard h3{margin:0 0 2px;font-size:19px}
+  .scard .sci{font-style:italic;color:var(--muted);font-size:13.5px}
+  .scard .row{margin-top:14px}
+  .scard .row .k{font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:5px}
+  .regchips{display:flex;flex-wrap:wrap;gap:6px}
+  .regchips .rc{background:#eef3f1;border:1px solid #d7e3df;border-radius:8px;padding:4px 9px;font-size:12px}
+  .regchips .rc b{font-variant-numeric:tabular-nums;color:var(--accent)}
+  .links{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+  .lk{display:inline-flex;align-items:center;gap:7px;text-decoration:none;border:1px solid var(--line);
+    border-radius:10px;padding:10px 14px;font-size:13px;background:#fff}
+  .lk:hover{border-color:var(--accent)}
+  .lk .t{font-weight:600}.lk .d{font-size:11px;color:var(--muted)}
+  .lk.primary{border-color:#cdddc8;background:#f4f8f6}
+  .lk.danger{border-color:#e7c9c0;background:#fdf4f1}
+  .lk.danger .t{color:#a23b1a}
+  .muted{color:var(--muted);font-size:12.5px}
+  footer{margin-top:24px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><b>Finding gap</b> · 서비스</h1>
+    <a class="back" href="index.html">← 대문</a>
+  </header>
+
+  <div class="tabs">
+    <button id="tabA" class="on" onclick="setMode('A')">분류군별 조회</button>
+    <button id="tabB" onclick="setMode('B')">종별 검색</button>
+  </div>
+
+  <!-- ── Mode A: 분류군별 조회 ── -->
+  <section id="modeA">
+    <div class="controls">
+      <div class="field"><label>분류군</label><select id="fTaxon"></select></div>
+      <div class="field"><label>시작 연도</label><select id="fY0"></select></div>
+      <div class="field"><label>종료 연도</label><select id="fY1"></select></div>
+      <div class="field"><label>발견/미발견</label>
+        <div class="seg"><button id="mFound" class="on" onclick="setMetric('found')">발견 종</button><button id="mGap" onclick="setMetric('gap')">미발견 종</button></div>
+      </div>
+      <div class="field" style="flex:1"><label>선택 지역</label>
+        <div class="selchips" id="selChips"><span class="muted">지도에서 시도를 클릭(폴리곤 밖 클릭=전체)</span></div>
+      </div>
+    </div>
+
+    <div class="split">
+      <div>
+        <div id="map"><div class="mapmsg" id="mapMsg">지도 불러오는 중…</div></div>
+        <div class="legend"><span id="legLo">0</span><span class="ramp"></span><span id="legHi">–</span>
+          <span style="margin-left:8px" id="legCap">시도별 발견 종수(짙을수록 많음)</span></div>
+      </div>
+      <div class="panel">
+        <h2>종 목록 <span class="cnt" id="tblCnt"></span><button class="dl" id="dlCsv">CSV</button></h2>
+        <div class="tblwrap"><table id="tbl"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Mode B: 종별 검색 ── -->
+  <section id="modeB" style="display:none">
+    <div class="controls">
+      <div class="field"><label>분류군</label><select id="sTaxon"></select></div>
+      <div class="field"><label>시작 연도</label><select id="sY0"></select></div>
+      <div class="field"><label>종료 연도</label><select id="sY1"></select></div>
+      <div class="field" style="flex:1;min-width:220px"><label>종 검색</label>
+        <input type="search" id="q" placeholder="국명·학명·초성(예: 수달, Lutra, ㅅㄷ)" autocomplete="off">
+      </div>
+      <div class="field"><label>&nbsp;</label><span class="scount" id="sCount"></span></div>
+    </div>
+    <div class="sresults" id="sResults" style="display:none"></div>
+    <div class="split">
+      <div>
+        <div id="mapB"><div class="mapmsg" id="mapMsgB">종을 검색·선택하면 발견 지역(시도)이 지도에 표시됩니다.</div></div>
+        <div class="legend"><span class="dot" style="background:#2f6f5e"></span><span>선택 종 발견 시도</span>
+          <span class="dot" style="background:#cfd3cf;margin-left:10px"></span><span>미발견(공백)</span>
+          <span style="margin-left:8px" id="legCapB" class="muted"></span></div>
+      </div>
+      <div id="sCard"></div>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script src="config.js" onerror="window.VWORLD_KEY=window.VWORLD_KEY||''"></script>
+<script src="https://cdn.jsdelivr.net/npm/ol@9.2.4/dist/ol.js"></script>
+<script src="demo/data/taxa_summary.js"></script>
+<script src="demo/data/obs_by_taxon.js"></script>
+<script src="demo/data/species_index.js"></script>
+<script>
+/* ── 토큰·상수 ── */
+const RL_FILL={EX:'#000',EW:'#3D2645',RE:'#6B4E71',CR:'#D81E05',EN:'#FC7F3F',VU:'#F2DC00',NT:'#C3D838',LC:'#5CB85C',DD:'#CFCFC4',NENA:'#E6E6DE'};
+const RL_FG={EX:'#fff',EW:'#fff',RE:'#fff',CR:'#fff',EN:'#4A1B0C',VU:'#5C5300',NT:'#3B4D00',LC:'#103D17',DD:'#3F3F38',NENA:'#44443E'};
+const RL_KOR={EX:'절멸',EW:'야생절멸',RE:'지역절멸',CR:'위급',EN:'위기',VU:'취약',NT:'준위협',LC:'최소관심',DD:'정보부족',NENA:'미평가·미적용'};
+const normCat=r=>(r==='NE'||r==='NA')?'NENA':r;
+const TAXON_KOR={MM:'포유류',AV:'조류',RP:'파충류',AM:'양서류','-P':'어류',UC:'미삭동물',IV:'무척추동물(곤충제외)',IN:'곤충류',VP:'관속식물',MS:'선태류'};
+const nf=n=>Number(n).toLocaleString('ko-KR');
+/* 외부 링크 */
+const NIBR=k=>`https://species.nibr.go.kr/species-detail/${k}`;
+const NATURING='https://www.naturing.net/m/3458/summary';
+const ECOBANK='https://www.nie-ecobank.kr/dataCnrs/B/list.do';
+const isEndangered=g=>g==='I'||g==='II';
+
+const OBS=window.__OBS__||{};                          // 분류군별 관측(EcoBank+국립공원)
+const OMETA=window.__OBSMETA__||{};
+const TAXA=(window.__TAXA__||[]).filter(t=>t.has_data); // 데이터 보유 분류군만 노출
+const SPIDX=window.__SPIDX__||[];                       // 서비스 종 인덱스(제외종 반영)
+const KEY=window.VWORLD_KEY||'';
+const ROWCAP=1500;                                      // 대용량 분류군 테이블 표시 상한(전체는 CSV)
+const SP_BY_TAX={};                                     // 분류군 → 종목록(검색 인덱스 파생)
+for(const sp of SPIDX){ (SP_BY_TAX[sp.t]||(SP_BY_TAX[sp.t]=[])).push(sp); }
+const ALL_YEARS=[...new Set(Object.values(OBS).flatMap(d=>d.years||[]))].map(Number).sort((a,b)=>a-b);
+
+/* ── 배지 ── */
+function badges(g,r){
+  let h='';
+  if(g) h+=`<span class="badge" style="background:${g==='I'?'var(--eg1)':'var(--eg2)'};color:#fff">멸종위기 ${g}급</span> `;
+  const rc=normCat(r);
+  if(rc) h+=`<span class="badge" style="background:${RL_FILL[rc]};color:${RL_FG[rc]}">${r==='NE'||r==='NA'?'NE/NA':r}</span>`;
+  return h;
+}
+/* 분리 배지(테이블 전용): 멸종위기종 / 국가적색목록 별도 컬럼 */
+function egBadge(g){
+  if(!g) return '<span class="muted">—</span>';
+  return `<span class="badge" style="background:${g==='I'?'var(--eg1)':'var(--eg2)'};color:#fff" title="야생생물 보호법 멸종위기 ${g}급">멸종위기 ${g}급</span>`;
+}
+function rlBadge(r){
+  const rc=normCat(r);
+  if(!rc) return '<span class="muted">—</span>';
+  return `<span class="badge" style="background:${RL_FILL[rc]};color:${RL_FG[rc]}" title="국가적색목록 ${RL_KOR[rc]||rc}">${r==='NE'||r==='NA'?'NE/NA':r}</span>`;
+}
+/* 적색목록 심각도 순위(EX 최상위 … 미분류 최하위) */
+const RL_RANK={EX:0,EW:1,RE:2,CR:3,EN:4,VU:5,NT:6,LC:7,DD:8,NENA:9};
+const rlr=r=>{ const rc=normCat(r); return (rc&&rc in RL_RANK)?RL_RANK[rc]:99; };
+const shortSido=s=>s.replace(/(특별자치도|특별자치시|특별시|광역시|도)$/,'')||s;
+
+/* ═══════ 공유 상태 ═══════ */
+let map=null, sidoLayer=null, SIDO_NAMES=[], mapMode='A';
+let curTaxon='MM', y0=null, y1=null, metric='found', sortKey='c', sortDir=-1;
+let selSidos=new Set(), METRIC=new Map(), DOM={min:0,max:1};
+let SRES=[], selSpecies=null, selRegions=new Map(), selRegMax=0, sTax='', sy0=null, sy1=null;
+
+/* ═══════ 공유 지도(모드 A·B 재사용, setTarget 전환) ═══════ */
+function colorFor(v){
+  const t=DOM.max<=DOM.min?0:(v-DOM.min)/(DOM.max-DOM.min);
+  const L=(a,b)=>Math.round(a+(b-a)*t);
+  return `rgba(${L(224,33)},${L(238,111)},${L(232,94)},0.82)`;
+}
+function sidoLabel(nm){
+  return new ol.style.Text({text:shortSido(nm),font:'11px system-ui,sans-serif',
+    fill:new ol.style.Fill({color:'#1b201d'}),stroke:new ol.style.Stroke({color:'#ffffff',width:2.4})});
+}
+function styleFn(feature){
+  const nm=feature.get('sido');
+  if(mapMode==='B'){                                    // 선택 종 발견 시도 강조
+    const c=selRegions.get(nm)||0, has=c>0;
+    const t=selRegMax>0?Math.min(1,c/selRegMax):0;
+    return new ol.style.Style({
+      fill:new ol.style.Fill({color:has?`rgba(47,111,94,${(0.35+0.5*t).toFixed(2)})`:'rgba(206,211,206,0.30)'}),
+      stroke:new ol.style.Stroke({color:has?'#16241f':'#cfd3cf', width:has?1.8:0.7}),
+      text:sidoLabel(nm)});
+  }
+  const v=METRIC.get(nm)||0, sel=selSidos.has(nm);     // 모드 A choropleth
+  return new ol.style.Style({
+    fill:new ol.style.Fill({color:colorFor(v)}),
+    stroke:new ol.style.Stroke({color:sel?'#16241f':'#ffffff', width:sel?3.2:1}),
+    text:sidoLabel(nm)});
+}
+function initMap(){
+  if(typeof ol==='undefined'){ mapMsg.textContent='지도 라이브러리를 불러오지 못했습니다(네트워크 확인).'; return; }
+  const layers=[];
+  // 배경: 항상 OSM 기본(키·도메인 불필요) → 외부 배포에서도 바로 표시.
+  //       vworld 키가 있으면 그 위에 얹어 국내 상세지도를 쓰되, 타일이 반복 실패하면(도메인 미등록 등) vworld만 제거 → OSM 노출.
+  layers.push(new ol.layer.Tile({source:new ol.source.OSM({crossOrigin:'anonymous'})}));
+  if(KEY){
+    const vsrc=new ol.source.XYZ({
+      url:`https://api.vworld.kr/req/wmts/1.0.0/${KEY}/Base/{z}/{y}/{x}.png`,
+      attributions:'© VWorld', crossOrigin:'anonymous', maxZoom:19});
+    const vlayer=new ol.layer.Tile({source:vsrc});
+    let tileErr=0;
+    vsrc.on('tileloaderror',()=>{ if(++tileErr===4){       // vworld 실패 → OSM 폴백(외부엔 에러 노출 않고 조용히 전환)
+      try{ map.removeLayer(vlayer); }catch(e){}
+      console.warn(`vworld 타일 로드 실패(도메인 ${location.host} 미등록 가능) — OpenStreetMap 배경으로 전환.`); }});
+    layers.push(vlayer);
+  }
+  sidoLayer=new ol.layer.Vector({source:new ol.source.Vector(),style:styleFn});
+  layers.push(sidoLayer);
+  map=new ol.Map({target:'map',layers,controls:ol.control.defaults.defaults({attribution:true}),
+    view:new ol.View({center:ol.proj.fromLonLat([127.8,36.1]),zoom:6.6,minZoom:5,maxZoom:12})});
+  fetch('demo/data/sido.geojson').then(r=>r.json()).then(gj=>{
+    const feats=new ol.format.GeoJSON().readFeatures(gj,{dataProjection:'EPSG:4326',featureProjection:'EPSG:3857'});
+    sidoLayer.getSource().addFeatures(feats);
+    SIDO_NAMES=feats.map(f=>f.get('sido'));
+    mapMsg.style.display='none';
+    recompute(); sidoLayer.changed(); renderTable();
+  }).catch(()=>{ mapMsg.textContent='시도 경계를 불러오지 못했습니다.'; });
+  map.on('singleclick',e=>{
+    if(mapMode!=='A') return;                            // 종별 모드 지도는 표시 전용
+    let hit=false;
+    map.forEachFeatureAtPixel(e.pixel,f=>{ const nm=f.get('sido'); if(nm){ selSidos.has(nm)?selSidos.delete(nm):selSidos.add(nm); hit=true; } return true; });
+    if(!hit) selSidos.clear();
+    sidoLayer.changed(); renderSelChips(); renderTable();
+  });
+}
+
+/* ═══════ Mode A: 분류군별 조회 ═══════ */
+function obsA(){ return (OBS[curTaxon]&&OBS[curTaxon].obs)||[]; }
+function spA(){ return SP_BY_TAX[curTaxon]||[]; }
+function years(){ return ((OBS[curTaxon]&&OBS[curTaxon].years)||[]).map(Number); }
+function fillTaxonSel(){
+  fTaxon.innerHTML=TAXA.map(t=>`<option value="${t.group}">${t.kor} (${nf(t.n_species)}종)</option>`).join('');
+  fTaxon.value=curTaxon;
+}
+function fillYearSels(){
+  const ys=years();
+  if(!ys.length){ fY0.innerHTML=fY1.innerHTML='<option>—</option>'; fY0.disabled=fY1.disabled=true; return; }
+  fY0.disabled=fY1.disabled=false;
+  fY0.innerHTML=ys.map(y=>`<option>${y}</option>`).join('');
+  fY1.innerHTML=ys.map(y=>`<option>${y}</option>`).join('');
+  if(y0==null||!ys.includes(y0)){y0=ys[0];} if(y1==null||!ys.includes(y1)){y1=ys[ys.length-1];}
+  fY0.value=y0; fY1.value=y1;
+}
+function recompute(){
+  const obs=obsA(), total=spA().length;
+  const bySido=new Map();
+  for(const [k,s,yy,c] of obs){ if(s==='미상')continue; const y=+yy; if(y<y0||y>y1)continue;
+    if(!bySido.has(s))bySido.set(s,new Set()); bySido.get(s).add(k); }
+  METRIC=new Map();
+  const names=SIDO_NAMES.length?SIDO_NAMES:[...bySido.keys()];
+  for(const nm of names){ const f=(bySido.get(nm)||new Set()).size; METRIC.set(nm, metric==='found'?f:(total-f)); }
+  const vals=[...METRIC.values()]; DOM={min:Math.min(0,...vals), max:Math.max(1,...vals)};
+  legLo.textContent=nf(DOM.min); legHi.textContent=nf(DOM.max);
+  legCap.textContent= metric==='found'?'시도별 발견 종수(짙을수록 많음)':'시도별 미발견 종수(짙을수록 많음=공백 큼)';
+}
+function renderSelChips(){
+  if(!selSidos.size){ selChips.innerHTML='<span class="muted">지도에서 시도를 클릭(폴리곤 밖 클릭=전체)</span>'; return; }
+  selChips.innerHTML=[...selSidos].map(s=>`<span class="c">${s}</span>`).join('')+
+    `<button class="clr" onclick="clearSel()">전체 해제</button>`;
+}
+function clearSel(){ selSidos.clear(); if(sidoLayer)sidoLayer.changed(); renderSelChips(); renderTable(); }
+
+function tableRows(){
+  const obs=obsA();
+  const cnt=new Map();
+  for(const [k,s,yy,c] of obs){ if(selSidos.size && !selSidos.has(s))continue; const y=+yy; if(y<y0||y>y1)continue; cnt.set(k,(cnt.get(k)||0)+c); }
+  const sp=spA();
+  let rows=sp.map(x=>({k:x.k,n:x.n,s:x.s,g:x.g,r:x.r,c:cnt.get(x.k)||0,found:cnt.has(x.k)}));
+  const egr=g=>g==='I'?0:g==='II'?1:2;
+  rows.sort((a,b)=>{
+    let d=0;
+    if(sortKey==='c') d=a.c-b.c;
+    else if(sortKey==='g') d=egr(b.g)-egr(a.g);          // 내림차순=I급 먼저
+    else if(sortKey==='r') d=rlr(b.r)-rlr(a.r);          // 내림차순=EX(심각) 먼저
+    else d=String(a[sortKey]||'').localeCompare(String(b[sortKey]||''),'ko');
+    return d*sortDir || (a.n||a.s).localeCompare(b.n||b.s,'ko');
+  });
+  return rows;
+}
+function renderTable(){
+  const all=tableRows();
+  const foundN=all.filter(r=>r.found).length, gapN=all.length-foundN;
+  const rows= metric==='found' ? all.filter(r=>r.found) : all.filter(r=>!r.found);   // 토글로 발견/미발견만 표시
+  tblCnt.textContent=`발견 ${nf(foundN)} · 미발견 ${nf(gapN)} / 총 ${nf(all.length)}종 — 표시: ${metric==='found'?'발견':'미발견'} ${nf(rows.length)}종`;
+  const ar=k=>sortKey===k?`<span class="ar on">${sortDir<0?'▼':'▲'}</span>`:`<span class="ar off">↕</span>`;
+  const head=`<thead><tr>
+    <th onclick="sortBy('n')" title="국명으로 정렬">국명${ar('n')}</th>
+    <th onclick="sortBy('s')" title="학명으로 정렬">학명${ar('s')}</th>
+    <th onclick="sortBy('g')" title="멸종위기 야생생물 등급으로 정렬(I급 먼저)">멸종위기종${ar('g')}</th>
+    <th onclick="sortBy('r')" title="국가적색목록 범주로 정렬(심각도 순)">국가적색목록${ar('r')}</th>
+    <th onclick="sortBy('c')" class="num" title="관측 수로 정렬">관측${ar('c')}</th></tr></thead>`;
+  const shown=rows.slice(0,ROWCAP);
+  const body=shown.map(x=>
+    `<tr><td>${x.n||'<span class="sci">'+x.s+'</span>'}</td><td><span class="sci">${x.s}</span></td>`+
+      `<td>${egBadge(x.g)}</td><td>${rlBadge(x.r)}</td><td class="num">${x.c||''}</td></tr>`
+  ).join('');
+  const more=rows.length>ROWCAP
+    ? `<tr><td colspan="5" style="padding:10px;color:#888;background:#fbfbfa;white-space:normal">상위 ${nf(ROWCAP)}행만 표시 — 전체 ${nf(rows.length)}종은 CSV 다운로드로 확인하세요.</td></tr>`
+    : '';
+  tbl.innerHTML=head+'<tbody>'+body+more+'</tbody>';
+}
+function sortBy(k){ if(sortKey===k)sortDir*=-1; else {sortKey=k;sortDir=(k==='n'||k==='s')?1:-1;} renderTable(); }
+
+function downloadCSV(){
+  const all=tableRows();
+  const rows= metric==='found' ? all.filter(r=>r.found) : all.filter(r=>!r.found);   // 화면 필터와 동일
+  const head=['국명','학명','멸종위기등급','적색목록','관측수'];
+  const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const body=rows.map(x=>[x.n,x.s,x.g?x.g+'급':'',x.r,x.c].map(esc).join(','));
+  const csv='﻿'+[head.join(','),...body].join('\r\n');
+  const reg=selSidos.size?[...selSidos].map(shortSido).join('+'):'전국';
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`${TAXON_KOR[curTaxon]}_${reg}_${y0}-${y1}_${metric==='found'?'발견':'미발견'}.csv`; a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ═══════ Mode B: 종별 검색(분류군·연도 필터 + 지도) ═══════ */
+const CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+function toCho(str){ let o=''; for(const ch of str){ const c=ch.charCodeAt(0)-0xAC00; o+=(c>=0&&c<11172)?CHO[Math.floor(c/588)]:ch; } return o; }
+function fillSearchTaxon(){
+  sTaxon.innerHTML='<option value="">전체 분류군</option>'+TAXA.map(t=>`<option value="${t.group}">${t.kor}</option>`).join('');
+  sTaxon.value=sTax;
+}
+function searchYears(){ return (sTax&&OBS[sTax])?OBS[sTax].years.map(Number):ALL_YEARS; }
+function fillSearchYears(){
+  const ys=searchYears();
+  if(!ys.length){ sY0.innerHTML=sY1.innerHTML='<option>—</option>'; sY0.disabled=sY1.disabled=true; return; }
+  sY0.disabled=sY1.disabled=false;
+  sY0.innerHTML=ys.map(y=>`<option>${y}</option>`).join('');
+  sY1.innerHTML=ys.map(y=>`<option>${y}</option>`).join('');
+  if(sy0==null||!ys.includes(sy0))sy0=ys[0]; if(sy1==null||!ys.includes(sy1))sy1=ys[ys.length-1];
+  sY0.value=sy0; sY1.value=sy1;
+}
+function speciesRegions(sp,a,b){
+  const m=new Map(), rows=(OBS[sp.t]&&OBS[sp.t].obs)||[];
+  for(const [k,s,yy,c] of rows){ if(k!==sp.k)continue; const y=+yy; if(y<a||y>b)continue; m.set(s,(m.get(s)||0)+c); }
+  return m;
+}
+function doSearch(){
+  const raw=q.value.trim();
+  if(!raw){ sResults.style.display='none'; sCount.textContent=''; return; }
+  const ql=raw.toLowerCase();
+  const isCho=/^[ㄱ-ㅎ]+$/.test(raw);     // 초성쿼리일 때만 초성매칭(전체 한글엔 오매칭 방지)
+  const pool=sTax?(SP_BY_TAX[sTax]||[]):SPIDX;
+  const scored=[];
+  for(const sp of pool){
+    const nl=(sp.n||'').toLowerCase(), sl=(sp.s||'').toLowerCase();
+    let sc=-1;
+    if(isCho){ const cn=toCho(sp.n||''); if(cn.startsWith(raw))sc=0; else if(cn.includes(raw))sc=2; }
+    else { if(nl.startsWith(ql))sc=0; else if(sl.startsWith(ql))sc=1; else if(nl.includes(ql))sc=2; else if(sl.includes(ql))sc=3; }
+    if(sc>=0) scored.push([sc,sp]);
+  }
+  scored.sort((a,b)=>a[0]-b[0] || (a[1].n||a[1].s).localeCompare(b[1].n||b[1].s,'ko'));
+  const total=scored.length;
+  SRES=scored.slice(0,60).map(x=>x[1]);
+  sCount.textContent=`${nf(total)}${total>60?' · 상위 60 표시':''}건`;
+  sResults.style.display='';
+  sResults.innerHTML=SRES.length?SRES.map((sp,i)=>
+    `<div class="r" onclick="showIdx(${i})">`+
+    `<span class="nm">${sp.n||'<span class=sci>'+sp.s+'</span>'}</span> <span class="sci">${sp.s}</span>`+
+    `<span class="tg">${TAXON_KOR[sp.t]||sp.t}</span></div>`).join('')
+    :'<div class="r" style="cursor:default;color:#999">검색 결과가 없습니다.</div>';
+}
+function showIdx(i){ if(SRES[i]) showSpecies(SRES[i]); }
+function refreshSpeciesMap(){
+  const vals=[...selRegions.entries()].filter(([s])=>s!=='미상').map(([,c])=>c);
+  selRegMax=vals.length?Math.max(...vals):0;
+  const hit=[...selRegions.keys()].filter(s=>s!=='미상').length;
+  if(legCapB) legCapB.textContent=selSpecies?`${selSpecies.n||selSpecies.s} · ${sy0}–${sy1} 발견 시도 ${hit}곳`:'';
+  if(mapMsgB) mapMsgB.style.display=selSpecies?'none':'';
+  if(mapMode==='B'&&sidoLayer) sidoLayer.changed();
+}
+function showSpecies(sp){
+  selSpecies=sp;
+  selRegions=speciesRegions(sp,sy0,sy1);
+  const eg=isEndangered(sp.g);
+  const ent=[...selRegions.entries()].sort((a,b)=>b[1]-a[1]);
+  const regHtml=ent.length
+    ? `<div class="regchips">`+ent.map(([s,c])=>`<span class="rc">${s==='미상'?'좌표미상':s} <b>${nf(c)}</b></span>`).join('')+`</div>`
+    : `<span class="muted">${sy0}–${sy1} 조사자료에서 관측 기록이 없습니다(발견공백).</span>`;
+  const reportLink=eg
+    ? `<a class="lk danger" href="${NATURING}" target="_blank" rel="noopener noreferrer"><span><span class="t">Naturing 멸종위기종 제보</span><br><span class="d">시민과학 관찰 제보 프로젝트 →</span></span></a>`
+    : `<a class="lk" href="${ECOBANK}" target="_blank" rel="noopener noreferrer"><span><span class="t">EcoBank 데이터 제보</span><br><span class="d">국립생태원 생태정보 제보 →</span></span></a>`;
+  sCard.innerHTML=`<div class="scard">
+    <h3>${sp.n||sp.s}</h3><div class="sci">${sp.s}</div>
+    <div style="margin-top:8px">${badges(sp.g,sp.r)||'<span class="muted">일반종</span>'} <span class="badge" style="background:#eef3f1;color:#2f6f5e">${TAXON_KOR[sp.t]||sp.t}</span></div>
+    <div class="row"><div class="k">발견 지역(시도) · ${sy0}–${sy1}</div>${regHtml}</div>
+    <div class="row"><div class="k">상세 정보 · 데이터 제보</div>
+      <div class="links">
+        <a class="lk primary" href="${NIBR(sp.k)}" target="_blank" rel="noopener noreferrer"><span><span class="t">한반도의 생물다양성</span><br><span class="d">국립생물자원관 종 상세 →</span></span></a>
+        ${reportLink}
+      </div>
+      <div class="muted" style="margin-top:8px">${eg?'멸종위기 야생생물 — 관찰 시 Naturing 제보 프로젝트로':'일반종 — 관찰 자료는 EcoBank로 제보'}</div>
+    </div>
+  </div>`;
+  refreshSpeciesMap();
+  if(window.innerWidth<=880) sCard.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function clearSelSpecies(){ selSpecies=null; selRegions=new Map(); sCard.innerHTML=''; refreshSpeciesMap(); }
+
+/* ── 모드 전환 ── */
+function setMode(m){
+  mapMode=m;
+  tabA.classList.toggle('on',m==='A'); tabB.classList.toggle('on',m==='B');
+  modeA.style.display=m==='A'?'':'none'; modeB.style.display=m==='B'?'':'none';
+  if(map){ map.setTarget(m==='A'?'map':'mapB'); setTimeout(()=>{ map.updateSize(); sidoLayer&&sidoLayer.changed(); },30); }
+}
+function setMetric(m){ metric=m; mFound.classList.toggle('on',m==='found'); mGap.classList.toggle('on',m==='gap');
+  recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); }   // 지도 metric + 테이블 필터 동시 전환
+
+/* ── 부트 ── */
+function boot(){
+  curTaxon=(TAXA[0]&&TAXA[0].group)||'MM';
+  // 딥링크 ?taxon&sido&y0&y1 (모드 A)
+  const p=new URLSearchParams(location.search);
+  if(p.get('taxon')&&TAXA.some(t=>t.group===p.get('taxon'))) curTaxon=p.get('taxon');
+  // 모드 A 컨트롤
+  fillTaxonSel(); fillYearSels();
+  if(p.get('y0')&&years().includes(+p.get('y0'))) y0=+p.get('y0');
+  if(p.get('y1')&&years().includes(+p.get('y1'))) y1=+p.get('y1');
+  fY0.value=y0; fY1.value=y1;
+  const qs=p.get('sido'); if(qs) selSidos.add(qs);
+  fTaxon.onchange=()=>{ curTaxon=fTaxon.value; y0=null;y1=null; fillYearSels(); selSidos.clear(); recompute(); if(sidoLayer)sidoLayer.changed(); renderSelChips(); renderTable(); };
+  fY0.onchange=()=>{ y0=+fY0.value; if(y1<y0){y1=y0;fY1.value=y1;} recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); };
+  fY1.onchange=()=>{ y1=+fY1.value; if(y1<y0){y0=y1;fY0.value=y0;} recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); };
+  dlCsv.onclick=downloadCSV;
+  // 모드 B 컨트롤
+  fillSearchTaxon(); fillSearchYears();
+  sTaxon.onchange=()=>{ sTax=sTaxon.value; sy0=null;sy1=null; fillSearchYears();
+    if(selSpecies&&sTax&&selSpecies.t!==sTax) clearSelSpecies();
+    else if(selSpecies) showSpecies(selSpecies);
+    doSearch(); };
+  sY0.onchange=()=>{ sy0=+sY0.value; if(sy1<sy0){sy1=sy0;sY1.value=sy1;} if(selSpecies)showSpecies(selSpecies); };
+  sY1.onchange=()=>{ sy1=+sY1.value; if(sy1<sy0){sy0=sy1;sY0.value=sy0;} if(selSpecies)showSpecies(selSpecies); };
+  q.addEventListener('input',doSearch);
+  // 초기 렌더
+  renderSelChips(); renderTable(); initMap();
+  foot.innerHTML=`배경지도 © VWorld / © OpenStreetMap 기여자 · 종 상세 © 국립생물자원관 한반도의 생물다양성 · 출처 ${OMETA.citation||'KTSN·EcoBank·국립공원'}<br>`+
+    `${TAXA.length}개 분류군 · 생성 ${OMETA.generated||'-'} · 종 검색 ${nf(SPIDX.length)}종 · 갱신주기 ${OMETA.update_cycle==='6mo'?'6개월':(OMETA.update_cycle||'6개월')}. 발견공백 = 국가생물종목록 − 관측(동적).`;
+  if(p.get('taxon')||p.get('sido')) setMode('A');
+}
+boot();
+</script>
+</body>
+</html>

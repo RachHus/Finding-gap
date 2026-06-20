@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finding gap — 포유류 발견공백 데모</title>
+<style>
+  :root{
+    --mm:#8B5E3C; --ink:#1f2421; --muted:#6b7280; --line:#e5e7eb; --bg:#fafaf8; --card:#fff;
+    --eg1:#7F1D1D; --eg2:#C2410C;
+    --r-ex:#000; --r-ew:#3D2645; --r-re:#6B4E71; --r-cr:#D81E05; --r-en:#FC7F3F;
+    --r-vu:#F2DC00; --r-nt:#C3D838; --r-lc:#5CB85C; --r-dd:#CFCFC4; --r-na:#EAEAE2; --r-ne:#F7F7F4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.45}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 64px}
+  header h1{margin:0 0 4px;font-size:22px}
+  header h1 .tag{display:inline-block;vertical-align:middle;margin-right:8px;width:12px;height:12px;
+    border-radius:999px;background:var(--mm)}
+  header .sub{color:var(--muted);font-size:13px;margin:0}
+  .note{margin:14px 0;padding:10px 12px;border-left:3px solid var(--mm);background:#fff;
+    border-radius:6px;font-size:12.5px;color:#444}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:18px 0 8px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+  select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;
+    font-size:14px;min-width:150px}
+  button.reset{padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;
+    cursor:pointer;font-size:13px;color:#444}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 6px}
+  .chip{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:120px}
+  .chip .v{font-size:22px;font-weight:700}
+  .chip .l{font-size:11px;color:var(--muted)}
+  .chip.gap .v{color:var(--mm)} .chip.eg .v{color:var(--eg1)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    display:flex;flex-direction:column;max-height:70vh}
+  .panel h2{margin:0;padding:13px 16px;font-size:14px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:8px;background:#fcfcfb}
+  .panel h2 .cnt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500}
+  .panel h2 .dl{font-size:12px;border:1px solid var(--line);border-radius:7px;padding:5px 9px;
+    background:#fff;cursor:pointer;color:#333}
+  .panel h2 .dl:hover{background:#f3f4f6}
+  ul.list{list-style:none;margin:0;padding:0;overflow:auto}
+  ul.list li{padding:9px 16px;border-bottom:1px solid #f1f1ee;display:flex;align-items:center;gap:10px}
+  ul.list li:last-child{border-bottom:0}
+  .nm{font-weight:600;font-size:13.5px}
+  .sci{font-style:italic;color:var(--muted);font-size:12px}
+  .spacer{flex:1}
+  .cntn{font-variant-numeric:tabular-nums;color:var(--mm);font-weight:700;font-size:13px}
+  .badge{font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 7px;white-space:nowrap}
+  .empty{padding:24px 16px;color:var(--muted);font-size:13px;text-align:center}
+  footer{margin-top:26px;color:var(--muted);font-size:11.5px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="tag"></span>Finding gap — 포유류(MM) 발견공백</h1>
+    <p class="sub">조사자료에서 <b>발견/미발견</b> 종을 시도·연도로 조회하고 체크리스트를 내려받습니다.</p>
+  </header>
+  <div class="note" id="note">데이터 로딩…</div>
+
+  <div class="controls">
+    <div class="field"><label>시도</label><select id="fSido"></select></div>
+    <div class="field"><label>연도</label><select id="fYear"></select></div>
+    <button class="reset" id="reset">필터 초기화</button>
+  </div>
+
+  <div class="chips">
+    <div class="chip"><div class="v" id="cTotal">–</div><div class="l">대상 종(마스터)</div></div>
+    <div class="chip"><div class="v" id="cObs">–</div><div class="l">발견 종</div></div>
+    <div class="chip gap"><div class="v" id="cGap">–</div><div class="l">미발견 종</div></div>
+    <div class="chip eg"><div class="v" id="cEgGap">–</div><div class="l">멸종위기 미발견</div></div>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>발견 종 <span class="cnt" id="hObs"></span>
+        <button class="dl" id="dlObs">CSV</button></h2>
+      <ul class="list" id="listObs"></ul>
+    </section>
+    <section class="panel">
+      <h2>미발견 종 <span class="cnt" id="hGap"></span>
+        <button class="dl" id="dlGap">CSV</button></h2>
+      <ul class="list" id="listGap"></ul>
+    </section>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script src="data/demo_mm.js"></script>
+<script>
+const RCOLOR={EX:'--r-ex',EW:'--r-ew',RE:'--r-re',CR:'--r-cr',EN:'--r-en',VU:'--r-vu',
+  NT:'--r-nt',LC:'--r-lc',DD:'--r-dd',NA:'--r-na',NE:'--r-ne'};
+const RDARKTEXT=new Set(['EN','VU','NT','LC','DD','NA','NE']);   // 밝은 배경 → 진한 글자
+const THREAT=new Set(['CR','EN','VU']);
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+let DATA=null;
+function boot(d){
+  DATA=d;
+  const note=document.getElementById('note');
+  const sample = (d.sources||[]).length===1 && d.sources[0]==='bgts';
+  note.innerHTML = `대상 <b>${d.n_species}종</b> · 관측행 ${d.obs.length} · 생성 ${d.generated||'-'} · 출처 ${(d.sources||[]).join(', ')||'-'}`
+    + (sample ? ` <b style="color:#b45309">— 현재 백두대간 샘플(부분). 전량(ecpe+ntee) 수집 완료 후 교체 예정.</b>` : '');
+  fill('fSido', d.sidos, '전체(전국)');
+  fill('fYear', d.years, '전체(전 기간)');
+  // 대문에서 넘어온 딥링크(?sido=&year=) 반영
+  const q=new URLSearchParams(location.search);
+  const qs=q.get('sido'); if(qs && d.sidos.includes(qs)) document.getElementById('fSido').value=qs;
+  const qy=q.get('year'); if(qy && d.years.includes(qy)) document.getElementById('fYear').value=qy;
+  document.getElementById('cTotal').textContent=d.n_species;
+  ['fSido','fYear'].forEach(id=>document.getElementById(id).onchange=render);
+  document.getElementById('reset').onclick=()=>{fSido.value='';fYear.value='';render();};
+  document.getElementById('dlObs').onclick=()=>downloadCSV(true);
+  document.getElementById('dlGap').onclick=()=>downloadCSV(false);
+  render();
+}
+function fill(id,arr,allLabel){
+  const s=document.getElementById(id);
+  s.innerHTML=`<option value="">${allLabel}</option>`+arr.map(v=>`<option>${v}</option>`).join('');
+}
+function observedCounts(){
+  const sido=document.getElementById('fSido').value, year=document.getElementById('fYear').value;
+  const m=new Map();
+  for(const [k,s,y,c] of DATA.obs){
+    if(sido && s!==sido) continue;
+    if(year && y!==year) continue;
+    m.set(k,(m.get(k)||0)+c);
+  }
+  return m;
+}
+function partition(){
+  const obs=observedCounts();
+  const found=[], gap=[];
+  for(const sp of DATA.species){
+    if(obs.has(sp.k)) found.push({...sp,c:obs.get(sp.k)}); else gap.push(sp);
+  }
+  found.sort((a,b)=>b.c-a.c || a.n.localeCompare(b.n,'ko'));
+  const egrank=g=>g==='I'?0:g==='II'?1:2;
+  gap.sort((a,b)=>egrank(a.g)-egrank(b.g) || (THREAT.has(b.r)-THREAT.has(a.r)) || a.n.localeCompare(b.n,'ko'));
+  return {found,gap};
+}
+function badges(sp){
+  let h='';
+  if(sp.g) h+=`<span class="badge" style="background:${sp.g==='I'?cssv('--eg1'):cssv('--eg2')};color:#fff">멸종위기 ${sp.g}급</span>`;
+  if(sp.r){const bg=cssv(RCOLOR[sp.r]||'--r-ne');h+=`<span class="badge" style="background:${bg};color:${RDARKTEXT.has(sp.r)?'#1f2421':'#fff'}">${sp.r}</span>`;}
+  return h;
+}
+function row(sp,withCount){
+  const name=sp.n||'<span class="sci">'+sp.s+'</span>';
+  const sci=sp.n?`<span class="sci">${sp.s}</span>`:'';
+  return `<li><span class="nm">${name}</span> ${sci} ${badges(sp)}<span class="spacer"></span>`
+    + (withCount?`<span class="cntn">${sp.c}</span>`:'')+`</li>`;
+}
+function render(){
+  const {found,gap}=partition();
+  document.getElementById('cObs').textContent=found.length;
+  document.getElementById('cGap').textContent=gap.length;
+  document.getElementById('cEgGap').textContent=gap.filter(s=>s.g).length;
+  document.getElementById('hObs').textContent=`${found.length}종`;
+  document.getElementById('hGap').textContent=`${gap.length}종`;
+  document.getElementById('listObs').innerHTML=found.length?found.map(s=>row(s,true)).join(''):'<div class="empty">조건에 맞는 발견 종이 없습니다.</div>';
+  document.getElementById('listGap').innerHTML=gap.length?gap.map(s=>row(s,false)).join(''):'<div class="empty">미발견 종이 없습니다.</div>';
+  const sido=document.getElementById('fSido').value||'전국', year=document.getElementById('fYear').value||'전기간';
+  document.getElementById('foot').textContent=`Finding gap 데모 · 필터: ${sido} / ${year} · gap=마스터−관측(동적 complement)`;
+}
+function downloadCSV(isFound){
+  const {found,gap}=partition();
+  const rows=isFound?found:gap;
+  const head=isFound?['국명','학명','멸종위기등급','적색목록','발견횟수']:['국명','학명','멸종위기등급','적색목록'];
+  const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const body=rows.map(s=>{const base=[s.n,s.s,s.g?s.g+'급':'',s.r];if(isFound)base.push(s.c);return base.map(esc).join(',');});
+  const csv='﻿'+[head.join(','),...body].join('\r\n');
+  const sido=document.getElementById('fSido').value||'전국', year=document.getElementById('fYear').value||'전기간';
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`포유류_${isFound?'발견':'미발견'}_${sido}_${year}.csv`;
+  a.click();URL.revokeObjectURL(a.href);
+}
+// 로드: file://는 demo_mm.js 전역, http는 fetch 폴백
+if(window.__DEMO_MM__) boot(window.__DEMO_MM__);
+else fetch('data/demo_mm.json').then(r=>r.json()).then(boot)
+  .catch(()=>document.getElementById('note').innerHTML='데이터를 불러오지 못했습니다. <code>demo_mm.js</code> 생성 또는 로컬 서버로 여세요.');
+</script>
+</body>
+</html>

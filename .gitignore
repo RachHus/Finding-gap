@@ -1,0 +1,77 @@
+# ---- Node / Next.js (5_App) ----
+**/node_modules/
+**/.next/
+**/out/
+**/.vercel/
+**/dist/
+**/build/
+
+# ---- Env / secrets (절대 커밋 금지) ----
+.env
+.env.*
+**/.env
+**/.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+id_rsa*
+**/serviceAccount*.json
+**/*credential*.json
+**/secret*.json
+**/secrets.*
+.supabase/
+# placeholder 템플릿(.env.example)만 추적 허용 — 부정 패턴은 맨 뒤에 둬야 적용됨
+!.env.example
+!**/.env.example
+# 웹 클라이언트 주입용(빌드 시 .env에서 생성) — vworld 키 포함, 커밋 금지. 템플릿(config.example.js)만 추적
+5_App/config.js
+
+# ---- Data: 대용량 원천·중간산출은 버전관리 제외 ----
+1_Data/raw/**
+!1_Data/raw/.gitkeep
+1_Data/processed/**
+!1_Data/processed/.gitkeep
+# 공간데이터 SHP 전체 세트 (필요시 LFS / 가공 GeoJSON만 공유)
+*.shp
+*.shx
+*.dbf
+*.cpg
+*.prj
+*.zip
+
+# ---- R / Python ----
+.Rproj.user/
+.Rhistory
+.RData
+.Renviron
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# ---- 신청서·문서 작업물 (배포/커밋 제외) ----
+*.hwpx
+*.hwp
+_hwpx_extract/
+6_Deliverables/_drafts/
+
+# ---- 4_References: 저작권 원문서·예시키 포함 자료 제외 (소스코드·CSV 입력은 유지) ----
+# EcoBank 기술문서(docx)·국가생물적색자료집(pdf)·예시 API키가 든 명세서 추출본(txt)
+4_References/*.pdf
+4_References/*.docx
+4_References/*.txt
+4_References/*.xlsx
+
+# ---- AI 개발도구 설정 / 내부 작업문서 (공개 제외) ----
+# Claude Code 등 AI 도구 설정(launch.json 등) — 로컬 전용
+.claude/
+# 내부 기획문서(구상안·계획서): AI 개발 과정 메타 포함 → 공개 레포에서 제외, 로컬만 보관
+2_Planning/
+
+# ---- 기타 ----
+.DS_Store
+Thumbs.db
+*.log
+_hwpx_extract/

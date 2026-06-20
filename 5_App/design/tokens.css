@@ -1,0 +1,57 @@
+/* Finding gap 디자인 토큰 — CSS 변수 (프레임워크 무관, shadcn/ui 호환)
+   단일 소스는 tokens.json. 이 파일은 런타임 사용용. */
+:root {
+  /* 적색목록 평가범주 (IUCN) */
+  --rl-ex: #000000;
+  --rl-ew: #3D2645;
+  --rl-re: #6B4E71;
+  --rl-cr: #D81E05;
+  --rl-en: #FC7F3F;
+  --rl-vu: #F2DC00;
+  --rl-nt: #C3D838;
+  --rl-lc: #5CB85C;
+  --rl-dd: #CFCFC4;
+  --rl-na: #EAEAE2;
+  --rl-ne: #F7F7F4;
+
+  /* 적색목록 — 배지 위 글자색(가독성) */
+  --rl-ex-fg: #FFFFFF;
+  --rl-ew-fg: #FFFFFF;
+  --rl-re-fg: #FFFFFF;
+  --rl-cr-fg: #FFFFFF;
+  --rl-en-fg: #4A1B0C;
+  --rl-vu-fg: #5C5300;
+  --rl-nt-fg: #3B4D00;
+  --rl-lc-fg: #103D17;
+  --rl-dd-fg: #3F3F38;
+  --rl-na-fg: #44443E;
+  --rl-ne-fg: #44443E;
+
+  /* 멸종위기 등급 */
+  --eg-1: #7F1D1D;
+  --eg-2: #C2410C;
+
+  /* 관리분류군 1~11 */
+  --tx-mammal: #8B5E3C;
+  --tx-bird: #2F6FB0;
+  --tx-reptile: #4F8F3F;
+  --tx-amphibian: #3FA796;
+  --tx-fish: #2C7BA6;
+  --tx-tunicate: #9C6FB0;
+  --tx-cephalochordate: #B07FA0;
+  --tx-invertebrate: #C2667A;
+  --tx-insect: #D98C36;
+  --tx-vascular: #5C9A3A;
+  --tx-bryophyte: #7FA05C;
+
+  /* 라운드 / 간격 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+}

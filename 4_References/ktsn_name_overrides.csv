@@ -1,0 +1,4 @@
+match_name,match_type,accepted_ktsn,accepted_name,reason,note
+박새,kor,120000155331,박새 (Parus cinereus),name_reassignment,"옛 학명 Parus major로 기록되나 현재 정명은 Parus cinereus. 학명 Parus major(큰박새)는 한국 미분포 → 조사기록의 박새는 모두 이 종."
+Parus major,sci,120000155331,박새 (Parus cinereus),name_reassignment,"큰박새(Parus major s.s.)는 한국 미분포. 국내 조사기록의 Parus major는 박새(Parus cinereus). 사용자 확인(2026-06-20)."
+꼬리치레도롱뇽,kor,120000164706,한국꼬리치레도롱뇽 (Onychodactylus koreanus),species_split,"옛 통합명 꼬리치레도롱뇽이 한국(O. koreanus)·양산(O. silanus, 양산 일대 미소분포 신종)으로 분할. 전국 국립공원 기록은 사실상 모두 한국꼬리치레도롱뇽 → 기본 보정. 양산 지역 기록은 별도 검토 필요."
