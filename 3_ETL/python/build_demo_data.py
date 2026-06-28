@@ -11,7 +11,7 @@
 클라이언트가 (연도·시도) 필터로 발견/미발견 complement·통계·CSV를 계산.
 사용: python build_demo_data.py [YYYY-MM-DD]
 """
-import sys, csv, json
+import sys, re, csv, json
 from collections import Counter
 from pathlib import Path
 
@@ -169,10 +169,20 @@ def build_species_index(excl=frozenset()):
     print(f"→ species_index.json ({len(rows)}종 | 멸종위기 {eg}종 → Naturing, 그 외 → EcoBank)")
 
 
-def build_obs_by_taxon(excl=frozenset(), obs_rows=None):
-    """분류군별 관측 집계(서비스 모드 A/B 다분류군). EcoBank+국립공원 union, 서비스 제외 종 필터.
-    출력 obs_by_taxon.js: window.__OBS__={taxon:{obs:[[k,sido,year,c]],years,sidos,sources,n_records,n_obs_species}},
-    window.__OBSMETA__={generated,citation,update_cycle}."""
+def _txfile(t):
+    """분류군 코드 → 파일명 안전 토큰('-P' → '_P'). service.html 와 규칙 일치."""
+    return re.sub(r"[^A-Za-z0-9]", "_", t)
+
+
+def build_obs_split(excl=frozenset(), obs_rows=None):
+    """분류군별 관측을 파일 단위로 분할 + 인코딩(서비스 모드 A/B 지연 로드).
+    서비스는 40MB 통짜 대신 (1) 메타로 UI 구성 후 (2) 선택 분류군 파일만 주입·디코드한다.
+
+    - obs_meta.js : window.__OBS__={t:{years,sidos,sources,n_records,n_obs_species}}(obs 배열 제외)
+                  + window.__OBSMETA__={generated,citation,update_cycle}
+    - obs_<T>.js  : window.__OBS__[t] 에 {k:[ktsn..], s:[sido..], o:[[kIdx,sIdx,year_int,count]..]} 병합
+                    (ktsn·sido 는 파일별 사전 인덱스, year 는 정수[0=미상] → 다운로드 용량 축소)
+    클라이언트 decodeTaxon() 이 o → [[ktsn, sido, year_str, count]] 로 복원(소비 로직 무변경)."""
     from collections import defaultdict
     rows = obs_rows if obs_rows is not None else union_obs()
     tax = defaultdict(lambda: {"obs": [], "years": set(), "sidos": set(), "sources": set(), "n_records": 0})
@@ -180,35 +190,52 @@ def build_obs_by_taxon(excl=frozenset(), obs_rows=None):
         if not t or k in excl:
             continue
         d = tax[t]
-        d["obs"].append([k, sido, year, c])
+        d["obs"].append((k, sido, year, c))
         if year:
             d["years"].add(year)
         d["sidos"].add(sido)
         if src:
             d["sources"].add(src)
         d["n_records"] += c
-    out = {}
-    for t, d in tax.items():
-        out[t] = {
-            "obs": d["obs"],
-            "years": sorted(d["years"]),
-            "sidos": sorted(d["sidos"]),
-            "sources": sorted(d["sources"]),
-            "n_records": d["n_records"],
-            "n_obs_species": len({o[0] for o in d["obs"]}),
+
+    # 재빌드 전 구형 모놀리식 산출물 정리(서비스가 더 이상 참조하지 않음)
+    for old in ("obs_by_taxon.js", "obs_by_taxon.json"):
+        p = OUTDIR / old
+        if p.exists():
+            p.unlink()
+
+    meta_tax = {}
+    for t, d in sorted(tax.items()):
+        kdict, kidx, sdict, sidx, enc = [], {}, [], {}, []
+        for k, sido, year, c in d["obs"]:
+            if k not in kidx:
+                kidx[k] = len(kdict); kdict.append(k)
+            if sido not in sidx:
+                sidx[sido] = len(sdict); sdict.append(sido)
+            enc.append([kidx[k], sidx[sido], (int(year) if year else 0), c])
+        meta_tax[t] = {
+            "years": sorted(d["years"]), "sidos": sorted(d["sidos"]),
+            "sources": sorted(d["sources"]), "n_records": d["n_records"],
+            "n_obs_species": len(kdict),
         }
-    meta = {"generated": GENERATED, "citation": CITATION, "update_cycle": "6mo"}
-    payload = json.dumps(out, ensure_ascii=False, separators=(",", ":"))
-    (OUTDIR / "obs_by_taxon.json").write_text(payload, encoding="utf-8")
-    (OUTDIR / "obs_by_taxon.js").write_text(
-        "window.__OBS__=" + payload + ";window.__OBSMETA__="
-        + json.dumps(meta, ensure_ascii=False, separators=(",", ":")) + ";", encoding="utf-8")
-    print("→ obs_by_taxon.json")
-    for t in sorted(out, key=lambda t: -out[t]["n_obs_species"]):
-        d = out[t]
+        payload = json.dumps({"k": kdict, "s": sdict, "o": enc},
+                             ensure_ascii=False, separators=(",", ":"))
+        (OUTDIR / f"obs_{_txfile(t)}.js").write_text(
+            f'(window.__OBS__=window.__OBS__||{{}})["{t}"]='
+            f'Object.assign(window.__OBS__["{t}"]||{{}},{payload});', encoding="utf-8")
+
+    obsmeta = {"generated": GENERATED, "citation": CITATION, "update_cycle": "6mo"}
+    (OUTDIR / "obs_meta.js").write_text(
+        "window.__OBS__=" + json.dumps(meta_tax, ensure_ascii=False, separators=(",", ":"))
+        + ";window.__OBSMETA__=" + json.dumps(obsmeta, ensure_ascii=False, separators=(",", ":"))
+        + ";", encoding="utf-8")
+    print("→ obs_meta.js + obs_<T>.js (분류군별 분할·인코딩)")
+    for t in sorted(meta_tax, key=lambda t: -meta_tax[t]["n_obs_species"]):
+        d = meta_tax[t]
+        sz = (OUTDIR / f"obs_{_txfile(t)}.js").stat().st_size
         yr = f"{d['years'][0]}~{d['years'][-1]}" if d["years"] else "-"
-        print(f"   [{t}] 관측종 {d['n_obs_species']} · 행 {len(d['obs'])} · 연도 {yr} · "
-              f"기록 {d['n_records']} · source {d['sources']}")
+        print(f"   [{t}] 관측종 {d['n_obs_species']} · 연도 {yr} · "
+              f"기록 {d['n_records']} · {sz/1_048_576:.2f}MB · source {d['sources']}")
 
 
 def build_species_state(excl=frozenset(), obs_rows=None):
@@ -239,7 +266,7 @@ def main():
     build_taxa_summary(excl, rows)
     build_species_index(excl)
     build_species_state(excl, rows)
-    build_obs_by_taxon(excl, rows)
+    build_obs_split(excl, rows)
 
 
 if __name__ == "__main__":

@@ -20,8 +20,10 @@ DATA = APP / "demo" / "data"
 
 # dist 에 포함할 정적 자산(서비스/대문이 실제 참조하는 것만)
 PAGES = ["index.html", "service.html"]
-DATA_FILES = ["taxa_summary.js", "demo_mm.js", "obs_by_taxon.js",
+DATA_FILES = ["taxa_summary.js", "demo_mm.js",
               "species_index.js", "species_state.js", "sido.geojson"]
+# 분류군별 관측은 분할 산출 — obs_meta.js + obs_<T>.js 전부 복사(서비스가 지연 로드)
+DATA_GLOBS = ["obs_*.js"]
 
 HEADERS = """\
 /*
@@ -67,6 +69,12 @@ def main():
             shutil.copy2(src, DIST / "demo" / "data" / f)
         else:
             print(f"(경고) 누락: {src.relative_to(BASE)}")
+    for pat in DATA_GLOBS:
+        hit = sorted(DATA.glob(pat))
+        for src in hit:
+            shutil.copy2(src, DIST / "demo" / "data" / src.name)
+        if not hit:
+            print(f"(경고) 글롭 누락: {pat}")
 
     osm_only = "--osm-only" in sys.argv[1:]
     key = "" if osm_only else vworld_key()

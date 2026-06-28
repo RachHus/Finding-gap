@@ -168,7 +168,7 @@
 <script src="config.js" onerror="window.VWORLD_KEY=window.VWORLD_KEY||''"></script>
 <script src="https://cdn.jsdelivr.net/npm/ol@9.2.4/dist/ol.js"></script>
 <script src="demo/data/taxa_summary.js"></script>
-<script src="demo/data/obs_by_taxon.js"></script>
+<script src="demo/data/obs_meta.js"></script>
 <script src="demo/data/species_index.js"></script>
 <script>
 /* ── 토큰·상수 ── */
@@ -184,8 +184,31 @@ const NATURING='https://www.naturing.net/m/3458/summary';
 const ECOBANK='https://www.nie-ecobank.kr/dataCnrs/B/list.do';
 const isEndangered=g=>g==='I'||g==='II';
 
-const OBS=window.__OBS__||{};                          // 분류군별 관측(EcoBank+국립공원)
+const OBS=window.__OBS__||{};                          // 분류군 메타({years,sidos,…}); obs 배열은 선택 시 지연 로드
 const OMETA=window.__OBSMETA__||{};
+/* ── 분류군 관측 지연 로드(분류군별 파일 분할·인코딩) ──
+   obs_meta.js 가 OBS[t]={years,…} 메타만 싣고, obs_<T>.js 를 필요 시 주입해
+   {k:[ktsn],s:[sido],o:[[kIdx,sIdx,year_int,count]]} 를 병합 → decodeTaxon 으로 기존 형태 복원. */
+const _txfile=t=>t.replace(/[^A-Za-z0-9]/g,'_');
+const _loadCbs={};
+function decodeTaxon(t){
+  const d=OBS[t]; if(!d||!d.o) return;
+  const K=d.k, S=d.s;
+  d.obs=d.o.map(r=>[K[r[0]], S[r[1]], r[2]?String(r[2]):'', r[3]]);  // [ktsn, sido, year, count]
+  d.o=null; d.k=null;                                  // 압축형 해제(메모리 회수)
+}
+function taxonReady(t){ return !t || !OBS[t] || !!OBS[t].obs; }   // 메타에 없는 분류군=관측자료 없음(준비됨 처리)
+function loadTaxon(t, cb){
+  if(taxonReady(t)){ cb&&cb(); return; }
+  if(_loadCbs[t]){ _loadCbs[t].push(cb); return; }
+  _loadCbs[t]=[cb];
+  const done=()=>{ const cbs=_loadCbs[t]; _loadCbs[t]=null; cbs.forEach(f=>f&&f()); };
+  const s=document.createElement('script');
+  s.src=`demo/data/obs_${_txfile(t)}.js`;
+  s.onload=()=>{ decodeTaxon(t); done(); };
+  s.onerror=()=>{ if(OBS[t])OBS[t].obs=OBS[t].obs||[]; console.warn('관측자료 로드 실패',t); done(); };
+  document.head.appendChild(s);
+}
 const TAXA=(window.__TAXA__||[]).filter(t=>t.has_data); // 데이터 보유 분류군만 노출
 const SPIDX=window.__SPIDX__||[];                       // 서비스 종 인덱스(제외종 반영)
 const KEY=window.VWORLD_KEY||'';
@@ -279,7 +302,7 @@ function initMap(){
     sidoLayer.getSource().addFeatures(feats);
     SIDO_NAMES=feats.map(f=>f.get('sido'));
     mapMsg.style.display='none';
-    recompute(); sidoLayer.changed(); renderTable();
+    loadTaxon(curTaxon, ()=>{ recompute(); sidoLayer.changed(); renderTable(); });
   }).catch(()=>{ mapMsg.textContent='시도 경계를 불러오지 못했습니다.'; });
   map.on('singleclick',e=>{
     if(mapMode!=='A') return;                            // 종별 모드 지도는 표시 전용
@@ -436,7 +459,11 @@ function refreshSpeciesMap(){
   if(mapMsgB) mapMsgB.style.display=selSpecies?'none':'';
   if(mapMode==='B'&&sidoLayer) sidoLayer.changed();
 }
-function showSpecies(sp){
+function showSpecies(sp){                                // 선택 종의 분류군 obs 를 보장 로드 후 렌더
+  if(!taxonReady(sp.t)) sCard.innerHTML='<div class="scard"><span class="muted">관측자료 불러오는 중…</span></div>';
+  loadTaxon(sp.t, ()=>renderSpecies(sp));
+}
+function renderSpecies(sp){
   selSpecies=sp;
   selRegions=speciesRegions(sp,sy0,sy1);
   const eg=isEndangered(sp.g);
@@ -498,7 +525,9 @@ function boot(){
   if(p.get('y1')&&years().includes(+p.get('y1'))) y1=+p.get('y1');
   fY0.value=y0; fY1.value=y1;
   const qs=p.get('sido'); if(qs) selSidos.add(qs);
-  fTaxon.onchange=()=>{ curTaxon=fTaxon.value; y0=null;y1=null; fillYearSels(); selSidos.clear(); recompute(); if(sidoLayer)sidoLayer.changed(); renderSelChips(); renderTable(); };
+  fTaxon.onchange=()=>{ curTaxon=fTaxon.value; y0=null;y1=null; fillYearSels(); selSidos.clear(); renderSelChips();
+    tblCnt.textContent='관측자료 불러오는 중…';
+    loadTaxon(curTaxon, ()=>{ recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); }); };
   fY0.onchange=()=>{ y0=+fY0.value; if(y1<y0){y1=y0;fY1.value=y1;} recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); };
   fY1.onchange=()=>{ y1=+fY1.value; if(y1<y0){y0=y1;fY0.value=y0;} recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); };
   dlCsv.onclick=downloadCSV;
@@ -511,8 +540,11 @@ function boot(){
   sY0.onchange=()=>{ sy0=+sY0.value; if(sy1<sy0){sy1=sy0;sY1.value=sy1;} if(selSpecies)showSpecies(selSpecies); };
   sY1.onchange=()=>{ sy1=+sY1.value; if(sy1<sy0){sy0=sy1;sY0.value=sy0;} if(selSpecies)showSpecies(selSpecies); };
   q.addEventListener('input',doSearch);
-  // 초기 렌더
-  renderSelChips(); renderTable(); initMap();
+  // 초기 렌더(관측자료는 선택 분류군만 지연 로드)
+  renderSelChips();
+  tblCnt.textContent='관측자료 불러오는 중…';
+  loadTaxon(curTaxon, ()=>{ recompute(); renderTable(); if(sidoLayer)sidoLayer.changed(); });
+  initMap();
   foot.innerHTML=`배경지도 © VWorld / © OpenStreetMap 기여자 · 종 상세 © 국립생물자원관 한반도의 생물다양성 · 출처 ${OMETA.citation||'KTSN·EcoBank·국립공원'}<br>`+
     `${TAXA.length}개 분류군 · 생성 ${OMETA.generated||'-'} · 종 검색 ${nf(SPIDX.length)}종 · 갱신주기 ${OMETA.update_cycle==='6mo'?'6개월':(OMETA.update_cycle||'6개월')}. 발견공백 = 국가생물종목록 − 관측(동적).`;
   if(p.get('taxon')||p.get('sido')) setMode('A');
