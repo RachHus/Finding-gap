@@ -4,7 +4,7 @@
 
 ## 0. 구성 요약
 - `5_App/index.html` (대문) · `5_App/service.html` (서비스: 분류군별 조회 + 종별 검색)
-- 데이터: `5_App/demo/data/*.js` (`obs_by_taxon.js` 분류군별 관측, `species_index.js` 종 검색, `taxa_summary.js`, `sido.geojson`)
+- 데이터: `5_App/demo/data/*.js` (`obs_meta.js`+`obs_<T>.js` 분류군별 관측[서비스가 선택 분류군만 지연 로드], `species_index.js` 종 검색, `species_state.js` 대문 요약, `taxa_summary.js`, `sido.geojson`)
 - 지도: **OSM(OpenStreetMap) 기본 배경** + (vworld 키가 그 도메인에 등록돼 있을 때만) vworld 상세지도 overlay. vworld 타일이 실패하면(도메인 미등록 등) 자동으로 OSM 폴백 → **외부 배포에서 키·도메인 등록 없이 즉시 배경지도 표시**. 클라이언트 키는 `config.js`(`.env`의 `VWORLD_KEY`에서 생성; 공개 파일럿은 `--osm-only`로 키 없이 빌드).
 - 갱신주기: 6개월(원천 ETL 재실행 → `build_demo_data.py` → `build_dist.py` → 재배포)
 
@@ -48,5 +48,5 @@ npx wrangler pages deploy 6_Deliverables/dist --project-name finding-gap
 - [ ] 대용량 분류군(곤충류)에서 표 상한(1,500행) 안내 노출 + CSV 전체 다운로드
 
 ## 5. 알려진 제약 / 후속
-- 정적 자산 합계 ~8MB(`obs_by_taxon.js` 4.2MB + `species_index.js` 3.8MB) — 모바일 초기 로딩 다소 느림. 후속: 시도명 인터닝/분류군 지연 로드/gzip(호스팅 기본 압축으로 ~1/4).
+- 서비스 초기 로드: `obs_meta.js`(~10KB)+선택 분류군 `obs_<T>.js`(기본 MM ~0.15MB)+`species_index.js`(3.8MB). 분류군 관측은 분류군별 분할·인덱스 인코딩으로 지연 로드(직전 40MB 통짜 제거; 전체 합 ~15MB이나 한 번에 한 분류군만 전송). 추가 여지: gzip(호스팅 기본 압축 ~1/4)·`species_index` 분할.
 - MBRIS 해양종 API(B553482) 현재 500 응답 — 해양포유류 제외는 분류학적 식별(Cetacea·기각류·해우류 과)로 대체 적용. API 복구 시 `fetch_mbris.py`→`improve_species_list.py` 재실행으로 교차검증 가능.

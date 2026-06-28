@@ -1,13 +1,13 @@
 # Finding gap — 데이터 파이프라인 구조
 
 > 원자료(raw) → 정제자료(processed) → 서비스 테이블(5_App/demo/data) 3계층.
-> 마지막 갱신: 2026-06-28 (GBIF 9분류군 적재·3원 관측 union 반영).
+> 마지막 갱신: 2026-06-28 (GBIF 9분류군 적재·3원 관측 union·서비스 obs 분류군별 분할·ETL 공통모듈 obs_common 반영).
 > 관측 행 수는 GBIF·EcoBank 전량 적재 후 재빌드 시 갱신(아래 일부는 직전 빌드 기준).
 
 ```
 ┌─ 0. 원자료 raw ──────────────┐   ┌─ 1. 정제자료 processed ──────────┐   ┌─ 2. 서비스 테이블 ────────┐
 │ NIBR KTSN  ndjson (10분류군)  │→ │ ktsn_master.csv        40,156     │→ │ taxa_summary.js   9그룹    │
-│ EcoBank    ndjson (WFS 레이어)│→ │ observation_agg.csv  (재빌드시)   │→ │ obs_by_taxon.js   분류군별 │
+│ EcoBank    ndjson (WFS 레이어)│→ │ observation_agg.csv   471,254    │→ │ obs_meta+obs_<T> 분류군별 │
 │ 국립공원   CSV+ZIP×22         │→ │ observation_nps.csv    91,267     │→ │ species_index.js  39,972   │
 │ GBIF       csv (9분류군)      │→ │ observation_gbif.csv  (etl_gbif)  │→ │ demo_mm.js        MM상세   │
 │ 멸종위기   xlsx               │→ │ endangered_species.csv    282     │   └───────────────────────────┘
@@ -48,8 +48,9 @@
 - **역할**: 모든 분류군의 "전체 종 목록"(발견공백의 분모).
 - **별칭 `ktsn_aliases.csv`** `(alias_name, alias_type[sci|kor], accepted_ktsn, accepted_korean, accepted_scientific, taxon_group, alias_rank)`: 마스터는 정명만 담아 변종/품종의 국명(예 **남산제비꽃**=Viola albida var.)이 사라진다. 같은 정명으로 폴딩된 비대표 멤버의 국명·학명을 정명 ktsn에 연결해 **조사기록이 옛 변종명을 써도 매칭**되게 한다(주로 VP·MS). KTSN API가 이명(synonym)을 제공하지 않으므로, 이 폴딩 복원이 사실상의 "정명 ktsn을 가지는 이명 목록"이다. etl_*가 sci/kor 사전에 gap-fill(정명 우선)로 흡수.
 
-### 1-B. 관측 집계 — `observation_agg.csv`(EcoBank, 5,049행) · `observation_nps.csv`(국립공원, 91,267행)
+### 1-B. 관측 집계 — `observation_agg.csv`(EcoBank, 471,254행) · `observation_nps.csv`(국립공원, 92,274행)
 - **생성**: `etl_observation.py`(EcoBank ndjson) · `etl_national_park.py`(국립공원 CSV/ZIP). 둘 다 master로 매칭 + 좌표→시도 join.
+- **공통 모듈 `obs_common.py`**: 세 어댑터(+`etl_gbif`)가 `load_master`·`resolve_ktsn`·`sido_lookup`(BND_SIDO_PG point-in-polygon)·`_kor`를 공유 → 매칭·시도조인 규칙 단일 출처.
 - **공통 스키마**: `ktsn, taxon_group, sido, year, source, obs_count`
   - `obs_count = COUNT(DISTINCT 좌표)` per (ktsn, taxon_group, sido, year, source)
   - `source`: EcoBank=조사사업코드(bgts/ecpe/ntee/wtl), 국립공원=`nps`
@@ -105,11 +106,13 @@
 | 파일 | 내용 | 핵심 구조 |
 |---|---|---|
 | `taxa_summary.js` | 대문 타일(분류군별 종수·관측종수·데이터유무) | `window.__TAXA__=[{group,kor,n_species,n_obs_species,has_data,n_records}]` — UC 제외로 **9그룹** |
-| `obs_by_taxon.js` | 분류군별 조회(모드 A) | `window.__OBS__={TX:{obs:[[ktsn,sido,year,c]],years,sidos,sources,n_records,n_obs_species}}` + `window.__OBSMETA__` |
+| `obs_meta.js` + `obs_<T>.js` | 분류군별 조회(모드 A/B) — 지연 로드 | `obs_meta.js`=`window.__OBS__={TX:{years,sidos,sources,n_records,n_obs_species}}`(obs 배열 제외)+`__OBSMETA__`. `obs_<T>.js`=선택 분류군만 주입, `{k:[ktsn],s:[sido],o:[[kIdx,sIdx,year_int,c]]}` 인코딩→클라이언트 `decodeTaxon`이 `[[ktsn,sido,year,c]]` 복원. 40MB 통짜 제거(기본 분류군 ~0.15MB) |
 | `species_index.js` | 종별 검색(모드 B) | `window.__SPIDX__=[{k,n,s,t,g,r}]` — 서비스 대상 **39,972종**(멸종위기 I/II→Naturing, 그 외→EcoBank 링크) |
 | `demo_mm.js` | 포유류 상세 대시보드 | `window.__DEMO_MM__={species,obs,meta,…}` (88종·54발견·204,569관측) |
 
-**제외종 일관 적용**: `build_demo_data`의 `load_excluded()`가 species_service_flags의 `in_service=False` ktsn을 읽어 taxa_summary·obs_by_taxon·species_index·demo_mm 모두에서 제거 → 종수·검색·지도·관측이 항상 동일 모집단.
+**제외종 일관 적용**: `build_demo_data`의 `load_excluded()`가 species_service_flags의 `in_service=False` ktsn을 읽어 taxa_summary·obs_<T>·species_index·species_state·demo_mm 모두에서 제거 → 종수·검색·지도·관측이 항상 동일 모집단.
+
+> 대문(`index.html`)은 종별 최신연도 요약 `species_state.js`(경량)로 대시보드를 구성하고 obs는 로드하지 않는다. 서비스(`service.html`)만 `obs_meta`+선택 분류군 `obs_<T>`를 지연 로드. obs 계열은 `.js`만 산출(`.json` 쌍둥이 없음 — 어느 페이지도 fetch하지 않음).
 
 ---
 
