@@ -42,10 +42,17 @@
   .dhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 14px}
   .dhead .chip{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff}
   .dhead h2{margin:0;font-size:18px}
-  .dhead .scope{margin-left:auto;display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}
-  .dhead .scope button{border:0;background:#fff;padding:7px 14px;font-size:12.5px;cursor:pointer;color:#555}
-  .dhead .scope button.on{background:var(--accent);color:#fff;font-weight:600}
-  .dhead .scope button:disabled{cursor:not-allowed;color:#b6b6b0}
+  /* ── 홈 3축 내비 ── */
+  .axes{display:flex;gap:2px;margin:20px 0 2px;border-bottom:1px solid var(--line)}
+  .axes .ax{appearance:none;border:0;background:none;cursor:pointer;padding:9px 15px 11px;
+    font-size:14.5px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;
+    margin-bottom:-1px;transition:color .12s,border-color .12s}
+  .axes .ax:hover{color:var(--ink)}
+  .axes .ax.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .vintro{margin:18px 0 6px}
+  .vintro h2{margin:0 0 6px;font-size:19px}
+  .vintro p{margin:0;color:var(--muted);font-size:13.5px;max-width:64ch;line-height:1.6}
+  .vintro p b{color:var(--ink);font-weight:600}
   /* cards */
   .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
   @media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}}
@@ -114,9 +121,40 @@
     <p class="sub">국가생물종목록(KTSN)을 기준으로, 국내 조사자료에서 <b>아직 발견되지 않은 종</b>을 분류군·지역·시기로 조회합니다.</p>
   </header>
 
-  <section class="tiles" id="tiles" aria-label="관리분류군 선택"></section>
+  <nav class="axes" id="axes" aria-label="홈 메뉴">
+    <button class="ax on" data-ax="survey">조사정보</button>
+    <button class="ax" data-ax="citizen">시민과학</button>
+    <button class="ax" data-ax="my">마이데이터</button>
+  </nav>
 
-  <section class="dash" id="dash"></section>
+  <section id="view-survey">
+    <section class="tiles" id="tiles" aria-label="관리분류군 선택"></section>
+    <section class="dash" id="dash"></section>
+  </section>
+
+  <section id="view-citizen" hidden>
+    <div class="vintro">
+      <h2>시민과학</h2>
+      <p>시민과학자가 제보한 관측을 분류군별로 모아, 공식 조사에서 <b>아직 발견되지 않은 종</b>의 재발견 단서를 함께 봅니다. 공식 발견공백(조사정보)과는 분리된 자료로 표시됩니다.</p>
+    </div>
+    <div class="soonbox">
+      <div class="v">곧 제공</div>
+      <div class="l">시민 제보 종합</div>
+      <div class="msg">제보는 <b>종 · 행정구역 · 연도</b>(선택 시 지도 위 좌표)로 기록하며 사진은 받지 않습니다. 미발견 종의 제보는 <b>재발견 후보</b>로 모아 검토를 거쳐 반영합니다.</div>
+    </div>
+  </section>
+
+  <section id="view-my" hidden>
+    <div class="vintro">
+      <h2>마이데이터</h2>
+      <p>로그인하면 <b>관심 종</b>을 저장하고, 내가 제보한 관측 이력을 한곳에서 모아 봅니다.</p>
+    </div>
+    <div class="soonbox">
+      <div class="v">곧 제공</div>
+      <div class="l">로그인 · 관심 종 · 내 제보</div>
+      <div class="msg">Google 로그인으로 시작하며, 개인 자료는 마이페이지에서만 보입니다. 공개 화면에는 종합된 통계만 표시됩니다.</div>
+    </div>
+  </section>
 
   <footer id="foot"></footer>
 </div>
@@ -253,10 +291,6 @@ function renderDash(group){
   <div class="dhead">
     <span class="chip">${iconSVG(group,22)}</span>
     <h2>${D.taxon_kor} <span style="font-size:13px;color:var(--muted);font-weight:500">(${group})</span></h2>
-    <div class="scope">
-      <button class="on">서비스 전체</button>
-      <button disabled title="준비중 · 로그인 후 내 관측자료 종합">내 데이터</button>
-    </div>
   </div>
 
   <div class="cards">
@@ -349,11 +383,20 @@ function renderFoot(){
     `gap = 국가생물종목록(마스터) − 관측(동적 complement). 데이터는 정기 수집으로 갱신됩니다.`;
 }
 
+/* ── 홈 3축 전환 ── */
+function switchAxis(ax){
+  document.querySelectorAll('.axes .ax').forEach(b=>b.classList.toggle('on',b.dataset.ax===ax));
+  document.getElementById('view-survey').hidden=ax!=='survey';
+  document.getElementById('view-citizen').hidden=ax!=='citizen';
+  document.getElementById('view-my').hidden=ax!=='my';
+}
+
 /* ── 부트 ── */
 function boot(){
   TAXA=window.__TAXA__||[];
   if(!TAXA.length){document.getElementById('dash').innerHTML='<div class="soonbox"><div class="l">데이터를 불러오지 못했습니다. <code>demo/data/taxa_summary.js</code> 생성 또는 로컬 서버로 여세요.</div></div>';return;}
   renderTiles(); renderFoot();
+  document.querySelectorAll('.axes .ax').forEach(b=>b.onclick=()=>switchAxis(b.dataset.ax));
   const first=(TAXA.find(t=>t.has_data)||TAXA[0]).group;
   select(first);
   document.getElementById('dash').scrollIntoView=()=>{}; // 초기엔 스크롤 억제
