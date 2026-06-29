@@ -85,10 +85,12 @@
   .scard .sci{font-style:italic;color:var(--muted);font-size:13.5px}
   .scard .row{margin-top:14px}
   .scard .row .k{font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:5px}
-  .reg-toggle{position:absolute;top:8px;right:8px;display:flex;background:#fff;border:1px solid #cdd5d1;border-radius:7px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.14)}
+  .map-ctrls{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2}
+  .reg-toggle{display:flex;background:#fff;border:1px solid #cdd5d1;border-radius:7px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.14)}
   .reg-toggle button{border:0;background:#fff;padding:5px 11px;font:600 12px system-ui,sans-serif;color:#5a665f;cursor:pointer}
   .reg-toggle button.on{background:var(--accent);color:#fff}
   .reg-toggle button+button{border-left:1px solid #e3e8e5}
+  .reg-toggle button.poly{min-width:44px;text-align:center;letter-spacing:.3px}
   .regtbl-wrap{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px}
   .regtbl{width:100%;border-collapse:collapse;font-size:13px}
   .regtbl thead th{position:sticky;top:0;background:#f4f6f4;text-align:left;padding:6px 10px;font-weight:600;color:#3b463f;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -98,6 +100,36 @@
   .regtbl-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px;flex-wrap:wrap}
   .rdl{border:1px solid var(--accent);background:#fff;color:var(--accent);font:600 12px system-ui,sans-serif;padding:5px 11px;border-radius:7px;cursor:pointer}
   .rdl:hover{background:var(--accent);color:#fff}
+  /* 종 카드 — 기후·지형 지위 막대 */
+  .khead{display:flex;align-items:center;gap:6px}
+  .infobtn{border:1px solid var(--line);background:#fff;color:var(--muted);width:17px;height:17px;line-height:15px;
+    text-align:center;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;padding:0}
+  .infobtn:hover{border-color:var(--accent);color:var(--accent)}
+  .infopop{display:none;margin:6px 0 2px;padding:9px 11px;background:#f6f8f7;border:1px solid var(--line);
+    border-radius:9px;font-size:11.5px;color:#414a45;line-height:1.55}
+  .infopop.on{display:block}
+  .infopop b{color:var(--ink)} .infopop .rc{color:#d6312b;font-weight:700}
+  .envbars{display:flex;flex-direction:column;gap:9px;margin-top:2px}
+  .envrow{display:grid;grid-template-columns:96px 1fr 124px;align-items:center;gap:9px;font-size:12px}
+  .envrow .lbl{color:#414a45}
+  .envtrack{position:relative;height:11px;background:#eceeec;border-radius:6px}
+  .envtrack .seg{position:absolute;top:0;height:11px;border-radius:6px;background:var(--accent);opacity:.55}
+  .envtrack .smed{position:absolute;top:-2px;width:2px;height:15px;background:#1b3a31;border-radius:1px}
+  .envtrack .nmed{position:absolute;top:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:999px;
+    background:#d6312b;box-shadow:0 0 0 1.5px #fff}
+  .envrow .val{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .envrow .val b{color:var(--ink);font-weight:600}
+  .envnote{font-size:11px;color:var(--faint);margin-top:8px}
+  /* 지도 — 환경변수 레이어 컨트롤 */
+  .env-ctrl{position:absolute;top:8px;left:8px;z-index:2;background:#fff;border:1px solid #cdd5d1;border-radius:8px;
+    box-shadow:0 1px 4px rgba(0,0,0,.14);padding:7px 9px;width:188px;font:12px system-ui,sans-serif}
+  .env-ctrl select{width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+  .env-legend{margin-top:7px;display:none}
+  .env-legend.on{display:block}
+  .env-grad{height:9px;border-radius:5px;border:1px solid rgba(0,0,0,.08)}
+  .env-scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+  .env-op{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:10.5px;color:var(--muted)}
+  .env-op input{flex:1}
   .regchips{display:flex;flex-wrap:wrap;gap:6px}
   .regchips .rc{background:#eef3f1;border:1px solid #d7e3df;border-radius:8px;padding:4px 9px;font-size:12px}
   .regchips .rc b{font-variant-numeric:tabular-nums;color:var(--accent)}
@@ -189,6 +221,7 @@
 <script src="demo/data/taxa_summary.js"></script>
 <script src="demo/data/obs_meta.js"></script>
 <script src="demo/data/species_index.js"></script>
+<script src="demo/data/env_meta.js"></script>
 <script>
 /* ── 토큰·상수 ── */
 const RL_FILL={EX:'#000',EW:'#3D2645',RE:'#6B4E71',CR:'#D81E05',EN:'#FC7F3F',VU:'#F2DC00',NT:'#C3D838',LC:'#5CB85C',DD:'#CFCFC4',NENA:'#E6E6DE'};
@@ -205,6 +238,17 @@ const isEndangered=g=>g==='I'||g==='II';
 
 const OBS=window.__OBS__||{};                          // 분류군 메타({years,sidos,…}); obs 배열은 선택 시 지연 로드
 const OMETA=window.__OBSMETA__||{};
+const ENVMETA=window.__ENVMETA__||null;               // 환경변수 메타(5변수·전국기준 분포·지도 레이어)
+let ENV=window.__ENV__||null, _envCbs=null;           // 종별 환경 5수치([15]) — 종 카드에서만 쓰므로 지연 로드
+function ensureEnv(cb){
+  if(window.__ENV__){ ENV=window.__ENV__; cb&&cb(); return; }
+  if(_envCbs){ _envCbs.push(cb); return; }
+  _envCbs=[cb];
+  const done=()=>{ ENV=window.__ENV__||{}; const cbs=_envCbs; _envCbs=null; cbs.forEach(f=>f&&f()); };
+  const s=document.createElement('script'); s.src='demo/data/species_env.js';
+  s.onload=done; s.onerror=()=>{ window.__ENV__=window.__ENV__||{}; console.warn('환경자료 로드 실패'); done(); };
+  document.head.appendChild(s);
+}
 /* ── 분류군 관측 지연 로드(분류군별 파일 분할·인코딩) ──
    obs_meta.js 가 OBS[t]={years,…} 메타만 싣고, obs_<T>.js 를 필요 시 주입해
    {k:[ktsn],s:[sido],o:[[kIdx,sIdx,year_int,count]]} 를 병합 → decodeTaxon 으로 기존 형태 복원. */
@@ -265,7 +309,11 @@ const shortSido=s=>SIDO_ABBR[s]||(s||'').replace(/(특별자치도|특별자치�
 
 /* ═══════ 공유 상태 ═══════ */
 let map=null, sidoLayer=null, SIDO_NAMES=[], mapMode='A';   // sidoLayer = 활성 경계 레이어(토글 시 재지정)
+const ENVLAYERS={}; let envActive='', envOpacity=0.7, envCtrlEl=null;   // 지도 환경변수 래스터(폴리곤 아래)
+function fmtVal(x,v){ return v && v.dec ? (+x).toFixed(v.dec) : Math.round(+x).toLocaleString('en-US'); }
 let regLevel='sido', regToggleEl=null;                     // 행정구역 표시 레벨(시도 ⇄ 시군구)
+let polyVisible=true, polyToggleEl=null;                   // 지역 경계 폴리곤 표시/숨김(검색 필터와 무관·시각화만)
+let regSortKey='c', regSortDir=-1;                         // 발견지역 표 정렬(기본 발견수 내림차순)
 const LAYERS={sido:null,sigungu:null};                     // 두 경계 레이어(활성만 표시)
 const ACODES={sido:[],sigungu:[]};                         // 레벨별 코드 목록(choropleth 순회)
 const RNAME={sido:{},sigungu:{}};                          // 코드 → 이름
@@ -298,13 +346,13 @@ function styleFn(feature){
     const t=selRegMax>0?Math.min(1,c/selRegMax):0;
     return new ol.style.Style({
       fill:new ol.style.Fill({color:has?`rgba(47,111,94,${(0.35+0.5*t).toFixed(2)})`:'rgba(206,211,206,0.30)'}),
-      stroke:new ol.style.Stroke({color:has?'#16241f':'#cfd3cf', width:has?1.8:0.7}),
+      stroke:new ol.style.Stroke({color:has?'#2f6f5e':'#9aa39c', width:has?1.2:0.6}),   // 기본 경계=회색 얇게·발견만 accent
       text:txt});
   }
   const v=METRIC.get(code)||0, sel=selSidos.has(code);  // 모드 A choropleth
   return new ol.style.Style({
     fill:new ol.style.Fill({color:colorFor(v)}),
-    stroke:new ol.style.Stroke({color:sel?'#16241f':'#ffffff', width:sel?(regLevel==='sido'?3.2:2):(regLevel==='sido'?1:0.5)}),
+    stroke:new ol.style.Stroke({color:sel?'#2f6f5e':'#9aa39c', width:sel?1.4:0.6}),   // 시도·시군구 동일 회색 얇게·선택만 accent
     text:txt});
 }
 function initMap(){
@@ -324,13 +372,14 @@ function initMap(){
       console.warn(`vworld 타일 로드 실패(도메인 ${location.host} 미등록 가능) — OpenStreetMap 배경으로 전환.`); }});
     layers.push(vlayer);
   }
+  initEnvLayers(layers);                                 // 환경변수 래스터(폴리곤 아래·배경 위)
   LAYERS.sido=new ol.layer.Vector({source:new ol.source.Vector(),style:styleFn});
   LAYERS.sigungu=new ol.layer.Vector({source:new ol.source.Vector(),style:styleFn,visible:false});
   sidoLayer=LAYERS.sido;
   layers.push(LAYERS.sido, LAYERS.sigungu);
   map=new ol.Map({target:'map',layers,controls:ol.control.defaults.defaults({attribution:true}),
     view:new ol.View({center:ol.proj.fromLonLat([127.8,36.1]),zoom:6.6,minZoom:5,maxZoom:12})});
-  addRegToggle();
+  addRegToggle(); addEnvCtrl();
   Promise.all([
     fetch('demo/data/sido.geojson').then(r=>r.json()),
     fetch('demo/data/sigungu.geojson').then(r=>r.json())
@@ -355,22 +404,76 @@ function initMap(){
     sidoLayer.changed(); renderSelChips(); renderTable();
   });
 }
-function addRegToggle(){                                  // 지도 안 시도/시군구 레벨 토글
-  const el=document.createElement('div'); el.className='ol-unselectable reg-toggle';
-  el.innerHTML='<button data-l="sido" class="on">시도</button><button data-l="sigungu">시군구</button>';
-  el.addEventListener('click',ev=>{ const b=ev.target.closest('button'); if(b) setRegLevel(b.dataset.l); });
-  map.addControl(new ol.control.Control({element:el}));
-  regToggleEl=el;
+function addRegToggle(){                                  // 지도 안 컨트롤: 시도/시군구 레벨 토글 + 지역 경계 표시 토글
+  const wrap=document.createElement('div'); wrap.className='ol-unselectable map-ctrls';
+  const lvl=document.createElement('div'); lvl.className='reg-toggle';
+  lvl.innerHTML='<button data-l="sido" class="on">시도</button><button data-l="sigungu">시군구</button>';
+  lvl.addEventListener('click',ev=>{ const b=ev.target.closest('button'); if(b) setRegLevel(b.dataset.l); });
+  const pv=document.createElement('div'); pv.className='reg-toggle';
+  pv.innerHTML='<button class="poly on" title="지역 경계 표시/숨김(검색 필터는 유지)">ON</button>';
+  pv.addEventListener('click',()=>setPolyVisible(!polyVisible));
+  wrap.appendChild(lvl); wrap.appendChild(pv);
+  map.addControl(new ol.control.Control({element:wrap}));
+  regToggleEl=lvl; polyToggleEl=pv;
+}
+function applyLayerVis(){                                 // 활성 레벨만, 그리고 polyVisible 일 때만 폴리곤 표시
+  if(LAYERS.sido) LAYERS.sido.setVisible(polyVisible && regLevel==='sido');
+  if(LAYERS.sigungu) LAYERS.sigungu.setVisible(polyVisible && regLevel==='sigungu');
+}
+function setPolyVisible(v){                               // 시각화만 끄고 켜기 — 선택/필터 상태(selSidos·selRegions)는 보존
+  polyVisible=v; applyLayerVis();
+  if(polyToggleEl){ const b=polyToggleEl.querySelector('button'); b.classList.toggle('on',v); b.textContent=v?'ON':'OFF'; }
 }
 function setRegLevel(l){
   if(l===regLevel||!LAYERS[l]) return;
   regLevel=l; SIDO_NAMES=ACODES[l];
-  LAYERS.sido.setVisible(l==='sido'); LAYERS.sigungu.setVisible(l==='sigungu');
+  applyLayerVis();
   sidoLayer=LAYERS[l]; selSidos.clear();
   if(regToggleEl) regToggleEl.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));
   if(mapMode==='A'){ recompute(); renderSelChips(); renderTable(); }
   else if(selSpecies){ selRegions=speciesRegions(selSpecies,sy0,sy1); refreshSpeciesMap(); }
   sidoLayer.changed();
+}
+function initEnvLayers(layers){                           // ImageStatic 오버레이(EPSG:3857) — 변수당 1장, 기본 숨김
+  if(!ENVMETA||!ENVMETA.layers) return;
+  for(const v of ENVMETA.vars){
+    const L=ENVMETA.layers[v.key]; if(!L) continue;
+    const img=new ol.layer.Image({visible:false, opacity:envOpacity,
+      source:new ol.source.ImageStatic({url:'demo/data/'+L.png, imageExtent:L.extent, projection:'EPSG:3857'})});
+    ENVLAYERS[v.key]=img; layers.push(img);
+  }
+}
+function addEnvCtrl(){                                     // 지도 좌상단: 변수 선택 + 범례 + 투명도
+  if(!ENVMETA||!ENVMETA.vars||!ENVMETA.vars.length) return;
+  const el=document.createElement('div'); el.className='ol-unselectable env-ctrl';
+  const opts=['<option value="">환경변수 끄기</option>']
+    .concat(ENVMETA.vars.map(v=>`<option value="${v.key}">${v.label}</option>`)).join('');
+  const op=Math.round(envOpacity*100);
+  el.innerHTML=`<select id="envSel">${opts}</select>
+    <div class="env-legend" id="envLegend">
+      <div class="env-grad" id="envGrad"></div>
+      <div class="env-scale"><span id="envLo"></span><span id="envUnit"></span><span id="envHi"></span></div>
+      <div class="env-op">투명도<input type="range" id="envOp" min="20" max="100" value="${op}"><span id="envOpV">${op}%</span></div>
+    </div>`;
+  el.addEventListener('change',e=>{ if(e.target.id==='envSel') setEnvLayer(e.target.value); });
+  el.addEventListener('input',e=>{ if(e.target.id==='envOp'){
+    envOpacity=(+e.target.value)/100; document.getElementById('envOpV').textContent=e.target.value+'%';
+    if(envActive&&ENVLAYERS[envActive]) ENVLAYERS[envActive].setOpacity(envOpacity); } });
+  map.addControl(new ol.control.Control({element:el})); envCtrlEl=el;
+}
+function setEnvLayer(key){
+  for(const k in ENVLAYERS) ENVLAYERS[k].setVisible(false);
+  envActive=key||'';
+  const leg=document.getElementById('envLegend');
+  if(!key||!ENVLAYERS[key]){ if(leg)leg.classList.remove('on'); return; }
+  const L=ENVMETA.layers[key], v=ENVMETA.vars.find(x=>x.key===key);
+  ENVLAYERS[key].setOpacity(envOpacity); ENVLAYERS[key].setVisible(true);
+  if(leg){ leg.classList.add('on');
+    document.getElementById('envGrad').style.background='linear-gradient(90deg,'+L.palette.join(',')+')';
+    document.getElementById('envLo').textContent=fmtVal(L.vmin,v);
+    document.getElementById('envHi').textContent=fmtVal(L.vmax,v);
+    document.getElementById('envUnit').textContent=v.unit;
+  }
 }
 
 /* ═══════ Mode A: 분류군별 조회 ═══════ */
@@ -521,8 +624,8 @@ function refreshSpeciesMap(){
   if(mapMode==='B'&&sidoLayer) sidoLayer.changed();
 }
 function showSpecies(sp){                                // 선택 종의 분류군 obs 를 보장 로드 후 렌더
-  if(!taxonReady(sp.t)) sCard.innerHTML='<div class="scard"><span class="muted">관측자료 불러오는 중…</span></div>';
-  loadTaxon(sp.t, ()=>renderSpecies(sp));
+  if(!taxonReady(sp.t)||!window.__ENV__) sCard.innerHTML='<div class="scard"><span class="muted">관측자료 불러오는 중…</span></div>';
+  ensureEnv(()=>loadTaxon(sp.t, ()=>renderSpecies(sp)));
 }
 function speciesSigungu(sp,a,b){                          // 종 obs → 시군구 단위 [{sido명, 시군구명, 발견수}] (토글 무관·항상 시군구)
   const m=new Map(), rows=(OBS[sp.t]&&OBS[sp.t].obs)||[];
@@ -532,18 +635,38 @@ function speciesSigungu(sp,a,b){                          // 종 obs → 시군�
     return {sg, sido:u?'좌표미상':(RNAME.sido[String(sg).slice(0,2)]||''), sigungu:u?'—':(RNAME.sigungu[sg]||sg), c};
   }).sort((x,y)=> y.c-x.c || x.sido.localeCompare(y.sido,'ko'));
 }
+function regSortRows(rows){                               // 발견지역 표 정렬 상태 적용
+  const r=rows.slice();
+  r.sort((a,b)=>{
+    let d = regSortKey==='c' ? a.c-b.c
+          : String(a[regSortKey]||'').localeCompare(String(b[regSortKey]||''),'ko');
+    return d*regSortDir || b.c-a.c || a.sido.localeCompare(b.sido,'ko');
+  });
+  return r;
+}
+function sortRegBy(k){                                    // 헤더 클릭 → 정렬(같은 열 재클릭=방향 반전)
+  if(regSortKey===k) regSortDir*=-1;
+  else { regSortKey=k; regSortDir=(k==='c')?-1:1; }      // 수치=내림차순 먼저, 텍스트=오름차순 먼저
+  const host=document.getElementById('regHost');
+  if(host && selSpecies) host.outerHTML=speciesRegionTable(selSpecies);
+}
 function speciesRegionTable(sp){
-  const rows=speciesSigungu(sp,sy0,sy1);
-  if(!rows.length) return `<span class="muted">${sy0}–${sy1} 조사자료에서 관측 기록이 없습니다(발견공백).</span>`;
+  const rows=regSortRows(speciesSigungu(sp,sy0,sy1));
+  if(!rows.length) return `<div id="regHost"><span class="muted">${sy0}–${sy1} 조사자료에서 관측 기록이 없습니다(발견공백).</span></div>`;
   const total=rows.reduce((s,r)=>s+r.c,0);
+  const ar=k=>regSortKey===k?`<span class="ar on">${regSortDir<0?'▼':'▲'}</span>`:`<span class="ar off">↕</span>`;
   const body=rows.map(r=>`<tr><td>${r.sido}</td><td>${r.sigungu}</td><td class="num">${nf(r.c)}</td></tr>`).join('');
-  return `<div class="regtbl-wrap"><table class="regtbl"><thead><tr><th>시도</th><th>시군구</th><th class="num">발견수</th></tr></thead><tbody>${body}</tbody></table></div>`+
+  return `<div id="regHost"><div class="regtbl-wrap"><table class="regtbl"><thead><tr>`+
+      `<th onclick="sortRegBy('sido')" title="시도명으로 정렬">시도${ar('sido')}</th>`+
+      `<th onclick="sortRegBy('sigungu')" title="시군구명으로 정렬">시군구${ar('sigungu')}</th>`+
+      `<th onclick="sortRegBy('c')" class="num" title="발견수로 정렬">발견수${ar('c')}</th></tr></thead>`+
+      `<tbody>${body}</tbody></table></div>`+
     `<div class="regtbl-foot"><span class="muted">${nf(rows.length)}개 시군구 · 합계 ${nf(total)}</span>`+
-    `<button class="rdl" onclick="downloadSpeciesRegions()">CSV 다운로드</button></div>`;
+    `<button class="rdl" onclick="downloadSpeciesRegions()">CSV 다운로드</button></div></div>`;
 }
 function downloadSpeciesRegions(){
   if(!selSpecies) return;
-  const rows=speciesSigungu(selSpecies,sy0,sy1);
+  const rows=regSortRows(speciesSigungu(selSpecies,sy0,sy1));   // 화면에 보이는 정렬 순서대로 내보내기
   const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
   const head=['종명','학명','시도','시군구','발견수'];
   const body=rows.map(r=>[selSpecies.n,selSpecies.s,r.sido,r.sigungu,r.c].map(esc).join(','));
@@ -551,11 +674,41 @@ function downloadSpeciesRegions(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download=`${selSpecies.n||selSpecies.s}_발견지역(시군구)_${sy0}-${sy1}.csv`; a.click(); URL.revokeObjectURL(a.href);
 }
+function envBars(sp){                                     // 관측지점 기후·지형 지위 막대(종 범위 vs 전국 범위·전국중앙값)
+  if(!ENVMETA||!window.__ENV__) return '';               // 메타·데이터 준비 안 됨 → 섹션 생략
+  const row=window.__ENV__[sp.k]; if(!row) return '';
+  const vars=ENVMETA.vars, ref=ENVMETA.ref; let bars='';
+  for(let i=0;i<vars.length;i++){
+    const v=vars[i], R=ref[v.key]; if(!R) continue;
+    const mn=row[i*3], md=row[i*3+1], mx=row[i*3+2];
+    if(mn==null||mx==null) continue;
+    const t0=R.p01, t1=R.p99, span=(t1-t0)||1;
+    const pc=x=>Math.max(0,Math.min(100,((x-t0)/span)*100));
+    let L=pc(mn), Rr=pc(mx); if(Rr-L<2.5){ const c=(L+Rr)/2; L=Math.max(0,c-1.25); Rr=Math.min(100,c+1.25); }
+    bars+=`<div class="envrow"><span class="lbl">${v.label}</span>`+
+      `<div class="envtrack" title="전국 ${fmtVal(t0,v)}–${fmtVal(t1,v)}${v.unit} · 전국 중앙값 ${fmtVal(R.median,v)} · 이 종 중앙값 ${fmtVal(md,v)}">`+
+        `<div class="seg" style="left:${L.toFixed(1)}%;width:${(Rr-L).toFixed(1)}%"></div>`+
+        `<div class="smed" style="left:${pc(md).toFixed(1)}%"></div>`+
+        `<div class="nmed" style="left:${pc(R.median).toFixed(1)}%"></div></div>`+
+      `<span class="val"><b>${fmtVal(mn,v)}–${fmtVal(mx,v)}</b> ${v.unit}</span></div>`;
+  }
+  if(!bars) return '';
+  return `<div class="envbars">${bars}</div>`+
+    `<div class="envnote">관측 기록이 있는 지점의 환경값 분포 — 실제 분포역과 다를 수 있습니다.</div>`;
+}
+function toggleEnvInfo(){ const p=document.getElementById('envInfo'); if(p) p.classList.toggle('on'); }
 function renderSpecies(sp){
   selSpecies=sp;
   selRegions=speciesRegions(sp,sy0,sy1);                  // 지도 강조용(활성 레벨)
   const eg=isEndangered(sp.g);
   const regHtml=speciesRegionTable(sp);                   // 발견지역 표(시도·시군구·발견수)
+  const envHtml=envBars(sp);                              // 기후·지형 지위 막대(데이터 있을 때만)
+  const envRow=envHtml?`<div class="row"><div class="k khead">관측지점 기후·지형 지위`+
+      ` <button class="infobtn" title="설명 보기" onclick="toggleEnvInfo()">?</button></div>`+
+      `<div class="infopop" id="envInfo"><b>막대 읽는 법</b> — 회색 막대 = 전국 분포(하위 1%–상위 99%), `+
+      `초록 막대 = 이 종이 관측된 지점의 값 범위, 진한 세로선 = 이 종 중앙값, <span class="rc">빨간 원</span> = 전국 중앙값.`+
+      `<br><b>변수</b> — 연평균기온(BIO1) · 최난월 최고기온(BIO5) · 최한월 최저기온(BIO6) · 연강수량(BIO12) · 해발고도(90m DEM).`+
+      `</div>${envHtml}</div>`:'';
   const reportLink=eg
     ? `<a class="lk danger" href="${NATURING}" target="_blank" rel="noopener noreferrer"><span><span class="t">Naturing 멸종위기종 제보</span><br><span class="d">시민과학 관찰 제보 프로젝트 →</span></span></a>`
     : `<a class="lk" href="${ECOBANK}" target="_blank" rel="noopener noreferrer"><span><span class="t">EcoBank 데이터 제보</span><br><span class="d">국립생태원 생태정보 제보 →</span></span></a>`;
@@ -566,6 +719,7 @@ function renderSpecies(sp){
     </div>
     <div style="margin-top:8px">${badges(sp.g,sp.r)||'<span class="muted">일반종</span>'} <span class="badge" style="background:#eef3f1;color:#2f6f5e">${TAXON_KOR[sp.t]||sp.t}</span></div>
     <div class="row"><div class="k">발견 지역(시군구) · ${sy0}–${sy1}</div>${regHtml}</div>
+    ${envRow}
     <div class="row"><div class="k">상세 정보 · 데이터 제보</div>
       <div class="links">
         <a class="lk primary" href="${NIBR(sp.k)}" target="_blank" rel="noopener noreferrer"><span><span class="t">한반도의 생물다양성</span><br><span class="d">국립생물자원관 종 상세 →</span></span></a>

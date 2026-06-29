@@ -21,9 +21,12 @@ DATA = APP / "demo" / "data"
 # dist 에 포함할 정적 자산(서비스/대문이 실제 참조하는 것만)
 PAGES = ["index.html", "service.html", "fg_supabase.js"]
 DATA_FILES = ["taxa_summary.js", "demo_mm.js",
-              "species_index.js", "species_state.js", "sido.geojson", "sigungu.geojson"]
+              "species_index.js", "species_state.js", "sido.geojson", "sigungu.geojson",
+              "env_meta.js", "species_env.js"]
 # 분류군별 관측은 분할 산출 — obs_meta.js + obs_<T>.js 전부 복사(서비스가 지연 로드)
 DATA_GLOBS = ["obs_*.js"]
+# 환경변수 래스터 오버레이(서브디렉터리 보존)
+DATA_DIRS = ["env"]
 
 HEADERS = """\
 /*
@@ -75,6 +78,16 @@ def main():
             shutil.copy2(src, DIST / "demo" / "data" / src.name)
         if not hit:
             print(f"(경고) 글롭 누락: {pat}")
+    for d in DATA_DIRS:
+        sdir = DATA / d
+        if sdir.is_dir():
+            ddir = DIST / "demo" / "data" / d
+            ddir.mkdir(parents=True, exist_ok=True)
+            for src in sorted(sdir.iterdir()):
+                if src.is_file():
+                    shutil.copy2(src, ddir / src.name)
+        else:
+            print(f"(경고) 디렉터리 누락: demo/data/{d}")
 
     osm_only = "--osm-only" in args
     no_supabase = "--no-supabase" in args              # docs(public) 에서 Supabase 키 제외하고 싶을 때
