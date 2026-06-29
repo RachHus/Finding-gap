@@ -89,6 +89,15 @@
   .reg-toggle button{border:0;background:#fff;padding:5px 11px;font:600 12px system-ui,sans-serif;color:#5a665f;cursor:pointer}
   .reg-toggle button.on{background:var(--accent);color:#fff}
   .reg-toggle button+button{border-left:1px solid #e3e8e5}
+  .regtbl-wrap{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  .regtbl{width:100%;border-collapse:collapse;font-size:13px}
+  .regtbl thead th{position:sticky;top:0;background:#f4f6f4;text-align:left;padding:6px 10px;font-weight:600;color:#3b463f;border-bottom:1px solid var(--line);white-space:nowrap}
+  .regtbl td{padding:5px 10px;border-bottom:1px solid #f0f2f0}
+  .regtbl tbody tr:last-child td{border-bottom:0}
+  .regtbl .num{text-align:right;font-variant-numeric:tabular-nums}
+  .regtbl-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px;flex-wrap:wrap}
+  .rdl{border:1px solid var(--accent);background:#fff;color:var(--accent);font:600 12px system-ui,sans-serif;padding:5px 11px;border-radius:7px;cursor:pointer}
+  .rdl:hover{background:var(--accent);color:#fff}
   .regchips{display:flex;flex-wrap:wrap;gap:6px}
   .regchips .rc{background:#eef3f1;border:1px solid #d7e3df;border-radius:8px;padding:4px 9px;font-size:12px}
   .regchips .rc b{font-variant-numeric:tabular-nums;color:var(--accent)}
@@ -515,14 +524,38 @@ function showSpecies(sp){                                // 선택 종의 분류
   if(!taxonReady(sp.t)) sCard.innerHTML='<div class="scard"><span class="muted">관측자료 불러오는 중…</span></div>';
   loadTaxon(sp.t, ()=>renderSpecies(sp));
 }
+function speciesSigungu(sp,a,b){                          // 종 obs → 시군구 단위 [{sido명, 시군구명, 발견수}] (토글 무관·항상 시군구)
+  const m=new Map(), rows=(OBS[sp.t]&&OBS[sp.t].obs)||[];
+  for(const [k,s,yy,c] of rows){ if(k!==sp.k)continue; const y=+yy; if(y<a||y>b)continue; m.set(s,(m.get(s)||0)+c); }
+  return [...m.entries()].map(([sg,c])=>{
+    const u=isUnknownReg(sg);
+    return {sg, sido:u?'좌표미상':(RNAME.sido[String(sg).slice(0,2)]||''), sigungu:u?'—':(RNAME.sigungu[sg]||sg), c};
+  }).sort((x,y)=> y.c-x.c || x.sido.localeCompare(y.sido,'ko'));
+}
+function speciesRegionTable(sp){
+  const rows=speciesSigungu(sp,sy0,sy1);
+  if(!rows.length) return `<span class="muted">${sy0}–${sy1} 조사자료에서 관측 기록이 없습니다(발견공백).</span>`;
+  const total=rows.reduce((s,r)=>s+r.c,0);
+  const body=rows.map(r=>`<tr><td>${r.sido}</td><td>${r.sigungu}</td><td class="num">${nf(r.c)}</td></tr>`).join('');
+  return `<div class="regtbl-wrap"><table class="regtbl"><thead><tr><th>시도</th><th>시군구</th><th class="num">발견수</th></tr></thead><tbody>${body}</tbody></table></div>`+
+    `<div class="regtbl-foot"><span class="muted">${nf(rows.length)}개 시군구 · 합계 ${nf(total)}</span>`+
+    `<button class="rdl" onclick="downloadSpeciesRegions()">CSV 다운로드</button></div>`;
+}
+function downloadSpeciesRegions(){
+  if(!selSpecies) return;
+  const rows=speciesSigungu(selSpecies,sy0,sy1);
+  const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const head=['종명','학명','시도','시군구','발견수'];
+  const body=rows.map(r=>[selSpecies.n,selSpecies.s,r.sido,r.sigungu,r.c].map(esc).join(','));
+  const csv='﻿'+[head.join(','),...body].join('\r\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`${selSpecies.n||selSpecies.s}_발견지역(시군구)_${sy0}-${sy1}.csv`; a.click(); URL.revokeObjectURL(a.href);
+}
 function renderSpecies(sp){
   selSpecies=sp;
-  selRegions=speciesRegions(sp,sy0,sy1);
+  selRegions=speciesRegions(sp,sy0,sy1);                  // 지도 강조용(활성 레벨)
   const eg=isEndangered(sp.g);
-  const ent=[...selRegions.entries()].sort((a,b)=>b[1]-a[1]);
-  const regHtml=ent.length
-    ? `<div class="regchips">`+ent.map(([code,c])=>`<span class="rc">${rname(code)} <b>${nf(c)}</b></span>`).join('')+`</div>`
-    : `<span class="muted">${sy0}–${sy1} 조사자료에서 관측 기록이 없습니다(발견공백).</span>`;
+  const regHtml=speciesRegionTable(sp);                   // 발견지역 표(시도·시군구·발견수)
   const reportLink=eg
     ? `<a class="lk danger" href="${NATURING}" target="_blank" rel="noopener noreferrer"><span><span class="t">Naturing 멸종위기종 제보</span><br><span class="d">시민과학 관찰 제보 프로젝트 →</span></span></a>`
     : `<a class="lk" href="${ECOBANK}" target="_blank" rel="noopener noreferrer"><span><span class="t">EcoBank 데이터 제보</span><br><span class="d">국립생태원 생태정보 제보 →</span></span></a>`;
@@ -532,7 +565,7 @@ function renderSpecies(sp){
       <button class="watchbtn" data-k="${sp.k}" style="margin-left:auto" hidden>☆ 관심 종</button>
     </div>
     <div style="margin-top:8px">${badges(sp.g,sp.r)||'<span class="muted">일반종</span>'} <span class="badge" style="background:#eef3f1;color:#2f6f5e">${TAXON_KOR[sp.t]||sp.t}</span></div>
-    <div class="row"><div class="k">발견 지역(${regLevel==='sido'?'시도':'시군구'}) · ${sy0}–${sy1}</div>${regHtml}</div>
+    <div class="row"><div class="k">발견 지역(시군구) · ${sy0}–${sy1}</div>${regHtml}</div>
     <div class="row"><div class="k">상세 정보 · 데이터 제보</div>
       <div class="links">
         <a class="lk primary" href="${NIBR(sp.k)}" target="_blank" rel="noopener noreferrer"><span><span class="t">한반도의 생물다양성</span><br><span class="d">국립생물자원관 종 상세 →</span></span></a>
