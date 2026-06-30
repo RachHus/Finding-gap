@@ -100,15 +100,17 @@
   .regtbl-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px;flex-wrap:wrap}
   .rdl{border:1px solid var(--accent);background:#fff;color:var(--accent);font:600 12px system-ui,sans-serif;padding:5px 11px;border-radius:7px;cursor:pointer}
   .rdl:hover{background:var(--accent);color:#fff}
-  /* 종 카드 — 기후·지형 지위 막대 */
+  /* 종 카드 — 발견지점 기후 및 고도 막대 */
   .khead{display:flex;align-items:center;gap:6px}
-  .infobtn{border:1px solid var(--line);background:#fff;color:var(--muted);width:17px;height:17px;line-height:15px;
-    text-align:center;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;padding:0}
-  .infobtn:hover{border-color:var(--accent);color:var(--accent)}
-  .infopop{display:none;margin:6px 0 2px;padding:9px 11px;background:#f6f8f7;border:1px solid var(--line);
-    border-radius:9px;font-size:11.5px;color:#414a45;line-height:1.55}
-  .infopop.on{display:block}
-  .infopop b{color:var(--ink)} .infopop .rc{color:#d6312b;font-weight:700}
+  .envlegend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 13px;margin:2px 0 11px;font-size:11px;color:#5a635d}
+  .envlegend .lgi{display:inline-flex;align-items:center;gap:5px}
+  .envlegend .lgi i{display:inline-block;flex:none}
+  .envlegend i.lg-area{width:18px;height:10px;border-radius:5px;background:#eceeec;border:1px solid #dcdfdc}
+  .envlegend i.lg-ncirc{width:8px;height:8px;border-radius:999px;background:#d6312b}
+  .envlegend i.lg-range{width:18px;height:2px;border-radius:1px;background:#aeb6b0}
+  .envlegend i.lg-box{width:18px;height:10px;border-radius:3px;background:var(--accent);opacity:.6}
+  .envlegend i.lg-smed{width:2px;height:13px;border-radius:1px;background:#1b3a31}
+  .envlegend .lgi.txt{color:#414a45;font-weight:600}
   .envbars{display:flex;flex-direction:column;gap:9px;margin-top:2px}
   .envrow{display:grid;grid-template-columns:92px 1fr 138px;align-items:center;gap:9px;font-size:12px}
   .envrow .lbl{color:#414a45}
@@ -675,7 +677,7 @@ function downloadSpeciesRegions(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download=`${selSpecies.n||selSpecies.s}_발견지역(시군구)_${sy0}-${sy1}.csv`; a.click(); URL.revokeObjectURL(a.href);
 }
-function envBars(sp){                                     // 관측지점 기후·지형 지위 박스플롯(Q1–Q3 집중구간) + 평균±표준편차
+function envBars(sp){                                     // 발견지점 기후·고도 박스플롯(Q1–Q3 집중구간) + 평균±표준편차
   if(!ENVMETA||!window.__ENV__) return '';               // 메타·데이터 준비 안 됨 → 섹션 생략
   const row=window.__ENV__[sp.k]; if(!row) return '';
   const vars=ENVMETA.vars, ref=ENVMETA.ref, NV=7; let bars='';   // 변수당 [min,q1,median,q3,max,mean,sd]
@@ -697,23 +699,23 @@ function envBars(sp){                                     // 관측지점 기후
       `<span class="val"><b>${fmtVal(mean,v)}</b>${sdTxt} ${v.unit}</span></div>`;
   }
   if(!bars) return '';
-  return `<div class="envbars">${bars}</div>`+
-    `<div class="envnote">관측 기록이 있는 지점의 환경값 분포 — 실제 분포역과 다를 수 있습니다.</div>`;
+  const legend=`<div class="envlegend">`+
+    `<span class="lgi"><i class="lg-area"></i>전국 분포</span>`+
+    `<span class="lgi"><i class="lg-ncirc"></i>전국 중앙값</span>`+
+    `<span class="lgi"><i class="lg-range"></i>종 발견 범위</span>`+
+    `<span class="lgi"><i class="lg-box"></i>집중 구간(Q1–Q3)</span>`+
+    `<span class="lgi"><i class="lg-smed"></i>발견 지점 중앙값</span>`+
+    `<span class="lgi txt">평균±표준편차</span></div>`;
+  return legend + `<div class="envbars">${bars}</div>`+
+    `<div class="envnote">발견 기록이 있는 지점의 환경값 분포 — 실제 분포역과 다를 수 있습니다.</div>`;
 }
-function toggleEnvInfo(){ const p=document.getElementById('envInfo'); if(p) p.classList.toggle('on'); }
 function renderSpecies(sp){
   selSpecies=sp;
   selRegions=speciesRegions(sp,sy0,sy1);                  // 지도 강조용(활성 레벨)
   const eg=isEndangered(sp.g);
   const regHtml=speciesRegionTable(sp);                   // 발견지역 표(시도·시군구·발견수)
   const envHtml=envBars(sp);                              // 기후·지형 지위 막대(데이터 있을 때만)
-  const envRow=envHtml?`<div class="row"><div class="k khead">관측지점 기후·지형 지위`+
-      ` <button class="infobtn" title="설명 보기" onclick="toggleEnvInfo()">?</button></div>`+
-      `<div class="infopop" id="envInfo"><b>막대 읽는 법</b> — 회색 트랙 = 전국 분포(하위 1%–상위 99%), `+
-      `가는 선 = 이 종 관측지점 전체 범위, <b>초록 박스 = Q1–Q3</b>(관측 집중 구간), 진한 세로선 = 중앙값, `+
-      `<span class="rc">빨간 원</span> = 전국 중앙값. 오른쪽 = <b>평균 ± 표준편차</b>.`+
-      `<br><b>변수</b> — 연평균기온(BIO1) · 최난월 최고기온(BIO5) · 최한월 최저기온(BIO6) · 연강수량(BIO12) · 해발고도(90m DEM).`+
-      `</div>${envHtml}</div>`:'';
+  const envRow=envHtml?`<div class="row"><div class="k khead">발견지점 기후 및 고도</div>${envHtml}</div>`:'';
   const reportLink=eg
     ? `<a class="lk danger" href="${NATURING}" target="_blank" rel="noopener noreferrer"><span><span class="t">Naturing 멸종위기종 제보</span><br><span class="d">시민과학 관찰 제보 프로젝트 →</span></span></a>`
     : `<a class="lk" href="${ECOBANK}" target="_blank" rel="noopener noreferrer"><span><span class="t">EcoBank 데이터 제보</span><br><span class="d">국립생태원 생태정보 제보 →</span></span></a>`;
