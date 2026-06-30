@@ -35,7 +35,7 @@ PAL <- list(
   elev   = c("#2b7a3d","#a6d96a","#ffffbf","#e0a060","#8c510a")
 )
 
-# ── 1) DEM 점추출 → 종별 고도 5수치 ────────────────────────────────────────
+# ── 1) 5변수 점추출 → 종별 통계(min·Q1·median·Q3·max·mean·sd) ──────────────
 con <- dbConnect(SQLite(), DBF)
 pts <- dbGetQuery(con, "SELECT ktsn, taxon_group, lon, lat FROM obs_points
                         WHERE lon IS NOT NULL AND lat IS NOT NULL")
@@ -43,33 +43,35 @@ dbDisconnect(con)
 key   <- paste0(pts$lon, "_", pts$lat)
 uc    <- pts[!duplicated(key), c("lon","lat")]
 pts$cid <- match(key, paste0(uc$lon, "_", uc$lat))
+ucv   <- vect(uc, geom=c("lon","lat"), crs="EPSG:4326")
+tx_of <- tapply(pts$taxon_group, pts$ktsn, function(z) z[1])
 cat(sprintf("점 %s행 · 고유좌표 %s · 종 %s\n",
             format(nrow(pts),big.mark=","), format(nrow(uc),big.mark=","),
             format(length(unique(pts$ktsn)),big.mark=",")))
 
-dem <- rast(DEMP)
-vd  <- project(vect(uc, geom=c("lon","lat"), crs="EPSG:4326"), crs(dem))
-demv <- terra::extract(dem, vd, ID=FALSE)[[1]]
-cat(sprintf("DEM 추출 %s (%.1f분)\n", format(length(demv),big.mark=","), mins()))
-
-tx_of <- tapply(pts$taxon_group, pts$ktsn, function(z) z[1])
-pv  <- demv[pts$cid]
-agg <- tapply(pv, pts$ktsn, function(x){
-  x <- x[is.finite(x)]; if(!length(x)) return(NULL)
-  q <- as.numeric(quantile(x, c(0,.25,.5,.75,1), names=FALSE))
-  c(n=length(x), min=q[1], q1=q[2], median=q[3], q3=q[4], max=q[5], mean=mean(x))
-})
-keep <- !vapply(agg, is.null, logical(1))
-dem_rows <- do.call(rbind, lapply(names(agg)[keep], function(k){
-  a <- agg[[k]]
-  data.frame(ktsn=k, taxon_group=tx_of[[k]], bio="dem",
-             n=a[["n"]], min=a[["min"]], q1=a[["q1"]], median=a[["median"]],
-             q3=a[["q3"]], max=a[["max"]], mean=a[["mean"]], stringsAsFactors=FALSE)
-}))
-num <- c("min","q1","median","q3","max","mean")
-dem_rows[num] <- round(dem_rows[num], 1)
-write.csv(dem_rows, file.path(PROC,"species_dem.csv"), row.names=FALSE, fileEncoding="UTF-8")
-cat(sprintf("species_dem.csv 종 %s (%.1f분)\n", format(nrow(dem_rows),big.mark=","), mins()))
+statRows <- list()
+for(v in VARS){
+  r  <- rast(v$path)
+  ex <- terra::extract(r, project(ucv, crs(r)), ID=FALSE)[[1]]   # 고유좌표 값(원본 풀해상도)
+  pv <- ex[pts$cid]                                              # 관측별 값
+  agg <- tapply(pv, pts$ktsn, function(x){
+    x <- x[is.finite(x)]; if(!length(x)) return(NULL)
+    q <- as.numeric(quantile(x, c(0,.25,.5,.75,1), names=FALSE))
+    c(n=length(x), min=q[1], q1=q[2], median=q[3], q3=q[4], max=q[5],
+      mean=mean(x), sd=if(length(x) > 1) sd(x) else 0)
+  })
+  keep <- !vapply(agg, is.null, logical(1))
+  for(k in names(agg)[keep]){ a <- agg[[k]]
+    statRows[[length(statRows)+1L]] <- data.frame(ktsn=k, taxon_group=tx_of[[k]], var=v$key,
+      n=a[["n"]], min=a[["min"]], q1=a[["q1"]], median=a[["median"]], q3=a[["q3"]],
+      max=a[["max"]], mean=a[["mean"]], sd=a[["sd"]], stringsAsFactors=FALSE) }
+  cat(sprintf("  %s 점추출·집계 종 %s (%.1f분)\n", v$key, format(sum(keep),big.mark=","), mins()))
+}
+stat <- do.call(rbind, statRows)
+sc <- c("min","q1","median","q3","max","mean","sd"); stat[sc] <- round(stat[sc], 2)
+write.csv(stat, file.path(PROC,"species_env_stats.csv"), row.names=FALSE, fileEncoding="UTF-8")
+cat(sprintf("species_env_stats.csv 행 %s · 종 %s (%.1f분)\n",
+            format(nrow(stat),big.mark=","), format(length(unique(stat$ktsn)),big.mark=","), mins()))
 
 # ── 2~4) 변수별: 1km 집계 → 전국 분위수 + 3857 PNG + 메타 ──────────────────
 val2rgb <- function(m, vmin, vmax, pal){
@@ -117,4 +119,4 @@ mt <- do.call(rbind, meta)
 mt[c("xmin","ymin","xmax","ymax")] <- round(mt[c("xmin","ymin","xmax","ymax")], 1)
 mt[c("vmin","vmax")] <- round(mt[c("vmin","vmax")], 1)
 write.csv(mt, file.path(PROC,"env_layers_meta.csv"), row.names=FALSE, fileEncoding="UTF-8")
-cat(sprintf("완료: species_dem.csv · env_national.csv · env_layers_meta.csv · env/*.png  (%.1f분)\n", mins()))
+cat(sprintf("완료: species_env_stats.csv · env_national.csv · env_layers_meta.csv · env/*.png  (%.1f분)\n", mins()))

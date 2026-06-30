@@ -110,10 +110,11 @@
   .infopop.on{display:block}
   .infopop b{color:var(--ink)} .infopop .rc{color:#d6312b;font-weight:700}
   .envbars{display:flex;flex-direction:column;gap:9px;margin-top:2px}
-  .envrow{display:grid;grid-template-columns:96px 1fr 124px;align-items:center;gap:9px;font-size:12px}
+  .envrow{display:grid;grid-template-columns:92px 1fr 138px;align-items:center;gap:9px;font-size:12px}
   .envrow .lbl{color:#414a45}
   .envtrack{position:relative;height:11px;background:#eceeec;border-radius:6px}
-  .envtrack .seg{position:absolute;top:0;height:11px;border-radius:6px;background:var(--accent);opacity:.55}
+  .envtrack .whisk{position:absolute;top:50%;height:2px;margin-top:-1px;background:#aeb6b0;border-radius:1px}
+  .envtrack .seg{position:absolute;top:0;height:11px;border-radius:4px;background:var(--accent);opacity:.6}
   .envtrack .smed{position:absolute;top:-2px;width:2px;height:15px;background:#1b3a31;border-radius:1px}
   .envtrack .nmed{position:absolute;top:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:999px;
     background:#d6312b;box-shadow:0 0 0 1.5px #fff}
@@ -674,23 +675,26 @@ function downloadSpeciesRegions(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download=`${selSpecies.n||selSpecies.s}_발견지역(시군구)_${sy0}-${sy1}.csv`; a.click(); URL.revokeObjectURL(a.href);
 }
-function envBars(sp){                                     // 관측지점 기후·지형 지위 막대(종 범위 vs 전국 범위·전국중앙값)
+function envBars(sp){                                     // 관측지점 기후·지형 지위 박스플롯(Q1–Q3 집중구간) + 평균±표준편차
   if(!ENVMETA||!window.__ENV__) return '';               // 메타·데이터 준비 안 됨 → 섹션 생략
   const row=window.__ENV__[sp.k]; if(!row) return '';
-  const vars=ENVMETA.vars, ref=ENVMETA.ref; let bars='';
+  const vars=ENVMETA.vars, ref=ENVMETA.ref, NV=7; let bars='';   // 변수당 [min,q1,median,q3,max,mean,sd]
   for(let i=0;i<vars.length;i++){
     const v=vars[i], R=ref[v.key]; if(!R) continue;
-    const mn=row[i*3], md=row[i*3+1], mx=row[i*3+2];
+    const b=i*NV, mn=row[b], q1=row[b+1], md=row[b+2], q3=row[b+3], mx=row[b+4], mean=row[b+5], sd=row[b+6];
     if(mn==null||mx==null) continue;
     const t0=R.p01, t1=R.p99, span=(t1-t0)||1;
     const pc=x=>Math.max(0,Math.min(100,((x-t0)/span)*100));
-    let L=pc(mn), Rr=pc(mx); if(Rr-L<2.5){ const c=(L+Rr)/2; L=Math.max(0,c-1.25); Rr=Math.min(100,c+1.25); }
+    const wl=pc(mn), wr=pc(mx);                           // 수염: min–max 전체 범위
+    let bl=pc(q1), br=pc(q3); if(br-bl<2){ const c=(bl+br)/2; bl=Math.max(0,c-1); br=Math.min(100,c+1); }  // 박스: Q1–Q3
+    const sdTxt=(sd!=null&&sd>0)?` ± ${fmtVal(sd,v)}`:'';
     bars+=`<div class="envrow"><span class="lbl">${v.label}</span>`+
-      `<div class="envtrack" title="전국 ${fmtVal(t0,v)}–${fmtVal(t1,v)}${v.unit} · 전국 중앙값 ${fmtVal(R.median,v)} · 이 종 중앙값 ${fmtVal(md,v)}">`+
-        `<div class="seg" style="left:${L.toFixed(1)}%;width:${(Rr-L).toFixed(1)}%"></div>`+
+      `<div class="envtrack" title="전국 ${fmtVal(t0,v)}–${fmtVal(t1,v)}${v.unit} · 전국 중앙값 ${fmtVal(R.median,v)} · 이 종 Q1–Q3 ${fmtVal(q1,v)}–${fmtVal(q3,v)} · 중앙값 ${fmtVal(md,v)}">`+
+        `<div class="whisk" style="left:${wl.toFixed(1)}%;width:${(wr-wl).toFixed(1)}%"></div>`+
+        `<div class="seg" style="left:${bl.toFixed(1)}%;width:${(br-bl).toFixed(1)}%"></div>`+
         `<div class="smed" style="left:${pc(md).toFixed(1)}%"></div>`+
         `<div class="nmed" style="left:${pc(R.median).toFixed(1)}%"></div></div>`+
-      `<span class="val"><b>${fmtVal(mn,v)}–${fmtVal(mx,v)}</b> ${v.unit}</span></div>`;
+      `<span class="val"><b>${fmtVal(mean,v)}</b>${sdTxt} ${v.unit}</span></div>`;
   }
   if(!bars) return '';
   return `<div class="envbars">${bars}</div>`+
@@ -705,8 +709,9 @@ function renderSpecies(sp){
   const envHtml=envBars(sp);                              // 기후·지형 지위 막대(데이터 있을 때만)
   const envRow=envHtml?`<div class="row"><div class="k khead">관측지점 기후·지형 지위`+
       ` <button class="infobtn" title="설명 보기" onclick="toggleEnvInfo()">?</button></div>`+
-      `<div class="infopop" id="envInfo"><b>막대 읽는 법</b> — 회색 막대 = 전국 분포(하위 1%–상위 99%), `+
-      `초록 막대 = 이 종이 관측된 지점의 값 범위, 진한 세로선 = 이 종 중앙값, <span class="rc">빨간 원</span> = 전국 중앙값.`+
+      `<div class="infopop" id="envInfo"><b>막대 읽는 법</b> — 회색 트랙 = 전국 분포(하위 1%–상위 99%), `+
+      `가는 선 = 이 종 관측지점 전체 범위, <b>초록 박스 = Q1–Q3</b>(관측 집중 구간), 진한 세로선 = 중앙값, `+
+      `<span class="rc">빨간 원</span> = 전국 중앙값. 오른쪽 = <b>평균 ± 표준편차</b>.`+
       `<br><b>변수</b> — 연평균기온(BIO1) · 최난월 최고기온(BIO5) · 최한월 최저기온(BIO6) · 연강수량(BIO12) · 해발고도(90m DEM).`+
       `</div>${envHtml}</div>`:'';
   const reportLink=eg

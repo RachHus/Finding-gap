@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""env 정적자산 빌드 — 종 페이지 "기후·지형 지위" 막대 + 지도 환경변수 레이어.
-입력 : 1_Data/processed/{species_bioclim.csv, species_dem.csv, env_national.csv, env_layers_meta.csv}
-출력 : 5_App/demo/data/species_env.js  (window.__ENV__  = {ktsn:[15수치]})
+"""env 정적자산 빌드 — 종 페이지 "기후·지형 지위" 박스플롯 막대 + 지도 환경변수 레이어.
+입력 : 1_Data/processed/{species_env_stats.csv, env_national.csv, env_layers_meta.csv}
+출력 : 5_App/demo/data/species_env.js  (window.__ENV__  = {ktsn:[변수당 min,q1,median,q3,max,mean,sd]})
        5_App/demo/data/env_meta.js     (window.__ENVMETA__ = {vars, ref, layers})
 PNG(env/*.png)은 env_layers.R 이 직접 demo/data/env 에 산출 — 여기선 메타만 묶음.
 실행 : python 5_App/build_env_data.py   (env_layers.R 이후)
@@ -37,30 +37,34 @@ def rnd(x, dec):
     return round(f, dec) if dec else int(round(f))
 
 
-def read_summary(path, allow, sp):
+# 변수당 인코딩 순서(프런트 envBars 가 동일 순서로 해석): 박스플롯 + 평균±표준편차
+STATS = ("min", "q1", "median", "q3", "max", "mean", "sd")
+
+
+def read_stats(path, allow):
+    sp = {}
     if not path.exists():
-        print(f"(경고) 누락: {path.relative_to(BASE)}"); return
+        print(f"(경고) 누락: {path.relative_to(BASE)}"); return sp
     with open(path, encoding="utf-8") as f:
         for r in csv.DictReader(f):
-            b = r["bio"]
-            if b in allow:
-                sp.setdefault(r["ktsn"], {})[b] = (r["min"], r["median"], r["max"])
+            v = r["var"]
+            if v in allow:
+                sp.setdefault(r["ktsn"], {})[v] = tuple(r[c] for c in STATS)
+    return sp
 
 
 def main():
-    sp = {}
-    read_summary(PROC / "species_bioclim.csv", {"bio01", "bio05", "bio06", "bio12"}, sp)
-    read_summary(PROC / "species_dem.csv",     {"dem"}, sp)
+    sp = read_stats(PROC / "species_env_stats.csv", set(KEYS))
 
     env = {}
     for k, d in sp.items():
         row, ok = [], False
         for key in KEYS:
             if key in d:
-                mn, md, mx = d[key]; dec = DEC[key]
-                row += [rnd(mn, dec), rnd(md, dec), rnd(mx, dec)]; ok = True
+                dec = DEC[key]
+                row += [rnd(x, dec) for x in d[key]]; ok = True
             else:
-                row += [None, None, None]
+                row += [None] * len(STATS)
         if ok:
             env[k] = row
 
