@@ -23,6 +23,10 @@ export async function sendMagicLink(email) {
   // 클릭 후 현재 페이지로 복귀(해당 URL 이 Supabase Auth Redirect URLs 에 등록돼 있어야 함)
   return sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href.split('#')[0] } });
 }
+export async function signInWithGoogle() {
+  // Google → Supabase 콜백 → 현재 페이지로 복귀(redirectTo 가 Auth Redirect URLs 에 등록돼 있어야 함)
+  return sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.href.split('#')[0] } });
+}
 export async function signOut() { return sb?.auth.signOut(); }
 
 // ── 관심 종(watchlist) — user_id 는 DB default auth.uid() 로 자동 채움 ──
