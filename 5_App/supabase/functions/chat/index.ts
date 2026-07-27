@@ -197,24 +197,23 @@ async function listSpeciesByTaxon(a: Record<string, unknown>) {
   const limit = Math.max(1, Math.min(Number(a.limit ?? 30), 100));
 
   // 분류군명 해석 — 쿼리에는 반드시 검증된 라틴명만 사용(사전/실데이터에 없는 raw 입력은 조회에 쓰지 않음).
+  // 우선순위: 한글 정확일치 > 라틴 실존 > 한글 근사(pg_trgm). 한글 정확/근사는 한 번의 왕복으로 조회.
   let latin: string | undefined;      // 실제 종 조회에 쓸 검증된 라틴명
   let matched: string | undefined;    // 사용자에게 보일 해석된 분류군(한글 우선)
   let approximate = false;
-  // 1) 한글 정확 일치(사전 fg_taxon_name)
-  const exact = (await sql`select latin, korean from fg_taxon_name where rank = ${rank} and korean = ${nameRaw} limit 1`)[0];
-  if (exact) { latin = exact.latin as string; matched = exact.korean as string; }
+  const km = (await sql`select latin, korean, (korean = ${nameRaw}) as exact
+    from fg_taxon_name
+    where rank = ${rank} and (korean = ${nameRaw} or korean % ${nameRaw})
+    order by exact desc, similarity(korean, ${nameRaw}) desc limit 1`)[0];
+  // 1) 한글 정확 일치
+  if (km?.exact) { latin = km.latin as string; matched = km.korean as string; }
   // 2) 라틴명 직접 입력이 실제 서비스 분류군에 존재하면 인정(정규 대소문자로 회수)
   if (!latin) {
     const asLatin = (await sql`select ${sql(col)} as v from fg_species where lower(${sql(col)}) = lower(${nameRaw}) limit 1`)[0];
     if (asLatin) { latin = asLatin.v as string; matched = latin; }
   }
-  // 3) 그래도 없으면 사전에서 가장 비슷한 같은 계층 항목으로 근사 해석(pg_trgm)
-  if (!latin) {
-    const near = (await sql`select latin, korean from fg_taxon_name
-      where rank = ${rank} and korean % ${nameRaw}
-      order by similarity(korean, ${nameRaw}) desc limit 1`)[0];
-    if (near) { latin = near.latin as string; matched = near.korean as string; approximate = true; }
-  }
+  // 3) 그래도 없으면 위에서 찾은 가장 비슷한 한글 후보로 근사 해석(pg_trgm)
+  if (!latin && km) { latin = km.latin as string; matched = km.korean as string; approximate = true; }
   // 4) 사전/실데이터 어디에도 없음 → 쿼리하지 않고 후보만 제시
   if (!latin) {
     let cand = await sql`select rank, latin, korean from fg_taxon_name
@@ -232,30 +231,67 @@ async function listSpeciesByTaxon(a: Record<string, unknown>) {
     };
   }
 
-  // 검증된 latin 으로만 종 조회.
+  // 검증된 latin 으로만 종 조회. 발견상태는 SQL에서 판정·필터한 뒤 LIMIT(부분집합만 잘려 오답 나지 않도록).
+  // 전국(지역 미지정)은 사전집계 MV(fg_species_national), 지역 한정은 커버링 인덱스 경로.
+  const gapJoin = code
+    ? sql`left join (select ktsn, max(maxyear) my from fg_species_region
+                     where ${sql(rcol)} = ${code} group by ktsn) g on g.ktsn = s.ktsn`
+    : sql`left join fg_species_national g on g.ktsn = s.ktsn`;
+  const myExpr = code ? sql`g.my` : sql`g.national_maxyear`;
   const rows = await sql`
-    select s.ktsn, s.korean_name, s.scientific_name,
-           s.class_la, s.order_la, s.family_la, s.genus_la,
-           s.endangered_grade, s.national_redlist_category, s.interest, g.my
-    from fg_species s
-    left join (
-      select ktsn, max(maxyear) my from fg_species_region
-      ${code ? sql`where ${sql(rcol)} = ${code}` : sql``}
-      group by ktsn) g on g.ktsn = s.ktsn
-    where lower(s.${sql(col)}) = lower(${latin})
-    order by s.korean_name
+    with base as (
+      select s.ktsn, s.korean_name, s.scientific_name,
+             s.class_la, s.order_la, s.family_la, s.genus_la,
+             s.endangered_grade, s.national_redlist_category, s.interest,
+             case when ${myExpr} is null then 'undiscovered'
+                  when ${myExpr} >= ${CUTOFF} then 'found' else 'dormant' end as state
+      from fg_species s
+      ${gapJoin}
+      where lower(s.${sql(col)}) = lower(${latin})
+    ),
+    tagged as (
+      select b.*,
+             count(*) over ()::int as t_total,
+             count(*) filter (where state = 'found') over ()::int as t_found,
+             count(*) filter (where state = 'dormant') over ()::int as t_dormant,
+             count(*) filter (where state = 'undiscovered') over ()::int as t_undiscovered
+      from base b
+    )
+    select * from tagged
+    ${state ? sql`where state = ${state}` : sql``}
+    order by korean_name
     limit ${limit}`;
-  const withState = rows.map((r) => {
-    const my = r.my as number | null;
-    const st = !my ? "undiscovered" : my >= CUTOFF ? "found" : "dormant";
-    const { my: _drop, ...rest } = r;
-    return { ...rest, state: st };
+  const t0 = rows[0] as Record<string, number> | undefined;
+  const species = rows.map((r) => {
+    const { t_total, t_found, t_dormant, t_undiscovered, ...rest } = r as Record<string, unknown>;
+    return rest;
   });
-  const filtered = state ? withState.filter((r) => r.state === state) : withState;
+  // 필터 결과가 비면(예: 해당 상태 종 0) 계층 전체 규모를 별도 집계로 보강.
+  let totals = t0
+    ? { total: t0.t_total, found: t0.t_found, dormant: t0.t_dormant, undiscovered: t0.t_undiscovered }
+    : (await sql`
+        select count(*)::int total,
+               count(*) filter (where st = 'found')::int found,
+               count(*) filter (where st = 'dormant')::int dormant,
+               count(*) filter (where st = 'undiscovered')::int undiscovered
+        from (
+          select case when ${myExpr} is null then 'undiscovered'
+                      when ${myExpr} >= ${CUTOFF} then 'found' else 'dormant' end as st
+          from fg_species s ${gapJoin}
+          where lower(s.${sql(col)}) = lower(${latin})) x`)[0] as Record<string, number>;
+  const inScope = state ? (totals as Record<string, number>)[state] : totals.total;
   return {
     rank, name: nameRaw, matched_taxon: matched ?? latin, latin, approximate,
-    region: code || null, count: filtered.length, species: filtered,
-    ...(approximate ? { note: `'${nameRaw}'와 정확히 일치하는 분류군이 없어 가장 비슷한 '${matched}'(으)로 안내합니다.` } : {}),
+    region: code || null, state: state || null,
+    count: inScope,                 // 요청 범위(state 지정 시 그 상태)의 실제 전체 종 수
+    returned: species.length,       // 실제 반환된 표본 수(국명순, 최대 limit)
+    total_in_taxon: totals.total,
+    state_totals: { found: totals.found, dormant: totals.dormant, undiscovered: totals.undiscovered },
+    species,
+    note: [
+      approximate ? `'${nameRaw}'와 정확히 일치하는 분류군이 없어 가장 비슷한 '${matched}'(으)로 안내합니다.` : "",
+      species.length < inScope ? `전체 ${inScope}종 중 국명순 상위 ${species.length}종만 표시.` : "",
+    ].filter(Boolean).join(" ") || undefined,
   };
 }
 
@@ -265,9 +301,12 @@ async function taxaSummary() {
            coalesce(a.recorded,0)::int recorded, coalesce(a.found,0)::int found
     from fg_taxa t
     left join (
-      select taxon_group, count(*) recorded, count(*) filter (where my >= ${CUTOFF}) found
-      from (select taxon_group, ktsn, max(maxyear) my from fg_species_region group by taxon_group, ktsn) g
-      group by taxon_group) a on a.taxon_group = t.taxon_group
+      select s.taxon_group,
+             count(*) recorded,
+             count(*) filter (where n.national_maxyear >= ${CUTOFF}) found
+      from fg_species s
+      join fg_species_national n on n.ktsn = s.ktsn
+      group by s.taxon_group) a on a.taxon_group = t.taxon_group
     order by t.n_species desc`;
   return {
     reference_year: CUTOFF + 10,
@@ -290,23 +329,32 @@ async function taxonGapRanking(a: Record<string, unknown>) {
   const onlyZero = a.only_zero_found === true || String(a.only_zero_found ?? "").toLowerCase() === "true";
   const limit = Math.max(1, Math.min(Number(a.limit ?? 15), 50));
 
+  // 종별 발견상태(전국=사전집계 MV, 지역=커버링 인덱스)로 1:1 조인 → 분류군 집계는 count(*)(팬아웃 없음).
+  // 한글명은 집계 후 lateral 로 한 건만 붙여 tn 조인 중복을 원천 차단.
+  const gapJoin = code
+    ? sql`left join (select ktsn, max(maxyear) my from fg_species_region
+                     where ${sql(rcol)} = ${code} group by ktsn) g on g.ktsn = s.ktsn`
+    : sql`left join fg_species_national g on g.ktsn = s.ktsn`;
+  const myExpr = code ? sql`g.my` : sql`g.national_maxyear`;
   const rows = await sql`
-    select s.${sql(col)} as taxon_latin, tn.korean as taxon_korean,
-           count(distinct s.ktsn)::int total,
-           count(distinct s.ktsn) filter (where g.my >= ${CUTOFF})::int found,
-           count(distinct s.ktsn) filter (where g.my is not null)::int recorded
-    from fg_species s
-    left join (
-      select ktsn, max(maxyear) my from fg_species_region
-      ${code ? sql`where ${sql(rcol)} = ${code}` : sql``}
-      group by ktsn) g on g.ktsn = s.ktsn
-    left join fg_taxon_name tn on tn.rank = ${rank} and lower(tn.latin) = lower(s.${sql(col)})
-    where coalesce(s.${sql(col)}, '') <> ''
-      ${tg ? sql`and s.taxon_group = ${tg}` : sql``}
-    group by s.${sql(col)}, tn.korean
-    ${onlyZero ? sql`having count(distinct s.ktsn) filter (where g.my >= ${CUTOFF}) = 0` : sql``}
-    order by (count(distinct s.ktsn) - count(distinct s.ktsn) filter (where g.my >= ${CUTOFF})) desc,
-             count(distinct s.ktsn) desc
+    with agg as (
+      select s.${sql(col)} as taxon_latin,
+             count(*)::int total,
+             count(*) filter (where ${myExpr} >= ${CUTOFF})::int found,
+             count(*) filter (where ${myExpr} is not null)::int recorded
+      from fg_species s
+      ${gapJoin}
+      where coalesce(s.${sql(col)}, '') <> ''
+        ${tg ? sql`and s.taxon_group = ${tg}` : sql``}
+      group by s.${sql(col)}
+      ${onlyZero ? sql`having count(*) filter (where ${myExpr} >= ${CUTOFF}) = 0` : sql``}
+    )
+    select a.taxon_latin, tn.korean as taxon_korean, a.total, a.found, a.recorded
+    from agg a
+    left join lateral (
+      select korean from fg_taxon_name
+      where rank = ${rank} and lower(latin) = lower(a.taxon_latin) limit 1) tn on true
+    order by (a.total - a.found) desc, a.total desc
     limit ${limit}`;
 
   const taxa = rows.map((r) => {
@@ -384,7 +432,7 @@ const SYSTEM = `당신은 '발견공백 도우미'입니다. 한국의 생물종
 - 멸종위기·적색목록 종 목록 → list_protected_species (region+state 로 지역별 상태 필터).
 - 특정 종의 전국 발견 상태 → search_species 로 ktsn 을 찾고 species_detail.
 - 전국 분류군별 요약 → taxa_summary (특정 지역 질문에는 쓰지 마세요).
-- 특정 강·목·과·속(예: 사슴벌레과, 하늘소과, 진달래속, 딱정벌레목, 포유강)에 속한 종 목록·미발견 종 → list_species_by_taxon (rank=class|order|family|genus). 강·목·과·속 모두 한글명을 그대로 넘기면 됩니다(라틴 학명도 가능). 결과에 approximate=true 이면 정확히 일치하는 분류군이 없어 가장 비슷한 matched_taxon 으로 해석한 것이니, 답변에 "'입력'과 가장 비슷한 'matched_taxon'로 안내"임을 밝히세요. 사전에 없어 suggestions(후보)만 오면 그 후보의 rank·이름으로 다시 호출하세요. taxon_group(9개 대분류: 곤충류 등)과는 다른 개념이니 혼동하지 마세요. KTSN 분류체계는 강-목-과-속-종/아종까지만 있고 아과·족은 지원하지 않습니다 — 물어보면 그렇게 안내하세요.
+- 특정 강·목·과·속(예: 사슴벌레과, 하늘소과, 진달래속, 딱정벌레목, 포유강)에 속한 종 목록·미발견 종 → list_species_by_taxon (rank=class|order|family|genus). 강·목·과·속 모두 한글명을 그대로 넘기면 됩니다(라틴 학명도 가능). 결과에 approximate=true 이면 정확히 일치하는 분류군이 없어 가장 비슷한 matched_taxon 으로 해석한 것이니, 답변에 "'입력'과 가장 비슷한 'matched_taxon'로 안내"임을 밝히세요. 사전에 없어 suggestions(후보)만 오면 그 후보의 rank·이름으로 다시 호출하세요. count 는 요청 범위의 '실제 전체' 종 수이고 species 는 국명순 상위 표본(최대 limit)이며 state_totals 에 발견/휴면/미발견 내역이 있으니, "전체 N종(미발견 M종) 중 상위 K종" 처럼 규모를 정확히 전하세요. taxon_group(9개 대분류: 곤충류 등)과는 다른 개념이니 혼동하지 마세요. KTSN 분류체계는 강-목-과-속-종/아종까지만 있고 아과·족은 지원하지 않습니다 — 물어보면 그렇게 안내하세요.
 - 어느 과·속에 발견공백이 많은지, 또는 (최근10년) 전혀 기록되지 않은 과·속 순위 → taxon_gap_ranking (rank=family|genus, taxon_group·region 선택, only_zero_found=true 면 완전 미발견 분류군만). 예: '곤충류에서 미발견 많은 과', '전남에서 기록 없는 과'. 개별 종 나열이 아니라 분류군 단위 순위가 필요할 때 씁니다.
 - taxon_group 인자에는 코드를 넘기세요: IN=곤충류, IV=무척추동물(곤충제외), VP=관속식물, -P=어류, MS=선태류, AV=조류, MM=포유류, RP=파충류, AM=양서류.`;
 

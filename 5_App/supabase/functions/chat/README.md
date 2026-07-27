@@ -5,13 +5,14 @@
 
 ## 활성화 순서
 
-1. **스키마** — `5_App/supabase/conversational_service.sql` 적용(마이그레이션 `conversational_service_reference`로 이미 반영), 이어서 `5_App/supabase/conversational_service_taxon.sql`(강·목·과·속 질의 — `fg_species.class_la/order_la/family_la/genus_la` + `fg_taxon_name`), 그리고 `5_App/supabase/conversational_service_taxon_ranks.sql`(강·목까지 CHECK 확대 + 한글명 퍼지매칭 `pg_trgm`) 적용.
+1. **스키마** — `5_App/supabase/conversational_service.sql` 적용(마이그레이션 `conversational_service_reference`로 이미 반영), 이어서 `5_App/supabase/conversational_service_taxon.sql`(강·목·과·속 질의 — `fg_species.class_la/order_la/family_la/genus_la` + `fg_taxon_name`), 그리고 `5_App/supabase/conversational_service_taxon_ranks.sql`(강·목까지 CHECK 확대 + 한글명 퍼지매칭 `pg_trgm`), 마지막으로 `5_App/supabase/conversational_service_perf.sql`(전국 롤업 MV `fg_species_national` + 지역 경로 커버링 인덱스) 적용.
 
 2. **데이터 적재** — `.env`에 `SUPABASE_DB_URL` 추가 후 실행:
    - 값: Supabase Dashboard → Project Settings → Database → Connection string → URI.
      **Direct connection 또는 Session pooler** URI 사용(포트 6543 Transaction pooler는 COPY 불가).
    - `python 7_MCP/build_taxon_names.py`로 `7_MCP/data/taxon_names.json.gz`(강·목·과·속 전체 KTSN 한글명) 생성(커밋본 있으면 생략 가능).
-   - `python 5_App/supabase/load_reference.py` → `fg_species`·`fg_species_region`·`fg_region`·`fg_taxa`·`fg_taxon_name` 적재.
+   - `python 5_App/supabase/load_reference.py` → `fg_species`·`fg_species_region`·`fg_region`·`fg_taxa`·`fg_taxon_name` 적재. `fg_species_region` 재적재 시 전국 롤업 MV 를 자동 refresh.
+   - 일부만 갱신할 땐 `--only`: 예) `python 5_App/supabase/load_reference.py --only fg_taxon_name,fg_species`(590k행 재적재 생략).
 
 3. **Gemini 키** — 함수 비밀키 설정:
    - `supabase secrets set GEMINI_API_KEY=...` (필수)
