@@ -9,16 +9,17 @@
   :root{
     --ink:#1b201d; --muted:#6b7280; --faint:#9aa0a6; --line:#e7e7e2; --bg:#fafaf8; --card:#fff;
     --accent:#2f6f5e;
-    --r-ex:#000000; --r-ew:#3D2645; --r-re:#6B4E71; --r-cr:#D81E05; --r-en:#FC7F3F;
-    --r-vu:#F2DC00; --r-nt:#C3D838; --r-lc:#5CB85C; --r-dd:#CFCFC4; --r-na:#EAEAE2; --r-ne:#F7F7F4;
+    --eg1:#7F1D1D; --eg2:#C2410C;                    /* 발견공백 강조(짙은 적갈 → 주황) */
     --radius:12px;
+    /* 적색목록 등급색은 여기 두지 않는다 — 지도·범례·표가 모두 스크립트의 RL_FILL 을 참조하므로
+       한 곳에서만 관리한다. CSS 토큰으로도 두면 두 벌이 되어 값이 갈린다. */
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
     font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.5}
   a{color:inherit}
   /* ── header ── */
-  header h1{margin:0 0 4px;font-size:24px;letter-spacing:-.01em}
+  header h1{margin:0 0 4px;font-size:23px;letter-spacing:-.01em}
   header h1 b{color:var(--accent)}
   header .sub{color:var(--muted);font-size:13.5px;margin:0;max-width:60ch}
   /* ── hero tiles ── */
@@ -151,20 +152,9 @@
   footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.7}
 
   /* ══ 지도 서비스(구 service.html) 스타일 ══ */
-  :root{
-    --ink:#1b201d;--muted:#6b7280;--faint:#9aa0a6;--line:#e7e7e2;--bg:#fafaf8;--card:#fff;--accent:#2f6f5e;
-    --r-ex:#000;--r-ew:#3D2645;--r-re:#6B4E71;--r-cr:#D81E05;--r-en:#FC7F3F;--r-vu:#F2DC00;
-    --r-nt:#C3D838;--r-lc:#5CB85C;--r-dd:#CFCFC4;--r-nena:#E6E6DE;--eg1:#7F1D1D;--eg2:#C2410C;
-    --radius:12px;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.5}
+  /* 토큰과 기본 규칙(:root·*·body·a·header h1)은 맨 위 공통 블록에 한 벌만 둔다. */
   .wrap{max-width:1280px;margin:0 auto;padding:20px 16px 64px}
-  a{color:inherit}
   header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  header h1{margin:0;font-size:20px;letter-spacing:-.01em}
-  header h1 b{color:var(--accent)}
   header .back{color:var(--muted);text-decoration:none;border:1px solid var(--line);
     border-radius:8px;padding:7px 9px;background:#fff;display:inline-flex;align-items:center;justify-content:center}
   header .back:hover{border-color:var(--accent);color:var(--accent)}
@@ -456,13 +446,10 @@
   }
 
   /* ══ 대화형 도우미(구 chat.html) 스타일 ══ */
-  *{box-sizing:border-box}
+  /* header h1 을 여기서 다시 선언하면 위 모바일 규칙(≤880px)보다 뒤에 와서 글자 축소가 먹지 않는다. */
   .back{display:inline-flex;align-items:center;justify-content:center;color:var(--muted);text-decoration:none;
     margin-bottom:14px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--card)}
   .back:hover{color:var(--accent);border-color:var(--accent)}
-  header h1{margin:0 0 4px;font-size:23px;letter-spacing:-.01em}
-  header h1 b{color:var(--accent)}
-  header .sub{color:var(--muted);font-size:13.5px;margin:0;max-width:60ch}
   .authcard h3{margin:0;font-size:15.5px}
   .authcard p{margin:6px 0 14px;color:var(--muted);font-size:13px}
   .authcard input[type=email]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:10px;font-family:inherit}
