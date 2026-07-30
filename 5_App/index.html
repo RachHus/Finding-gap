@@ -278,6 +278,17 @@
   .reg-toggle{display:flex;background:#fff;border:1px solid #cdd5d1;border-radius:7px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.14)}
   .reg-toggle button{border:0;background:#fff;padding:5px 11px;font:600 12px system-ui,sans-serif;color:#5a665f;cursor:pointer}
   .reg-toggle button.on{background:var(--accent);color:#fff}
+  /* 확대 버튼이 좌상단 환경변수 컨트롤에 가려지므로 좌하단으로 내린다(저작권 표기는 우하단). */
+  #map .ol-zoom,#mapB .ol-zoom{top:auto;bottom:.6em;left:.6em}
+  /* 맨휠은 페이지 스크롤로 넘기므로, 확대 방법을 그 자리에서 알려 준다.
+     ol.css 의 `.ol-overlaycontainer-stopevent > *{pointer-events:auto}` 와 특이도가 같아 밀리므로
+     선택자를 한 단계 더 준다(안 그러면 이 오버레이가 지도 클릭·확대 버튼·휠을 전부 가로챈다). */
+  .ol-overlaycontainer-stopevent .wheel-hint{pointer-events:none}
+  .wheel-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(20,28,24,.42);color:#fff;font:600 14px system-ui,sans-serif;
+    opacity:0;transition:opacity .18s;z-index:4}
+  .wheel-hint.on{opacity:1}
+  @media(hover:none){.wheel-hint{display:none}}
   .reg-toggle button+button{border-left:1px solid #e3e8e5}
   .reg-toggle button.poly{min-width:44px;text-align:center;letter-spacing:.3px}
   /* 내 주변(geolocation → 시군구 발견공백) */
@@ -1030,8 +1041,12 @@ function initMap(){
   sidoLayer=LAYERS.sido;
   layers.push(LAYERS.sido, LAYERS.sigungu);
   map=new ol.Map({target:'map',layers,controls:ol.control.defaults.defaults({attribution:true}),
-    view:new ol.View({center:ol.proj.fromLonLat([127.8,36.1]),zoom:6.6,minZoom:5,maxZoom:12})});
-  addRegToggle(); addEnvCtrl();
+    interactions:mapInteractions(),
+    view:new ol.View({center:ol.proj.fromLonLat([127.8,36.1]),zoom:6.6,minZoom:5,maxZoom:12,
+      // 국내 조회 서비스이므로 지도 중심이 한반도 밖으로 나가지 못하게 묶는다.
+      // (중심만 제한 — 축소해서 주변 나라까지 보는 것은 그대로 된다)
+      extent:KOREA_EXTENT, constrainOnlyCenter:true})});
+  addRegToggle(); addEnvCtrl(); addWheelHint();
   Promise.all([
     fetch('demo/data/sido.geojson').then(r=>r.json()),
     fetch('demo/data/sigungu.geojson').then(r=>r.json())
@@ -1062,15 +1077,51 @@ function initMap(){
     sidoLayer.changed(); renderSelChips(); renderTable();
   });
 }
+// 지도 중심 허용 범위(한반도 + 여유) — 실수로 지구 반대편까지 끌려가는 일을 막는다.
+// ol 로드 실패 시에도 스크립트 전체가 죽지 않도록 방어한다(지도만 못 뜨고 나머지는 동작).
+const KOREA_EXTENT = (typeof ol!=='undefined')
+  ? ol.proj.transformExtent([122,31.5,134,40.5],'EPSG:4326','EPSG:3857') : undefined;
+window.KOREA_EXTENT=KOREA_EXTENT;                         // const 는 전역 객체에 안 붙는다 → 제보 모듈에서 쓰도록 노출
+/* 지도가 페이지 한가운데 놓이므로, 지도 위에서 휠을 굴리면 페이지가 내려가야 한다.
+   기본 설정은 휠을 지도 확대에 써 버리고 커서 쪽으로 당겨 확대하기 때문에,
+   페이지를 내리려던 사용자가 최대 배율로 엉뚱한 곳(적도 부근)까지 끌려간다.
+   → 확대는 Ctrl(⌘)+휠, 터치는 두 손가락. 맨휠·한 손가락은 페이지 스크롤에 그대로 넘긴다. */
+function mapInteractions(){
+  return ol.interaction.defaults.defaults({mouseWheelZoom:false, dragPan:false}).extend([
+    new ol.interaction.MouseWheelZoom({condition:ol.events.condition.platformModifierKeyOnly}),
+    new ol.interaction.DragPan({condition(e){
+      return this.getPointerCount()===2 || (e.originalEvent&&e.originalEvent.pointerType)!=='touch';
+    }})
+  ]);
+}
+function addWheelHint(){                                  // 맨휠로 넘어갈 때 확대 방법을 지도 위에 잠깐 띄운다
+  const el=document.createElement('div'); el.className='ol-unselectable wheel-hint'; el.setAttribute('aria-hidden','true');
+  el.style.pointerEvents='none';                          // 스타일시트 순서와 무관하게 확실히 통과시킨다
+  el.textContent=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent)?'⌘ + 휠로 확대·축소':'Ctrl + 휠로 확대·축소';
+  map.addControl(new ol.control.Control({element:el}));
+  let t=null;
+  map.getViewport().addEventListener('wheel',ev=>{
+    if(ev.ctrlKey||ev.metaKey) return;
+    el.classList.add('on'); clearTimeout(t); t=setTimeout(()=>el.classList.remove('on'),1400);
+  },{passive:true});
+}
+function resetMapView(){                                  // 확대해 들어간 뒤 전국 범위로 되돌아오는 수단
+  if(!map) return;
+  map.getView().setCenter(ol.proj.fromLonLat([127.8,36.1]));
+  map.getView().setZoom(6.6);
+}
 function addRegToggle(){                                  // 지도 안 컨트롤: 시도/시군구 레벨 토글 + 지역 경계 표시 토글
   const wrap=document.createElement('div'); wrap.className='ol-unselectable map-ctrls';
   const lvl=document.createElement('div'); lvl.className='reg-toggle';
   lvl.innerHTML='<button data-l="sido" class="on">시도</button><button data-l="sigungu">시군구</button>';
   lvl.addEventListener('click',ev=>{ const b=ev.target.closest('button'); if(b) setRegLevel(b.dataset.l); });
+  const hv=document.createElement('div'); hv.className='reg-toggle';
+  hv.innerHTML='<button type="button" title="지도를 전국 범위로 되돌립니다">전국</button>';
+  hv.addEventListener('click',resetMapView);
   const pv=document.createElement('div'); pv.className='reg-toggle';
   pv.innerHTML='<button class="poly on" title="지역 경계 표시/숨김(검색 필터는 유지)">ON</button>';
   pv.addEventListener('click',()=>setPolyVisible(!polyVisible));
-  wrap.appendChild(lvl); wrap.appendChild(pv);
+  wrap.appendChild(lvl); wrap.appendChild(hv); wrap.appendChild(pv);
   map.addControl(new ol.control.Control({element:wrap}));
   regToggleEl=lvl; polyToggleEl=pv;
 }
@@ -1584,6 +1635,8 @@ window.fgMapResize=function(){ if(!map) return;
 window.fgApplyDeepLink=function(p){
   const tx=p.get('taxon');
   if(tx && TAXA.some(t=>t.group===tx) && curTaxon!==tx){ fTaxon.value=tx; fTaxon.onchange(); }
+  // 분류군 타일·요약도 같은 분류군을 가리키게 한다(딥링크로 들어오면 타일이 이전 분류군에 남는다).
+  if(tx && typeof select==='function') select(tx,false);
   const spk=p.get('sp');
   if(spk){ const sp=SPIDX.find(x=>x.k===spk);
     if(sp){ setMode('B'); sTaxon.value=''; sTax=''; q.value=sp.n||sp.s; doSearch(); showSpecies(sp);
@@ -1823,17 +1876,16 @@ function select(group,scroll){
     if(tgt) tgt.scrollIntoView({behavior:'smooth',block:'start'}); }
 }
 
-/* ── 타일 선택 → 지도(모드 A·B)의 분류군 선택자로 전달 ──
+/* ── 타일 선택 → 지도(모드 A)의 분류군 선택자로 전달 ──
    지도는 같은 문서 안에 있고 분류군 선택 UI 는 타일 하나로 통일한다.
-   service 쪽 로직을 건드리지 않도록 select 값을 바꾸고 change 를 발생시킨다. */
+   service 쪽 로직을 건드리지 않도록 select 값을 바꾸고 change 를 발생시킨다.
+   종별 검색(모드 B)은 분류군과 무관하게 전 분류군을 대상으로 하므로 sTaxon 은 건드리지 않는다. */
 function syncTaxonToMap(group,ready){
   if(!ready) return;
-  ['fTaxon','sTaxon'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el||el.value===group) return;
-    if(![...el.options].some(o=>o.value===group)) return;
-    el.value=group; el.dispatchEvent(new Event('change'));
-  });
+  const el=document.getElementById('fTaxon');
+  if(!el||el.value===group) return;
+  if(![...el.options].some(o=>o.value===group)) return;
+  el.value=group; el.dispatchEvent(new Event('change'));
 }
 
 /* ── 푸터 ── */
@@ -2261,7 +2313,10 @@ function initMap(){
     rptMap=new ol.Map({target:el,
       layers:[new ol.layer.Tile({source:new ol.source.OSM({crossOrigin:'anonymous'})}), pinLayer],
       controls:ol.control.defaults.defaults({attribution:false}),
-      view:new ol.View({center:ol.proj.fromLonLat([127.8,36.3]), zoom:6, minZoom:5, maxZoom:18})});
+      // 모달 안에서도 휠은 모달 스크롤에 넘긴다(확대는 Ctrl/⌘+휠·두 손가락).
+      interactions:window.mapInteractions?window.mapInteractions():undefined,
+      view:new ol.View({center:ol.proj.fromLonLat([127.8,36.3]), zoom:6, minZoom:5, maxZoom:18,
+        extent:window.KOREA_EXTENT, constrainOnlyCenter:true})});
     rptMap.on('singleclick',(e)=>{
       const ll=ol.proj.toLonLat(e.coordinate); setPin(ll[0],ll[1]);
     });
@@ -2272,7 +2327,11 @@ function initMap(){
   const cc=document.getElementById('rptCoord'); if(cc) cc.textContent='';
   rptMap.getView().setCenter(ol.proj.fromLonLat([127.8,36.3]));
   rptMap.getView().setZoom(6);
-  setTimeout(()=>rptMap.updateSize(),60);
+  // 모달이 막 펼쳐진 직후라 컨테이너 크기가 아직 0 으로 잡힐 수 있다.
+  // 레이아웃이 확정된 뒤 크기를 다시 재고, 그려질 프레임을 기다리지 않도록 강제로 한 번 그린다.
+  const fit=()=>{ if(!rptMap) return; rptMap.updateSize(); rptMap.renderSync(); };
+  requestAnimationFrame(()=>requestAnimationFrame(fit));
+  setTimeout(fit,120); setTimeout(fit,450);
 }
 function setPin(lon,lat){
   latlon={lon:+lon.toFixed(5), lat:+lat.toFixed(5)};
