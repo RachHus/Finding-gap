@@ -15,6 +15,9 @@
        한 곳에서만 관리한다. CSS 토큰으로도 두면 두 벌이 되어 값이 갈린다. */
   }
   *{box-sizing:border-box}
+  /* 제목 크기는 세 단만 쓴다 — 23(페이지) / 18(섹션) / 15(패널·카드).
+     h2 가 h3 보다 작아지는 역전이 있었다. 새 제목을 넣을 때 중간값(16·17)을 만들지 말 것.
+     본문 설명글은 13.5, 표·조밀한 컨트롤은 12.5 다. */
   body{margin:0;background:var(--bg);color:var(--ink);
     font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.5}
   a{color:inherit}
@@ -32,7 +35,7 @@
   .tile:hover{border-color:#cfcfc7;box-shadow:0 4px 14px rgba(0,0,0,.05);transform:translateY(-1px)}
   .tile.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
   .tile .chip{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff}
-  .tile .nm{font-weight:700;font-size:14.5px}
+  .tile .nm{font-weight:700;font-size:15px}
   .tile .meta{font-size:11.5px;color:var(--muted)}
   .tile.nodata{opacity:.62}
   .tile.nodata .chip{filter:grayscale(.35)}
@@ -45,13 +48,13 @@
   .dhead h2{margin:0;font-size:18px}
   /* ── 홈 3축 내비 ── */
   .axes{display:flex;gap:2px;margin:20px 0 2px;border-bottom:1px solid var(--line)}
-  .axes .ax{appearance:none;border:0;background:none;cursor:pointer;padding:9px 15px 11px;
-    font-size:14.5px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;
+  .axes .ax{appearance:none;border:0;background:none;cursor:pointer;padding:10px 15px 12px;
+    font-size:15px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;
     margin-bottom:-1px;transition:color .12s,border-color .12s}
   .axes .ax:hover{color:var(--ink)}
   .axes .ax.on{color:var(--accent);border-bottom-color:var(--accent)}
   .vintro{margin:18px 0 6px}
-  .vintro h2{margin:0 0 6px;font-size:19px}
+  .vintro h2{margin:0 0 6px;font-size:18px}
   .vintro p{margin:0;color:var(--muted);font-size:13.5px;max-width:64ch;line-height:1.6}
   .vintro p b{color:var(--ink);font-weight:600}
   /* cards */
@@ -60,7 +63,7 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
   .card .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
   .card .l{font-size:12px;color:var(--muted);margin-top:1px}
-  .card .s{font-size:11px;color:var(--faint);margin-top:5px}
+  .card .s{font-size:11px;color:#6b7280;margin-top:5px}
   .card.gap .v{color:#b8541f}
   /* 분류군 퀴즈 진입 카드(누적 관측 옆) */
   .card.quiz{background:#eef3f1;border-color:#d3e5dd;text-decoration:none;color:inherit;
@@ -72,20 +75,7 @@
   .card.quiz .qs{font-size:11px;color:var(--accent);font-weight:700;margin-top:7px}
   /* panel */
   .dashpanel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px}
-  .dashpanel h3{margin:0;font-size:14.5px;display:flex;align-items:center;gap:7px}
-  /* 물음표 툴팁: 옅은 안내문을 아이콘 뒤로 — 호버·포커스·탭(모바일) 시 표출 */
-  .qtip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
-    border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:10px;line-height:1;
-    font-weight:700;cursor:help;padding:0;margin-left:5px;vertical-align:middle;flex:none;appearance:none}
-  .qtip:hover,.qtip:focus,.qtip.on{border-color:var(--accent);color:var(--accent);outline:none}
-  .qtip::after{content:attr(data-tip);position:absolute;left:-4px;top:calc(100% + 7px);z-index:60;width:max-content;
-    max-width:min(260px,74vw);padding:7px 10px;border-radius:8px;background:#2b332e;color:#fff;font-size:11.5px;
-    font-weight:400;line-height:1.5;text-align:left;white-space:normal;box-shadow:0 6px 20px rgba(0,0,0,.18);
-    opacity:0;visibility:hidden;transition:opacity .12s}
-  .qtip::before{content:"";position:absolute;left:3px;top:calc(100% + 2px);border:5px solid transparent;
-    border-bottom-color:#2b332e;opacity:0;visibility:hidden;transition:opacity .12s;z-index:61}
-  .qtip:hover::after,.qtip:focus::after,.qtip.on::after,
-  .qtip:hover::before,.qtip:focus::before,.qtip.on::before{opacity:1;visibility:visible}
+  .dashpanel h3{margin:0;font-size:15px;display:flex;align-items:center;gap:7px}
   /* chart1 bars */
   .bars{margin-top:12px;display:flex;flex-direction:column;gap:7px}
   .bar{display:grid;grid-template-columns:96px 1fr 40px;align-items:center;gap:10px;cursor:pointer;
@@ -115,7 +105,7 @@
   .donuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px;margin-top:14px}
   @media(max-width:520px){.donuts{grid-template-columns:repeat(2,1fr)}}
   .dcard{text-align:center}
-  .dcard .dt{font-size:12.5px;margin-bottom:4px}
+  .dcard .dt{font-size:13.5px;margin-bottom:4px}
   .dcard .dt b{font-size:13px}
   .dcard .dn{font-size:10.5px;color:#5a5f5c;display:flex;flex-direction:column;gap:1px;margin-bottom:6px}
   .dcard .dn span{display:inline-flex;align-items:center;justify-content:center}
@@ -126,10 +116,10 @@
   .soonbox{background:var(--card);border:1px dashed var(--line);border-radius:var(--radius);padding:28px 20px;text-align:center}
   .soonbox .v{font-size:30px;font-weight:800}
   .soonbox .l{color:var(--muted);font-size:13px;margin-top:4px}
-  .soonbox .msg{margin-top:14px;font-size:12.5px;color:#7a7f7c;max-width:46ch;margin-left:auto;margin-right:auto}
+  .soonbox .msg{margin-top:14px;font-size:13.5px;color:#7a7f7c;max-width:46ch;margin-left:auto;margin-right:auto}
   /* ── 마이데이터(인증·관심종) ── */
   .authcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;max-width:440px}
-  .authcard h3{margin:0;font-size:15.5px}
+  .authcard h3{margin:0;font-size:15px}
   .authcard p{margin:6px 0 14px;color:var(--muted);font-size:13px}
   .authcard input[type=email]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:10px;font-family:inherit}
   .btn{appearance:none;border:0;border-radius:9px;padding:10px 16px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
@@ -145,21 +135,24 @@
   .wl li .sci{font-style:italic;color:var(--muted);font-size:12px}
   .wl li .rm{margin-left:auto;border:0;background:none;color:var(--faint);cursor:pointer;font-size:12px}
   .wl li .rm:hover{color:#b8541f}
-  .muted2{color:var(--muted);font-size:12.5px}
-  .authmsg{margin-top:10px;font-size:12.5px;padding:8px 10px;border-radius:8px}
+  .muted2{color:var(--muted);font-size:13.5px}
+  .authmsg{margin-top:10px;font-size:13.5px;padding:8px 10px;border-radius:8px}
   .authmsg.ok{background:#eef6f0;color:#2c6a4f;border:1px solid #cfe6d8}
   .authmsg.err{background:#fbeeea;color:#9a3412;border:1px solid #f1d2c6}
   footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.7}
+  footer a{min-height:44px;display:inline-flex;align-items:center;padding:10px 0;margin-right:6px}
 
   /* ══ 지도 서비스(구 service.html) 스타일 ══ */
   /* 토큰과 기본 규칙(:root·*·body·a·header h1)은 맨 위 공통 블록에 한 벌만 둔다. */
-  .wrap{max-width:1280px;margin:0 auto;padding:20px 16px 64px}
+  /* 절대 배치된 도움말 말풍선이 오른쪽으로 삐져나가면 페이지 전체가 가로로 밀린다.
+     clip 은 hidden 과 달리 스크롤 컨테이너를 만들지 않아 상단 탭의 sticky 가 그대로 동작한다. */
+  .wrap{max-width:1280px;margin:0 auto;padding:20px 16px 64px;overflow-x:clip}
   header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   header .back{color:var(--muted);text-decoration:none;border:1px solid var(--line);
     border-radius:8px;padding:7px 9px;background:#fff;display:inline-flex;align-items:center;justify-content:center}
   header .back:hover{border-color:var(--accent);color:var(--accent)}
   .tabs{display:flex;gap:6px;margin:16px 0 14px;border-bottom:1px solid var(--line)}
-  .tabs button{border:0;background:none;padding:10px 16px;font-size:14px;cursor:pointer;color:#666;
+  .tabs button{border:0;background:none;padding:11px 16px;font-size:14px;cursor:pointer;color:#666;
     border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:600}
   .tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
   /* 현재 화면 공유(딥링크) */
@@ -176,7 +169,7 @@
   #modeA .controls .field:last-child{min-width:240px}
   .field label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em}
   select,input[type=search]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px}
-  select{min-width:130px}
+  select{min-width:130px;min-height:44px}
   .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
   .seg button{border:0;background:#fff;padding:8px 12px;font-size:12.5px;cursor:pointer;color:#555}
   .seg button.on{background:var(--accent);color:#fff;font-weight:600}
@@ -194,7 +187,7 @@
   .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
     display:flex;flex-direction:column;max-height:560px}
   @media(max-width:880px){.panel{max-height:none}}
-  .panel h2{margin:0;padding:11px 14px;font-size:13.5px;border-bottom:1px solid var(--line);background:#fcfcfb;
+  .panel h2{margin:0;padding:11px 14px;font-size:15px;border-bottom:1px solid var(--line);background:#fcfcfb;
     display:flex;align-items:center;gap:8px}
   .panel h2 .cnt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500}
   .panel h2 .dl{font-size:12px;border:1px solid var(--line);border-radius:7px;padding:5px 9px;background:#fff;cursor:pointer}
@@ -208,7 +201,7 @@
   th:hover{color:var(--accent)}
   th .ar{font-size:10px;margin-left:3px}
   th .ar.on{color:var(--accent)}
-  th .ar.off{color:#c6cac6}
+  th .ar.off{color:#57606a}
   th:hover .ar.off{color:#9aa0a6}
   .panel h2 .hint{margin-left:8px;font-size:10.5px;color:var(--faint);font-weight:400}
   td .sci{font-style:italic;color:var(--muted)}
@@ -232,18 +225,28 @@
   .qtip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
     border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:10px;line-height:1;
     font-weight:700;cursor:help;padding:0;margin-left:5px;vertical-align:middle;flex:none;appearance:none}
-  .qtip:hover,.qtip:focus,.qtip.on{border-color:var(--accent);color:var(--accent);outline:none}
-  .qtip::after{content:attr(data-tip);position:absolute;left:-4px;top:calc(100% + 7px);z-index:60;width:max-content;
-    max-width:min(240px,74vw);padding:7px 10px;border-radius:8px;background:#2b332e;color:#fff;font-size:11.5px;
+  .qtip:hover,.qtip.on{border-color:var(--accent);color:var(--accent)}
+  .qtip:focus-visible{border-color:var(--accent);color:var(--accent);outline:2px solid var(--accent);outline-offset:2px}
+  /* width 를 주지 않으면 말풍선이 16px 버튼 폭에 맞춰져 글자가 세로로 길게 늘어난다(1,500px 넘게).
+     max-content 로 글줄 길이를 잡고 max-width 로 상한을 둔다 — 둘은 같이 있어야 한다. */
+  .qtip::after{content:attr(data-tip);position:absolute;left:-4px;top:calc(100% + 7px);z-index:60;
+    width:max-content;max-width:min(240px,74vw);padding:7px 10px;border-radius:8px;background:#2b332e;color:#fff;font-size:11.5px;
     font-weight:400;line-height:1.5;text-align:left;white-space:normal;box-shadow:0 6px 20px rgba(0,0,0,.18);
     opacity:0;visibility:hidden;transition:opacity .12s}
-  .qtip::before{content:"";position:absolute;left:3px;top:calc(100% + 2px);border:5px solid transparent;
-    border-bottom-color:#2b332e;opacity:0;visibility:hidden;transition:opacity .12s;z-index:61}
+  /* 이 버튼은 제목 줄 안에 인라인으로 들어가므로 실제 크기를 키우면 줄이 무너진다.
+     보이는 크기는 16px 로 두고, 손가락이 닿는 영역만 44px 로 넓힌다.
+     (outline 으로는 안 된다 — 그리기만 할 뿐 포인터 이벤트를 받지 않는다) */
+  .qtip::before{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;
+    transform:translate(-50%,-50%);z-index:0}
+  /* 퀴즈 카드는 오른쪽 열에 붙어 있어, 말풍선을 왼쪽 기준으로 펼치면 화면 밖으로 나간다.
+     오른쪽 가장자리에 놓이는 도움말은 기준을 뒤집는다. 다만 한 열로 쌓이는 좁은 화면에서는
+     뒤집으면 반대로 왼쪽이 잘리므로, 넓은 화면에만 적용한다. */
+  @media(min-width:881px){ .card.quiz .qt .qtip::after{left:auto;right:-4px} }
   .qtip:hover::after,.qtip:focus::after,.qtip.on::after,
   .qtip:hover::before,.qtip:focus::before,.qtip.on::before{opacity:1;visibility:visible}
   .rec-chips{display:flex;flex-wrap:wrap;gap:6px}
   .rec-chip{appearance:none;cursor:pointer;border:1px solid #dfe7e2;background:#fff;border-radius:999px;
-    padding:5px 11px;font-size:12px;color:#3a4a43;display:inline-flex;align-items:center;gap:7px;max-width:100%}
+    padding:5px 11px;font-size:12px;color:#3a4a43;display:inline-flex;align-items:center;gap:7px;max-width:100%;min-height:44px}
   .rec-chip:hover{border-color:#9ec3b2;background:#f4f9f6}
   .rec-chip .rc-n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
   .rec-chip .rc-n .sci{font-style:italic;font-weight:600;color:#5a5f5c}
@@ -260,7 +263,7 @@
   .sresults .nm{font-weight:600}.sresults .sci{font-style:italic;color:var(--muted);font-size:12px}
   .sresults .tg{margin-left:auto;font-size:11px;color:var(--faint)}
   .scard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;max-width:720px}
-  .scard h3{margin:0 0 2px;font-size:19px}
+  .scard h3{margin:0 0 2px;font-size:18px}
   .scard .sci{font-style:italic;color:var(--muted);font-size:13.5px}
   .scard .row{margin-top:14px}
   .scard .row .k{font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:5px}
@@ -270,12 +273,13 @@
   .reg-toggle button.on{background:var(--accent);color:#fff}
   /* 확대 버튼이 좌상단 환경변수 컨트롤에 가려지므로 좌하단으로 내린다(저작권 표기는 우하단). */
   #map .ol-zoom,#mapB .ol-zoom{top:auto;bottom:.6em;left:.6em}
+  #map .ol-zoom button,#mapB .ol-zoom button{width:44px;height:44px;font-size:16px}
   /* 맨휠은 페이지 스크롤로 넘기므로, 확대 방법을 그 자리에서 알려 준다.
      ol.css 의 `.ol-overlaycontainer-stopevent > *{pointer-events:auto}` 와 특이도가 같아 밀리므로
      선택자를 한 단계 더 준다(안 그러면 이 오버레이가 지도 클릭·확대 버튼·휠을 전부 가로챈다). */
   .ol-overlaycontainer-stopevent .wheel-hint{pointer-events:none}
   .wheel-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    background:rgba(20,28,24,.42);color:#fff;font:600 14px system-ui,sans-serif;
+    background:rgba(20,28,24,.65);color:#fff;font:600 14px system-ui,sans-serif;
     opacity:0;transition:opacity .18s;z-index:4}
   .wheel-hint.on{opacity:1}
   @media(hover:none){.wheel-hint{display:none}}
@@ -353,13 +357,14 @@
   .lk.primary{border-color:#cdddc8;background:#f4f8f6}
   .lk.danger{border-color:#e7c9c0;background:#fdf4f1}
   .lk.danger .t{color:#a23b1a}
-  .muted{color:var(--muted);font-size:12.5px}
+  .muted{color:var(--muted);font-size:13.5px}
   footer{margin-top:24px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.7}
 
   /* ═══════ 모바일(≤880px) 반응형 — 데스크톱(≥881px)은 위 규칙 그대로 ═══════ */
   @media(max-width:880px){
     .wrap{padding:14px 12px 56px}
-    header h1{font-size:18px}
+    /* 섹션 제목이 18px 이라 H1 도 18px 이면 위계가 사라진다. 375px 폭에서 한 줄에 들어가는 상한이 20px 다. */
+    header h1{font-size:20px}
     header .back{padding:8px 14px;min-height:44px;display:inline-flex;align-items:center;font-size:13px}
 
     /* 탭: 스크롤 중에도 모드 전환 접근 가능하게 상단 고정 */
@@ -379,10 +384,19 @@
 
     /* 지도 오버레이 폭 제한 → 지도 팬/줌 공간 확보 */
     .env-ctrl{width:auto;max-width:150px;font-size:11px;padding:6px 8px}
-    .env-ctrl select{min-height:0;padding:5px 6px}
+    .env-ctrl select{min-height:44px;padding:5px 6px}
+    /* 좁은 화면에서는 도움말 말풍선이 240px 이면 오른쪽으로 삐져나가 페이지가 가로로 밀린다.
+       버튼이 놓이는 위치를 감안해 폭을 줄인다. */
+    .qtip::after{max-width:min(210px,58vw)}
+    /* 지도 저작권 링크는 OSM 표기 의무라 없앨 수 없다. 지도를 가리지 않는 선에서 누를 여지를 준다. */
+    #map .ol-attribution a,#mapB .ol-attribution a{display:inline-block;padding:4px 0}
+    /* 지도 위에 얹히는 OpenLayers 기본 컨트롤(저작권 펼침·회전 초기화)도 손가락으로 눌러야 한다.
+       데스크톱은 마우스라 기본 크기로 둔다. */
+    #map .ol-attribution button,#mapB .ol-attribution button,
+    #map .ol-rotate button,#mapB .ol-rotate button{min-width:44px;min-height:44px}
     .env-ctrl .env-op input{min-height:0}
     .map-ctrls{z-index:2}
-    .reg-toggle button{min-height:40px;display:inline-flex;align-items:center}
+    .reg-toggle button{min-height:44px;display:inline-flex;align-items:center}
 
     /* 범례: 줄바꿈 허용 + 컬러바 축소 */
     .legend{flex-wrap:wrap;gap:6px 8px;font-size:10.5px}
@@ -390,6 +404,9 @@
     #legCap,#legCapB{flex-basis:100%}
 
     /* 종 목록(Mode A): 5열 테이블 → 카드(가로 스크롤 없이 세로 스캔) */
+    /* 표가 자기 안에서 스크롤되게 상한을 준다. 상한이 없으면 61행이 그대로 페이지를 밀어
+       모바일에서 12,000px 를 넘긴다. 화면 높이에 따라 함께 줄도록 vh 로 잡는다. */
+    .tblwrap{max-height:70vh}
     #tbl,#tbl tbody{display:block;width:100%}
     #tbl thead{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}  /* 시각적으로만 숨김 — 스크린리더는 열 이름 읽음 */
     #tbl tbody tr{display:block}
@@ -450,7 +467,6 @@
   .back{display:inline-flex;align-items:center;justify-content:center;color:var(--muted);text-decoration:none;
     margin-bottom:14px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--card)}
   .back:hover{color:var(--accent);border-color:var(--accent)}
-  .authcard h3{margin:0;font-size:15.5px}
   .authcard p{margin:6px 0 14px;color:var(--muted);font-size:13px}
   .authcard input[type=email]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:10px;font-family:inherit}
   .btn:disabled{opacity:.6;cursor:default}
@@ -485,7 +501,7 @@
   .inrow{display:flex;gap:8px;margin-top:12px}
   .inrow textarea{flex:1;padding:11px 13px;border:1px solid var(--line);border-radius:11px;font-size:14px;
     font-family:inherit;resize:none;line-height:1.5;max-height:120px}
-  .inrow textarea:focus{outline:none;border-color:var(--accent)}
+  .inrow textarea:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
   @media(max-width:560px){ .msg{max-width:90%}
 </style>
 </head>
@@ -640,7 +656,7 @@
   .btn.cta{display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap}
   .btn.cta.sm{padding:7px 12px;font-size:13px}
   .feedlist .fmeta{color:var(--muted);font-size:12px}
-  .feedlist .fnote{flex-basis:100%;color:#4a4f4c;font-size:12.5px;margin-top:2px;background:#f6f9f7;border-radius:6px;padding:6px 9px}
+  .feedlist .fnote{flex-basis:100%;color:#4a4f4c;font-size:13.5px;margin-top:2px;background:#f6f9f7;border-radius:6px;padding:6px 9px}
   .missions{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
   .mission{display:block;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card);color:inherit}
   .mission:hover{border-color:#9ec3b2;background:#f6f9f7}
@@ -674,7 +690,7 @@
   .rpt-f>label{display:block;font-size:12px;font-weight:600;color:#4f6f61;margin-bottom:5px}
   .rpt-f .req{color:#c0392b}
   .rpt-f input,.rpt-f textarea{width:100%;border:1px solid #d7ded9;border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box}
-  .rpt-f input:focus,.rpt-f textarea:focus{outline:none;border-color:var(--accent)}
+  .rpt-f input:focus-visible,.rpt-f textarea:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
   .rpt-f textarea{resize:vertical;min-height:52px}
   .rpt-sp{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid #d7ded9;border-radius:8px;background:#f7faf8}
   .rpt-sp .nm{font-weight:600;font-size:13px}.rpt-sp .sci{font-style:italic;color:var(--muted);font-size:12px}
@@ -689,7 +705,7 @@
   .rpt-coord{font-size:12px;color:#256b48;font-weight:600;margin-top:5px;min-height:16px}
   .rpt-submit{width:100%;border:0;border-radius:9px;padding:12px;font:inherit;font-weight:700;font-size:14px;background:var(--accent);color:#fff;cursor:pointer;min-height:46px}
   .rpt-submit:disabled{opacity:.5;cursor:default}
-  .rpt-msg{font-size:12.5px;margin-top:11px;padding:10px 12px;border-radius:8px;display:none;line-height:1.5}
+  .rpt-msg{font-size:13.5px;margin-top:11px;padding:10px 12px;border-radius:8px;display:none;line-height:1.5}
   .rpt-msg.err{display:block;background:#fdecea;color:#a03027}
   .rpt-msg.ok{display:block;background:#eaf6ef;color:#256b48}
   .rpt-gate{text-align:center;padding:14px 4px}
@@ -1387,7 +1403,7 @@ function doSearch(){
   scored.sort((a,b)=>a[0]-b[0] || (a[1].n||a[1].s).localeCompare(b[1].n||b[1].s,'ko'));
   const total=scored.length;
   SRES=scored.slice(0,60).map(x=>x[1]);
-  sCount.textContent=`${nf(total)}${total>60?' · 상위 60 표시':''}건`;
+  sCount.textContent=`${nf(total)}건${total>60?' · 상위 60 표시':''}`;
   sResults.style.display='';
   sResults.innerHTML=SRES.length?SRES.map((sp,i)=>
     `<div class="r" onclick="showIdx(${i})">`+
@@ -2009,6 +2025,7 @@ function loginCard(){
   <div class="authcard">
     <h3>로그인 · 가입</h3>
     <p>이메일로 로그인 링크를 보내드립니다 — 비밀번호가 필요 없습니다.</p>
+    <label for="authEmail" style="display:block;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em;margin-bottom:4px">이메일</label>
     <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
     <button class="btn" id="authSend">로그인 링크 받기</button>
     <div class="authdiv">또는</div>
@@ -2455,6 +2472,7 @@ function loginCard(){
     <p>대화형 도우미는 로그인한 이용자에게 하루 일정 횟수 제공됩니다.</p>
     <button class="btn goog" id="cAuthGoogle"><svg viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>Google로 계속하기</button>
     <div class="divider">또는 이메일</div>
+    <label for="cAuthEmail" style="display:block;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em;margin-bottom:4px">이메일</label>
     <input type="email" id="cAuthEmail" placeholder="you@example.com" autocomplete="email">
     <button class="btn" id="cAuthSend" style="width:100%">로그인 링크 받기</button>
     <div id="cAuthMsg"></div>
