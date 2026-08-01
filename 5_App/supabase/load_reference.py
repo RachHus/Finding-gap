@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 발견공백 MCP SQLite → Supabase Postgres 참고 테이블 벌크 로드.
-사용법: python 5_App/supabase/load_reference.py
+사용법: python 5_App/supabase/load_reference.py                              # 전체 재적재
+        python 5_App/supabase/load_reference.py --only fg_taxon_name,fg_species  # 지정 테이블만
 필요: SUPABASE_DB_URL 환경변수 (Supabase Dashboard → Database → URI)
+참고: fg_species_region 을 재적재하면 전국 롤업 MV(fg_species_national)를 자동 refresh 한다.
 """
 
 import os
@@ -11,6 +13,7 @@ import sys
 import gzip
 import csv
 import io
+import json
 import sqlite3
 from pathlib import Path
 
@@ -77,9 +80,67 @@ def load_table(sqlite_conn, pg_cursor, table_name, columns, query):
         pg_cursor.copy_expert(copy_sql, buf)
 
 
+def load_taxon_name(pg_cursor):
+    """KTSN 전체(강·목·과·속 라틴↔한글)를 fg_taxon_name 에 적재.
+    출처: 7_MCP/data/taxon_names.json.gz (python 7_MCP/build_taxon_names.py 로 생성)."""
+    path = Path('7_MCP/data/taxon_names.json.gz')
+    if not path.exists():
+        print(f"(경고) 건너뜀: {path} 없음 — python 7_MCP/build_taxon_names.py 로 먼저 생성하세요.")
+        return
+    with gzip.open(path, 'rt', encoding='utf-8') as f:
+        data = json.load(f)
+    rows = [(rank, la, ko)
+            for rank in ('class', 'order', 'family', 'genus')
+            for la, ko in data.get(rank, {}).items()]
+    pg_cursor.execute("TRUNCATE public.fg_taxon_name;")
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator='\n')
+    writer.writerows(rows)
+    buf.seek(0)
+    pg_cursor.copy_expert(
+        "COPY public.fg_taxon_name (rank, latin, korean) FROM STDIN WITH (FORMAT csv)", buf)
+
+
+KNOWN_TABLES = ['fg_species', 'fg_species_region', 'fg_region', 'fg_taxa', 'fg_taxon_name']
+
+
+def parse_only(argv):
+    """--only a,b / --only=a,b / 나열된 테이블명 → set(대상) 또는 None(전체)."""
+    vals = []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == '--only':
+            i += 1
+            if i < len(argv):
+                vals.extend(argv[i].split(','))
+        elif a.startswith('--only='):
+            vals.extend(a[len('--only='):].split(','))
+        else:
+            vals.append(a)
+        i += 1
+    vals = [v.strip() for v in vals if v.strip()]
+    if not vals:
+        return None
+    unknown = [v for v in vals if v not in KNOWN_TABLES]
+    if unknown:
+        print(f"오류: 알 수 없는 테이블 {unknown}. 가능: {KNOWN_TABLES}", file=sys.stderr)
+        sys.exit(2)
+    return set(vals)
+
+
+def refresh_national(pg_cursor):
+    """fg_species_region 변경 후 전국 롤업 MV(fg_species_national) 재계산."""
+    try:
+        pg_cursor.execute("REFRESH MATERIALIZED VIEW public.fg_species_national;")
+        print("  fg_species_national: refreshed")
+    except Exception as e:
+        print(f"  (경고) fg_species_national refresh 실패(MV 미생성?): {e}", file=sys.stderr)
+
+
 def verify_tables(pg_cursor):
     """로드된 행 수 확인."""
-    for table in ['fg_species', 'fg_species_region', 'fg_region', 'fg_taxa']:
+    for table in KNOWN_TABLES:
         pg_cursor.execute(f"SELECT count(*) FROM public.{table};")
         count = pg_cursor.fetchone()[0]
         print(f"  {table}: {count}행")
@@ -99,28 +160,44 @@ def main():
         pg_conn = psycopg2.connect(db_url)
         pg_cursor = pg_conn.cursor()
 
-        print("데이터 로드 중...")
+        only = parse_only(sys.argv[1:])   # None=전체, set=지정 테이블만
+        want = lambda t: only is None or t in only
 
-        load_table(sqlite_conn, pg_cursor, 'fg_species',
-                   ['ktsn', 'korean_name', 'scientific_name', 'taxon_group',
-                    'taxon_group_kor', 'endangered_grade', 'national_redlist_category',
-                    'has_media', 'interest'],
-                   "SELECT ktsn, korean_name, scientific_name, taxon_group, "
-                   "taxon_group_kor, endangered_grade, national_redlist_category, "
-                   "has_media, interest FROM species")
+        # (테이블, 적재 함수) — --only 로 선택 적재. 순서 유지(스키마 의존 없음이나 가독성).
+        steps = [
+            ('fg_species', lambda: load_table(sqlite_conn, pg_cursor, 'fg_species',
+                ['ktsn', 'korean_name', 'scientific_name', 'taxon_group',
+                 'taxon_group_kor', 'class_la', 'order_la', 'family_la', 'genus_la',
+                 'endangered_grade', 'national_redlist_category',
+                 'has_media', 'interest'],
+                "SELECT ktsn, korean_name, scientific_name, taxon_group, "
+                "taxon_group_kor, class_la, order_la, family_la, genus_la, "
+                "endangered_grade, national_redlist_category, "
+                "has_media, interest FROM species")),
+            ('fg_species_region', lambda: load_table(sqlite_conn, pg_cursor, 'fg_species_region',
+                ['ktsn', 'taxon_group', 'region', 'sido', 'maxyear', 'obs_count'],
+                "SELECT ktsn, taxon_group, region, sido, maxyear, obs_count "
+                "FROM species_region")),
+            ('fg_region', lambda: load_table(sqlite_conn, pg_cursor, 'fg_region',
+                ['code', 'name', 'level', 'sido_cd'],
+                "SELECT code, name, level, sido_cd FROM region")),
+            ('fg_taxa', lambda: load_table(sqlite_conn, pg_cursor, 'fg_taxa',
+                ['taxon_group', 'taxon_group_kor', 'n_species'],
+                "SELECT taxon_group, taxon_group_kor, n_species FROM taxa")),
+            ('fg_taxon_name', lambda: load_taxon_name(pg_cursor)),
+        ]
 
-        load_table(sqlite_conn, pg_cursor, 'fg_species_region',
-                   ['ktsn', 'taxon_group', 'region', 'sido', 'maxyear', 'obs_count'],
-                   "SELECT ktsn, taxon_group, region, sido, maxyear, obs_count "
-                   "FROM species_region")
+        print(f"데이터 로드 중... ({'전체' if only is None else '선택: ' + ', '.join(sorted(only))})")
+        loaded = []
+        for name, fn in steps:
+            if want(name):
+                print(f"  적재: {name}")
+                fn()
+                loaded.append(name)
 
-        load_table(sqlite_conn, pg_cursor, 'fg_region',
-                   ['code', 'name', 'level', 'sido_cd'],
-                   "SELECT code, name, level, sido_cd FROM region")
-
-        load_table(sqlite_conn, pg_cursor, 'fg_taxa',
-                   ['taxon_group', 'taxon_group_kor', 'n_species'],
-                   "SELECT taxon_group, taxon_group_kor, n_species FROM taxa")
+        # 전국 롤업 MV 는 fg_species_region 에 의존 — 재적재됐을 때만 refresh.
+        if 'fg_species_region' in loaded:
+            refresh_national(pg_cursor)
 
         print("검증:")
         verify_tables(pg_cursor)
