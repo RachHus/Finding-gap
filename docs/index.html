@@ -45,6 +45,9 @@
   .dash{margin-top:18px}
   .dhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 14px}
   .dhead .chip{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff}
+  /* 아이콘은 flex 자식이라 flex:none 이 없으면 상자 폭에 맞춰 눌린다 —
+     22px 로 그린 그림이 8px 로 납작해져 무엇인지 알아볼 수 없게 된다. */
+  .tile .chip>svg,.dhead .chip>svg{flex:none;display:block}
   .dhead h2{margin:0;font-size:18px}
   /* ── 홈 3축 내비 ── */
   .axes{display:flex;gap:2px;margin:20px 0 2px;border-bottom:1px solid var(--line)}
@@ -192,6 +195,9 @@
   .panel h2 .cnt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500}
   .panel h2 .dl{font-size:12px;border:1px solid var(--line);border-radius:7px;padding:5px 9px;background:#fff;cursor:pointer}
   .tblwrap{overflow:auto}
+  /* 넓은 화면에서는 표 머리글을 눌러 정렬한다. 이 막대는 머리글이 화면에서 사라지는
+     좁은 화면에서만 나온다(아래 880px 이하 규칙). */
+  .sortbar{display:none}
   table{border-collapse:collapse;width:100%;font-size:12.5px}
   th,td{padding:7px 10px;text-align:left;border-bottom:1px solid #f1f1ee;white-space:nowrap}
   #tbl th,#tbl td{padding:7px 6px}                         /* 6열 수용 위해 종 목록만 가로 패딩 축소 */
@@ -409,6 +415,14 @@
     .tblwrap{max-height:70vh}
     #tbl,#tbl tbody{display:block;width:100%}
     #tbl thead{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}  /* 시각적으로만 숨김 — 스크린리더는 열 이름 읽음 */
+    /* 머리글이 화면에서 숨겨지면 열을 눌러 정렬할 수단이 사라진다. 같은 정렬 상태를
+       고르는 컨트롤을 여기서 내보인다. 새 컴포넌트를 만들지 않고 기존 select 규칙을 쓴다. */
+    .sortbar{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#fcfcfb;
+      border-bottom:1px solid var(--line)}
+    .sortbar select{flex:1}
+    .sortbar .sortdir{flex:none;min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:9px;
+      background:#fff;color:var(--ink);font-size:15px;font-weight:700;cursor:pointer}
+    .sortbar .sortdir:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:2px}
     #tbl tbody tr{display:block}
     #tbl tbody tr.rowlink{border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px;margin:0 0 8px}
     #tbl tbody tr.rowlink:hover{background:#f6f9f7}
@@ -495,9 +509,11 @@
   .msg .maplink.rep.on{background:#b26a1a;color:#fff;border-color:#b26a1a}
   .typing{align-self:flex-start;color:var(--faint);font-size:13px}
   .chips{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 4px}
-  .chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;
+  /* 이 칩은 대화형 도우미의 예시 질문 버튼이다. 반드시 .chips 안으로 한정한다 —
+     분류군 아이콘 상자도 class="chip" 이라, 한정하지 않으면 그쪽 배경·안쪽 여백·커서까지 덮어쓴다. */
+  .chips .chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;
     font-size:12px;color:#3a3f3c;cursor:pointer}
-  .chip:hover{border-color:var(--accent);color:var(--accent)}
+  .chips .chip:hover{border-color:var(--accent);color:var(--accent)}
   .inrow{display:flex;gap:8px;margin-top:12px}
   .inrow textarea{flex:1;padding:11px 13px;border:1px solid var(--line);border-radius:11px;font-size:14px;
     font-family:inherit;resize:none;line-height:1.5;max-height:120px}
@@ -554,6 +570,17 @@
       </div>
       <div class="panel">
         <h2>종 목록 <span class="cnt" id="tblCnt"></span><button class="dl" id="dlCsv">CSV</button></h2>
+        <div class="sortbar">
+          <select id="sortSel" aria-label="정렬 기준">
+            <option value="n">국명</option>
+            <option value="s">학명</option>
+            <option value="g">멸종위기종</option>
+            <option value="r">국가적색목록</option>
+            <option value="iv">관심도</option>
+            <option value="c">관측 수</option>
+          </select>
+          <button type="button" class="sortdir" id="sortDirBtn" aria-label="정렬 방향 바꾸기">↓</button>
+        </div>
         <div class="recstrip" id="recStrip" hidden></div>
         <div class="tblwrap"><table id="tbl"></table></div>
       </div>
@@ -1349,8 +1376,19 @@ function renderTable(){
     ? `<tr><td colspan="6" style="padding:10px;color:#888;background:#fbfbfa;white-space:normal">상위 ${nf(ROWCAP)}행만 표시 — 전체 ${nf(rows.length)}종은 CSV 다운로드로 확인하세요.</td></tr>`
     : '';
   tbl.innerHTML=head+'<tbody>'+body+more+'</tbody>';
+  syncSortBar();
 }
 function sortBy(k){ if(sortKey===k)sortDir*=-1; else {sortKey=k;sortDir=(k==='n'||k==='s')?1:-1;} renderTable(); }
+/* 좁은 화면용 정렬 컨트롤. 표 머리글과 같은 상태(sortKey·sortDir)를 다루므로,
+   한쪽에서 바꾸면 다른 쪽 표시도 함께 맞춘다. */
+function syncSortBar(){
+  const sel=document.getElementById('sortSel'), btn=document.getElementById('sortDirBtn');
+  if(!sel||!btn) return;
+  sel.value=sortKey;
+  const up=sortDir>0;
+  btn.textContent=up?'↑':'↓';
+  btn.setAttribute('aria-label',(up?'오름차순':'내림차순')+' — 눌러서 바꾸기');
+}
 
 function downloadCSV(){
   const all=tableRows();
@@ -1602,6 +1640,10 @@ function boot(){
   fY0.onchange=()=>{ y0=+fY0.value; if(y1<y0){y1=y0;fY1.value=y1;} recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); };
   fY1.onchange=()=>{ y1=+fY1.value; if(y1<y0){y0=y1;fY0.value=y0;} recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); };
   dlCsv.onclick=downloadCSV;
+  { const ss=document.getElementById('sortSel'), sd=document.getElementById('sortDirBtn');
+    if(ss) ss.onchange=()=>{ if(ss.value===sortKey) return;
+      sortKey=ss.value; sortDir=(sortKey==='n'||sortKey==='s')?1:-1; renderTable(); };
+    if(sd) sd.onclick=()=>{ sortDir*=-1; renderTable(); }; }
   { const nb=document.getElementById('nearbyBtn'); if(nb) nb.onclick=locateNearby; }
   { const sb=document.getElementById('shareBtn'); if(sb) sb.onclick=shareView; }
   // 모드 B 컨트롤
@@ -1674,13 +1716,29 @@ const ICON={
   amphibian:`<path d="M12 3.6C9.9 3.6 8.4 5.2 8.4 7.1c0 .8.3 1.5.7 2C7.5 9.9 6.8 11.5 6.8 13.4c0 2.7 2.2 4.9 5.2 4.9s5.2-2.2 5.2-4.9c0-1.9-.7-3.5-2.3-4.3.4-.5.7-1.2.7-2C15.6 5.2 14.1 3.6 12 3.6z"/><path d="M9.1 8.4C7.6 7.4 5.9 6.2 4.7 5.8 4.2 5.6 3.8 6.1 4.1 6.6 5 8 6.7 9.6 8.5 10.2z"/><path d="M14.9 8.4c1.5-1 3.2-2.2 4.4-2.6.5-.2.9.3.6.8-.9 1.4-2.6 3-4.4 3.6z"/><path d="M10 12.9C7.8 13.2 5.6 14 4.9 15.6 4.4 17 4.3 18.8 4.5 20.2 4.5 20.7 4.9 21 5.4 21 6 21 6.4 20.6 6.5 20 6.7 18.6 6.9 17 7.5 15.9 8.1 14.9 9 14.1 10 13.8Z"/><path d="M14 12.9C16.2 13.2 18.4 14 19.1 15.6 19.6 17 19.7 18.8 19.5 20.2 19.5 20.7 19.1 21 18.6 21 18 21 17.6 20.6 17.5 20 17.3 18.6 17.1 17 16.5 15.9 15.9 14.9 15 14.1 14 13.8Z"/><circle cx="9.5" cy="4.8" r="1.7"/><circle cx="14.5" cy="4.8" r="1.7"/><circle cx="9.5" cy="4.8" r="0.7" fill="var(--chip-bg)"/><circle cx="14.5" cy="4.8" r="0.7" fill="var(--chip-bg)"/>`,
   fish:`<path d="M3 12c2.5-3.4 6.4-5 9.8-5 2.6 0 4.9 1.1 6.4 2.8l2.3-2.6v9.6l-2.3-2.6c-1.5 1.7-3.8 2.8-6.4 2.8-3.4 0-7.3-1.6-9.8-5z"/><circle cx="8.4" cy="11.6" r="1" fill="var(--chip-bg)"/>`,
   tunicate:`<path d="M7 20.5c-.9 0-1.5-.8-1.5-2.2C5.5 12.7 8.2 7.6 11 5.5c.6-.5 1-.7 1-.7s.4.2 1 .7c2.8 2.1 5.5 7.2 5.5 12.8 0 1.4-.6 2.2-1.5 2.2z"/><circle cx="9.7" cy="7.1" r="0.7" fill="var(--chip-bg)"/><circle cx="14.3" cy="7.1" r="0.7" fill="var(--chip-bg)"/>`,
-  invertebrate:`<path d="M3 17.5c0-1 .8-1.8 1.8-1.8h6.7c.6 0 1 .5 1 1.1 0 1.3-1.1 2.4-2.4 2.4H4.9C3.8 19.2 3 18.4 3 17.5z"/><circle cx="14.5" cy="11" r="5"/><circle cx="14.5" cy="11" r="1.7" fill="var(--chip-bg)"/><path d="M18.4 7.4l1.4-1.8M20 9l1.9-1" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round"/>`,
+  /* 달팽이 — 더듬이가 짧으면 무엇인지 알아볼 수 없다. 머리를 왼쪽에 세우고
+     더듬이 둘을 벌려 끝에 눈을 붙였다. 26px 에서도 더듬이가 보이는 것이 이 그림의 조건이다. */
+  invertebrate:`<path d="M2.2 20.4c-1.2 0-2-1.2-1.6-2.3 1-2.6 3.5-4.4 6.4-4.4h8.6c.8 0 1.5.8 1.3 1.6-.6 3-3.1 5.1-6.2 5.1z"/><path d="M5 16c-1.2-3.3-.4-6 2.2-7.7.8-.5 1.7-.2 2.1.5.4.8.2 1.7-.6 2.2-1.3.9-1.6 2.3-1 4.2z"/><circle cx="7.4" cy="9.9" r="2.3"/><path d="M6.2 8.1 3.2 3.9M9 8.3l1.7-4.2" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round"/><circle cx="2.8" cy="3.3" r="1.4"/><circle cx="11" cy="3.4" r="1.3"/><circle cx="16.6" cy="11.8" r="5.2"/><path d="M16.6 11.8a1.7 1.7 0 1 1 1.5-.9 3.4 3.4 0 1 1-4.3 4.2" stroke="var(--chip-bg)" stroke-width="1.7" fill="none" stroke-linecap="round"/>`,
   insect:`<ellipse cx="7" cy="9.2" rx="4.2" ry="3.2"/><ellipse cx="17" cy="9.2" rx="4.2" ry="3.2"/><ellipse cx="7.8" cy="15" rx="3.4" ry="2.8"/><ellipse cx="16.2" cy="15" rx="3.4" ry="2.8"/><rect x="11.3" y="6.5" width="1.4" height="11" rx="0.7"/><path d="M12 6.6l-1.6-2M12 6.6l1.6-2" stroke="currentColor" fill="none" stroke-width="1.2" stroke-linecap="round"/>`,
   vascular:`<path d="M4.5 19.5c-1.2-6.5 2.2-12.5 9.5-13.7 1.6-.3 3.2-.2 4.3.1.4 7.2-3.1 13.4-9.6 14.6-1.6.3-3.1 0-4.2-1z"/><path d="M4 20.2 6.4 18" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round"/>`,
   bryophyte:`<path d="M3 18.6c.8 0 1.2-1.5 2.4-1.5S6.6 18.6 7.8 18.6 9 17.1 10.2 17.1s1.2 1.5 2.4 1.5S13.8 17.1 15 17.1s1.2 1.5 2.4 1.5S18.6 17.1 19.8 17.1 21 18.6 21 18.6V20H3z"/><rect x="6.4" y="11" width="1.2" height="6" rx="0.6"/><ellipse cx="7" cy="10.4" rx="1.1" ry="1.6"/><rect x="11.4" y="9" width="1.2" height="8" rx="0.6"/><ellipse cx="12" cy="8.2" rx="1.1" ry="1.6"/><rect x="16.4" y="11.5" width="1.2" height="5.5" rx="0.6"/><ellipse cx="17" cy="10.9" rx="1.1" ry="1.6"/>`,
 };
+/* 그림마다 24×24 안에서 차지하는 크기가 제각각이라(긴 변 기준 62~82%) 나란히 놓으면
+   어떤 것은 유독 작아 보인다. [중심x, 중심y, 배율] 로 긴 변이 상자의 85% 가 되도록 맞춘다.
+   값은 브라우저에서 getBBox() 로 잰 것이다. 선으로 그린 부분(더듬이·줄기)은 getBBox 가
+   선 두께를 세지 않으므로 그만큼 배율을 낮췄다. 그림을 고치면 다시 재서 갱신할 것. */
+const ICON_FIT={mammal:[12.8,12.56,1.36], bird:[11.75,12.75,1.03], reptile:[11.85,13.8,1.036],
+  amphibian:[12,12.05,1.14], fish:[12.25,12,1.103], tunicate:[12,12.65,1.299],
+  invertebrate:[11.15,11.15,.887], insect:[12,11.2,1.041], vascular:[11.17,13.11,1.23],
+  bryophyte:[12,13.3,1.133]};
 function iconSVG(group,size){const [key,color]=TAXON_META[group]||['mammal','#888'];
-  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor" style="--chip-bg:${color};color:#fff">${ICON[key]}</svg>`;}
+  const [cx,cy,sc]=ICON_FIT[key]||[12,12,1];
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor" style="--chip-bg:${color};color:#fff">`+
+    `<g transform="translate(12 12) scale(${sc}) translate(${-cx} ${-cy})">${ICON[key]}</g></svg>`;}
+/* 아이콘 상자는 세 곳(대문 타일·대시보드 머리·수집예정 머리)에서 쓴다. 한 곳에서 만들어야
+   배경색이 빠진 채 흰 그림만 흰 바탕에 얹히는 일이 생기지 않는다. */
+function chipHTML(group,size){const [,color]=TAXON_META[group]||['','#888'];
+  return `<span class="chip" style="background:${color}">${iconSVG(group,size)}</span>`;}
 
 /* ── 도넛 기하 ── */
 function pol(cx,cy,r,a){return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}
@@ -1770,7 +1828,7 @@ function renderDash(group){
 
   const html=`
   <div class="dhead">
-    <span class="chip">${iconSVG(group,22)}</span>
+    ${chipHTML(group,24)}
     <h2>${D.taxon_kor} <span style="font-size:13px;color:var(--muted);font-weight:500">(${group})</span></h2>
   </div>
 
@@ -1811,7 +1869,7 @@ function renderSoon(t){
     `<div style="font-size:11.5px;color:var(--muted);margin-top:2px">${l}</div></div>`;
   document.getElementById('dash').innerHTML=`
   <div class="dhead">
-    <span class="chip">${iconSVG(t.group,22)}</span>
+    ${chipHTML(t.group,24)}
     <h2>${t.kor} <span style="font-size:13px;color:var(--muted);font-weight:500">(${t.group})</span></h2>
   </div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px">
@@ -1860,10 +1918,9 @@ let TAXA_ALL=[];
 function renderTiles(){
   const wrap=document.getElementById('tiles');
   wrap.innerHTML=TAXA_ALL.map(t=>{
-    const [,color]=TAXON_META[t.group]||['',''];
     return `<button class="tile ${t.has_data?'':'nodata'}" data-g="${t.group}">`+
       (t.has_data?'':'<span class="soon">수집예정</span>')+
-      `<span class="chip" style="background:${color}">${iconSVG(t.group,22)}</span>`+
+      chipHTML(t.group,26)+
       `<span class="nm">${t.kor}</span>`+
       `<span class="meta">${nf(t.n_species)}종${t.has_data?' · 데이터 있음':''}</span></button>`;
   }).join('');
