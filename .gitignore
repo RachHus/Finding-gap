@@ -32,6 +32,7 @@ id_rsa*
 5_App/demo/data/species_media.json
 # 발견공백 MCP: gz(fg_mcp.sqlite.gz)만 커밋 — 해제본 sqlite(캐시)·venv 는 제외
 7_MCP/data/fg_mcp.sqlite
+7_MCP/data/wiki_harvest.log
 7_MCP/.venv/
 # 로컬 MCP 등록(머신별 절대경로) — 템플릿(.mcp.json.example)만 커밋
 .mcp.json
@@ -78,8 +79,14 @@ _hwpx_extract/
 .claude/
 # 내부 기획문서(구상안·계획서): AI 개발 과정 메타 포함 → 공개 레포에서 제외, 로컬만 보관
 2_Planning/
+# 에이전트 팀 구성 포인터·중간 산출물 — .claude/ 와 같은 이유로 로컬만 보관
+CLAUDE.md
+_workspace/
+_workspace_prev/
 
 # ---- 기타 ----
+# Google Drive 가 폴더마다 만드는 설정 파일(작업물 아님)
+desktop.ini
 .DS_Store
 Thumbs.db
 *.log

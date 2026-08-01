@@ -132,7 +132,7 @@ def page_html(sido, sido_name, taxon, taxon_kor, total, found_n, gap_n, undiscov
     title = f"{sido_name} {taxon_kor} 발견공백 (미발견 {gap_n}종) · Finding gap"
     desc = (f"{sido_name} {taxon_kor} 발견공백: 국가생물종목록 {total}종 중 최근 10년 관측 기록이 없는 "
             f"미발견 {gap_n}종({gap_pct}%). 시민 관찰로 채울 수 있는 종과 지도를 확인하세요.")
-    map_link = f"../service.html?taxon={esc(taxon)}&sido={esc(sido)}&metric=gap"
+    map_link = f"../index.html?taxon={esc(taxon)}&sido={esc(sido)}&metric=gap"
 
     # 미발견 종 목록(상위 관심도)
     if undiscovered:
@@ -191,7 +191,7 @@ def page_html(sido, sido_name, taxon, taxon_kor, total, found_n, gap_n, undiscov
   </div>
   <div class="cta">
     <a class="primary" href="{map_link}">지도에서 보기 →</a>
-    <a class="sec" href="../chat.html">대화로 물어보기</a>
+    <a class="sec" href="../index.html#chat">대화로 물어보기</a>
   </div>
   <h2>주목할 미발견 종</h2>
   <p class="sub">관심도(관측·위키 조회수·관심종) 순 상위. 관찰 기록이 공백을 메웁니다.</p>
@@ -303,7 +303,7 @@ def generate(out_dir, verbose=True):
 
     rdir = out / "regions"
     rdir.mkdir(parents=True, exist_ok=True)
-    sitemap = [f"{BASE_URL}/", f"{BASE_URL}/service.html", f"{BASE_URL}/chat.html",
+    sitemap = [f"{BASE_URL}/",
                f"{BASE_URL}/quiz.html", f"{BASE_URL}/regions/"]
     n = 0
     for sido, sido_name in sidos:
