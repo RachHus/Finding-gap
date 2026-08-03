@@ -541,8 +541,7 @@
   <nav class="axes" id="axes" aria-label="홈 메뉴">
     <button class="ax on" data-ax="survey">조사정보</button>
     <button class="ax" data-ax="chat">대화형</button>
-    <button class="ax" data-ax="citizen">시민과학</button>
-    <button class="ax" data-ax="my">마이데이터</button>
+    <button class="ax" data-ax="community">시민과학·마이데이터</button>
   </nav>
 
   <section id="view-survey">
@@ -630,7 +629,8 @@
     </div>
     <div id="chatView"><p class="intro" style="margin-top:8px">불러오는 중…</p></div>
   </section>
-  <section id="view-citizen" hidden>
+  <section id="view-community" hidden>
+  <div id="view-citizen">
     <div class="vintro">
       <h2>시민과학</h2>
       <p>시민과학자가 제보한 관측을 분류군별로 모아, 공식 조사에서 <b>아직 발견되지 않은 종</b>의 재발견 단서를 함께 봅니다. 공식 발견공백(조사정보)과는 분리된 자료로 표시됩니다.</p>
@@ -655,9 +655,9 @@
       <h3 style="margin:0 0 12px">많이 담긴 종 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이용자들이 관심 종으로 가장 많이 담은 종입니다 — 종별 익명 집계(개인 정보 없이 합계만).">?</button></h3>
       <ol class="wl trendlist" id="trendList"><li class="muted2">불러오는 중…</li></ol>
     </div>
-  </section>
+  </div>
 
-  <section id="view-my" hidden>
+  <div id="view-my">
     <div class="vintro">
       <h2>마이데이터</h2>
       <p>로그인하면 <b>관심 종</b>을 저장하고, 내가 제보한 관측 이력을 한곳에서 모아 봅니다.</p>
@@ -667,6 +667,7 @@
       <div class="l">로그인 · 관심 종 · 내 제보</div>
       <div class="msg">Google 로그인으로 시작하며, 개인 자료는 마이페이지에서만 보입니다. 공개 화면에는 종합된 통계만 표시됩니다.</div>
     </div>
+  </div>
   </section>
 
   <footer id="foot"></footer>
@@ -1973,7 +1974,7 @@ function renderFoot(){
 /* ── 홈 3축 전환 ── */
 function switchAxis(ax){
   document.querySelectorAll('.axes .ax').forEach(b=>b.classList.toggle('on',b.dataset.ax===ax));
-  ['survey','chat','citizen','my'].forEach(k=>{
+  ['survey','chat','community'].forEach(k=>{
     const v=document.getElementById('view-'+k); if(v) v.hidden = ax!==k;
   });
   // 숨김 상태에서는 지도 크기가 0으로 잡히므로, 조사정보로 돌아올 때 다시 계산한다.
@@ -1986,7 +1987,8 @@ function bootHome(){
   if(!TAXA_ALL.length){document.getElementById('dash').innerHTML='<div class="soonbox"><div class="l">데이터를 불러오지 못했습니다. <code>demo/data/taxa_summary.js</code> 생성 또는 로컬 서버로 여세요.</div></div>';return;}
   renderTiles();
   document.querySelectorAll('.axes .ax').forEach(b=>b.onclick=()=>switchAxis(b.dataset.ax));
-  if(location.hash==='#my') switchAxis('my');       // 관심 종 ☆ → 로그인 유도 진입
+  if(location.hash==='#my'){ switchAxis('community');   // 관심 종 ☆ → 로그인 유도 진입
+    const vm=document.getElementById('view-my'); if(vm) vm.scrollIntoView({behavior:'smooth',block:'start'}); }
   if(location.hash==='#chat') switchAxis('chat');   // 대화형 직접 진입
   // 지도 쪽이 딥링크(?taxon)로 이미 정한 분류군이 있으면 그것을 따른다.
   // (여기서 첫 분류군을 강제하면 딥링크의 분류군·지역 선택이 지워진다.)
