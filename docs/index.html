@@ -168,8 +168,9 @@
   .tabs button{border:0;background:none;padding:11px 16px;font-size:14px;cursor:pointer;color:#666;
     border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:600}
   .tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
-  /* 현재 화면 공유(딥링크) */
-  .tabs button.sharebtn{margin-left:auto;align-self:center;border:1px solid var(--line);border-radius:8px;
+  /* 현재 화면 공유(딥링크) · 대화형 도우미 토글 — 오른쪽 정렬 그룹 */
+  .tabs .tabsright{margin-left:auto;display:flex;align-items:center;gap:6px}
+  .tabs button.sharebtn{align-self:center;border:1px solid var(--line);border-radius:8px;
     padding:6px 12px;font-size:12.5px;color:#3a4a43;margin-bottom:6px;display:inline-flex;align-items:center;gap:5px}
   .tabs button.sharebtn:hover{border-color:var(--accent);color:var(--accent)}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2b332e;color:#fff;
@@ -540,7 +541,6 @@
 
   <nav class="axes" id="axes" aria-label="홈 메뉴">
     <button class="ax on" data-ax="survey">조사정보</button>
-    <button class="ax" data-ax="chat">대화형</button>
     <button class="ax" data-ax="community">시민과학·마이데이터</button>
   </nav>
 
@@ -550,7 +550,10 @@
   <div class="tabs">
     <button id="tabA" class="on" onclick="setMode('A')">분류군별 조회</button>
     <button id="tabB" onclick="setMode('B')">종별 검색</button>
-    <button id="shareBtn" class="sharebtn" type="button" title="현재 화면을 링크로 공유">🔗 공유</button>
+    <span class="tabsright">
+      <button id="chatToggle" class="sharebtn" type="button" title="발견공백 도우미(대화형)에게 물어보기" onclick="fgChatDrawer.toggle()">💬 대화형 도우미</button>
+      <button id="shareBtn" class="sharebtn" type="button" title="현재 화면을 링크로 공유">🔗 공유</button>
+    </span>
   </div>
 
   <!-- ── Mode A: 분류군별 조회 ── -->
@@ -622,13 +625,6 @@
     <section class="dash" id="dash"></section>
   </section>
 
-  <section id="view-chat" hidden>
-    <div class="vintro">
-      <h2>발견공백 도우미</h2>
-      <p>한국 생물종의 발견공백을 대화로 물어보세요. 지역·분류군·멸종위기 기준으로 <b>아직 기록이 없는 종</b>을 찾아 드립니다. 답변의 지도 버튼을 누르면 조사정보 탭의 지도로 바로 이어집니다.</p>
-    </div>
-    <div id="chatView"><p class="intro" style="margin-top:8px">불러오는 중…</p></div>
-  </section>
   <section id="view-community" hidden>
   <div id="view-citizen">
     <div class="vintro">
@@ -684,6 +680,13 @@
     <div class="rpt-bd" id="rptBody"></div>
   </div>
 </div>
+
+<!-- 대화형 도우미 슬라이드 패널 — 조사정보 탭의 #chatToggle로 열림. 지도를 가리지 않고 옆(모바일: 하단)에 뜸 -->
+<aside id="chatDrawer" aria-hidden="true">
+  <div class="chathd"><h3>발견공백 도우미</h3><button class="x" id="chatClose" type="button" aria-label="닫기">&times;</button></div>
+  <div class="vintro"><p>지역·분류군·멸종위기 기준으로 <b>아직 기록이 없는 종</b>을 대화로 물어보세요. 답변의 지도 버튼을 누르면 옆의 지도가 바로 갱신됩니다.</p></div>
+  <div id="chatView"><p class="intro" style="margin-top:8px">불러오는 중…</p></div>
+</aside>
 
 <style>
   .dbadge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;margin-left:4px;vertical-align:middle}
@@ -755,6 +758,26 @@
   .rpt-url-toggle{display:inline-block;margin-top:6px;font-size:12px;color:var(--faint);cursor:pointer;text-decoration:underline}
   .report-lk{cursor:pointer}
   @media(max-width:880px){ .rpt-overlay{padding:0;align-items:flex-end} .rpt-modal{max-width:none;max-height:94vh;border-radius:14px 14px 0 0} }
+
+  /* 대화형 도우미 슬라이드 패널 — 지도를 가리지 않고 옆(모바일: 하단)에 뜨는 패널.
+     .tabs(sticky, z-index:100)보다 위, .rpt-overlay(1000)·.toast보다는 아래(제보모달이 패널 위에 뜨도록). */
+  #chatDrawer{position:fixed;top:0;right:0;height:100vh;width:min(480px,92vw);background:var(--card);
+    border-left:1px solid var(--line);box-shadow:-8px 0 26px rgba(0,0,0,.10);transform:translateX(100%);
+    transition:transform .28s ease;z-index:200;display:flex;flex-direction:column}
+  body.chatopen{padding-right:min(480px,92vw)}
+  body{transition:padding-right .28s ease}
+  body.chatopen #chatDrawer{transform:none}
+  .chathd{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);flex:none}
+  .chathd h3{margin:0;font-size:15px}
+  .chathd .x{margin-left:auto;border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:#8a8f8c;padding:0 6px;min-height:44px}
+  #chatDrawer .vintro{padding:12px 16px 0;flex:none}
+  #chatDrawer #chatView{flex:1;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column}
+  @media(max-width:880px){
+    body.chatopen{padding-right:0}
+    #chatDrawer{top:auto;bottom:0;left:0;right:0;width:auto;height:80vh;transform:translateY(100%);
+      border-left:0;border-top:1px solid var(--line);box-shadow:0 -8px 26px rgba(0,0,0,.16);border-radius:14px 14px 0 0}
+    body.chatopen #chatDrawer{transform:none}
+  }
 </style>
 <script src="config.js" onerror="window.SUPABASE_URL=window.SUPABASE_URL||''"></script>
 <script src="fg_analytics.js"></script>
@@ -1974,12 +1997,28 @@ function renderFoot(){
 /* ── 홈 3축 전환 ── */
 function switchAxis(ax){
   document.querySelectorAll('.axes .ax').forEach(b=>b.classList.toggle('on',b.dataset.ax===ax));
-  ['survey','chat','community'].forEach(k=>{
+  ['survey','community'].forEach(k=>{
     const v=document.getElementById('view-'+k); if(v) v.hidden = ax!==k;
   });
+  if(ax!=='survey' && window.fgChatDrawer) window.fgChatDrawer.close();
   // 숨김 상태에서는 지도 크기가 0으로 잡히므로, 조사정보로 돌아올 때 다시 계산한다.
   if(ax==='survey' && window.fgMapResize) window.fgMapResize();
 }
+
+/* ── 대화형 도우미 슬라이드 패널 — 지도를 가리지 않고 옆(모바일: 하단)에 열림/닫힘 ──
+   switchAxis 와 같은(비-module) 스크립트에 둔다: 대화형 모듈은 지연 실행되는 module 스크립트라
+   부트 시점 #chat 해시 체크가 의존할 함수는 여기 있어야 콜드 로드에서도 바로 쓸 수 있다. */
+window.fgChatDrawer = {
+  open(){ document.body.classList.add('chatopen');
+    const d=document.getElementById('chatDrawer'); if(d) d.setAttribute('aria-hidden','false');
+    setTimeout(()=>{ if(window.fgMapResize) window.fgMapResize(); }, 300); },
+  close(){ document.body.classList.remove('chatopen');
+    const d=document.getElementById('chatDrawer'); if(d) d.setAttribute('aria-hidden','true');
+    setTimeout(()=>{ if(window.fgMapResize) window.fgMapResize(); }, 300); },
+  toggle(){ document.body.classList.contains('chatopen') ? this.close() : this.open(); }
+};
+document.getElementById('chatClose').onclick = () => window.fgChatDrawer.close();
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape'&&document.body.classList.contains('chatopen')) window.fgChatDrawer.close(); });
 
 /* ── 부트 ── */
 function bootHome(){
@@ -1989,7 +2028,7 @@ function bootHome(){
   document.querySelectorAll('.axes .ax').forEach(b=>b.onclick=()=>switchAxis(b.dataset.ax));
   if(location.hash==='#my'){ switchAxis('community');   // 관심 종 ☆ → 로그인 유도 진입
     const vm=document.getElementById('view-my'); if(vm) vm.scrollIntoView({behavior:'smooth',block:'start'}); }
-  if(location.hash==='#chat') switchAxis('chat');   // 대화형 직접 진입
+  if(location.hash==='#chat'){ switchAxis('survey'); window.fgChatDrawer && window.fgChatDrawer.open(); }  // 대화형 직접 진입
   // 지도 쪽이 딥링크(?taxon)로 이미 정한 분류군이 있으면 그것을 따른다.
   // (여기서 첫 분류군을 강제하면 딥링크의 분류군·지역 선택이 지워진다.)
   const dl = (typeof curTaxon!=='undefined' && TAXA_ALL.some(t=>t.group===curTaxon)) ? curTaxon : null;
@@ -2518,6 +2557,8 @@ function openMap(href, btn){
   const qs = new URLSearchParams(href.split('?')[1] || '');
   if(window.switchAxis) window.switchAxis('survey');
   if(window.fgApplyDeepLink) window.fgApplyDeepLink(qs);
+  // 모바일은 패널이 화면 80%를 가려서 지도가 바로 안 보이므로 반영 후 닫음. 데스크톱은 옆에 계속 띄워둠.
+  if(window.matchMedia && window.matchMedia('(max-width:880px)').matches && window.fgChatDrawer) window.fgChatDrawer.close();
   if(mapBtnActive && mapBtnActive!==btn) mapBtnActive.classList.remove('on');
   if(btn){ btn.classList.add('on'); mapBtnActive = btn; }
   const tgt = document.getElementById('modeA');
@@ -2529,7 +2570,7 @@ if (!configured) {
   view.innerHTML = '<div class="authcard"><h3>안내</h3><p>로그인 기능이 설정되지 않아 대화형 도우미를 이용할 수 없습니다.</p></div>';
 } else if (!enabled) {
   view.innerHTML = `<div class="authcard"><h3>곧 제공됩니다</h3>
-    <p>발견공백 데이터를 바탕으로 대화하는 도우미를 준비하고 있습니다. 먼저 <a href="#" onclick="switchAxis('survey');return false" style="color:var(--accent)">조사정보</a>에서 지역·분류군별 발견 현황을 살펴보실 수 있어요.</p></div>`;
+    <p>발견공백 데이터를 바탕으로 대화하는 도우미를 준비하고 있습니다. 지도는 계속 옆에서 보실 수 있어요 — <a href="#" onclick="window.fgChatDrawer&&window.fgChatDrawer.close();return false" style="color:var(--accent)">패널 닫기</a></p></div>`;
 } else {
   onAuth(user => user ? chatView(user) : loginCard());
 }
