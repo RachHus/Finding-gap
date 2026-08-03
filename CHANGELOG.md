@@ -24,6 +24,9 @@ Finding gap의 릴리스 단위 변경 이력입니다.
 - `5_App/supabase/reports_photo.sql`을 Supabase SQL Editor에서 적용해야 사진 업로드가 동작함(`reports.sql` 적용 후).
 - `5_App/supabase/conversational_service_taxon.sql`·`conversational_service_taxon_ranks.sql`·`conversational_service_perf.sql`(MV·커버링 인덱스) 적용 + `load_reference.py` 재실행 + `supabase functions deploy chat` 해야 강·목·과·속 질의·발견공백 순위·v9 개선이 동작함.
 
+### 수정
+- 발견 제보 사진 입력에서 `capture="environment"` 제거 — 모바일에서 무조건 카메라만 뜨고 앨범(저장된 사진)을 고를 수 없던 문제. 속성을 빼면 브라우저가 카메라 촬영·앨범 선택을 모두 제공.
+
 ## [0.9.0] - 2026-07-02
 
 최초 버전 기준선 — 현재 라이브 상태를 정리한 스냅숏.
