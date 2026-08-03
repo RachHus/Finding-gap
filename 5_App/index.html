@@ -2563,12 +2563,12 @@ function chatView(user){
   </div>
   <div class="chips" id="chips">${EXAMPLES.map(e => `<button class="chip">${esc(e)}</button>`).join('')}</div>
   <div class="inrow">
-    <textarea id="q" rows="1" placeholder="예: 제주도에서 아직 발견 안 된 양서류 알려줘" maxlength="500"></textarea>
+    <textarea id="chatQ" rows="1" placeholder="예: 제주도에서 아직 발견 안 된 양서류 알려줘" maxlength="500"></textarea>
     <button class="btn" id="send">보내기</button>
   </div>
   <p class="note">답변은 공개 집계 데이터를 바탕으로 하며 부정확할 수 있습니다. 정확한 위치·개인정보는 제공하지 않습니다.</p>`;
 
-  const box = view.querySelector('#box'), q = view.querySelector('#q');
+  const box = view.querySelector('#box'), q = view.querySelector('#chatQ');
   const send = view.querySelector('#send'), rem = view.querySelector('#rem');
   const msgs = [];              // 서버로 보내는 대화 이력(role/content)
   let busy = false;
