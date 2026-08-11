@@ -17,7 +17,11 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@9.2.4/ol.css">
 <style>
   :root{
-    --ink:#1b201d; --muted:#6b7280; --faint:#9aa0a6; --line:#e7e7e2; --bg:#fafaf8; --card:#fff;
+    /* --faint 는 --muted 보다 한 단계 옅은 보조색이었다. 본문 대비 4.5:1 을 지키면
+       두 색 사이에 눈으로 구분될 여지가 남지 않아(4.71:1 대 4.83:1) 색으로는 더 이상
+       단계를 만들 수 없다. 보조 텍스트 색은 하나로 두고, 그 아래 단계는 색이 아니라
+       글자 크기(10~11.5px)와 굵기로 준다. 이름은 쓰임새를 남기기 위해 유지한다. */
+    --ink:#1b201d; --muted:#6b7280; --faint:var(--muted); --line:#e7e7e2; --bg:#fafaf8; --card:#fff;
     --accent:#2f6f5e;
     --eg1:#7F1D1D; --eg2:#C2410C;                    /* 발견공백 강조(짙은 적갈 → 주황) */
     --radius:12px;
@@ -76,7 +80,7 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
   .card .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
   .card .l{font-size:12px;color:var(--muted);margin-top:1px}
-  .card .s{font-size:11px;color:#6b7280;margin-top:5px}
+  .card .s{font-size:11px;color:var(--muted);margin-top:5px}
   .card.gap .v{color:#b8541f}
   /* 분류군 퀴즈 진입 카드(누적 관측 옆) */
   .card.quiz{background:#eef3f1;border-color:#d3e5dd;text-decoration:none;color:inherit;
@@ -194,8 +198,10 @@
   @media(max-width:880px){.split{grid-template-columns:1fr}}
   #map,#mapB{width:100%;height:560px;border:1px solid var(--line);border-radius:var(--radius);background:#eef0ee;position:relative}
   @media(max-width:880px){#map,#mapB{height:400px}}
+  /* 지도 타일 위에 얹히는 안내문이라 글자색만으로는 대비를 보장할 수 없다.
+     안내문이 뜨는 동안은 보여줄 지도 내용이 없으므로 옅은 판을 깔아 바닥을 고정한다. */
   .mapmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
-    padding:20px;color:#777;font-size:13px;pointer-events:none}
+    padding:20px;color:#3f4542;font-size:13px;pointer-events:none;background:rgba(250,250,248,.78)}
   .legend{display:flex;align-items:center;gap:8px;font-size:11px;color:#666;margin-top:8px}
   .ramp{height:10px;width:120px;border-radius:3px;background:linear-gradient(90deg,#1a9850,#fee08b,#d73027)}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
@@ -318,7 +324,7 @@
   .regtbl .num{text-align:right;font-variant-numeric:tabular-nums}
   .regtbl-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px;flex-wrap:wrap}
   .spview-tg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
-  .spview-tg button{border:0;background:#fff;color:#5a635d;font-size:12px;padding:3px 10px;cursor:pointer;font-weight:500}
+  .spview-tg button{border:0;background:#fff;color:#5a635d;font-size:12px;padding:4px 10px;cursor:pointer;font-weight:500}
   .spview-tg button+button{border-left:1px solid var(--line)}
   .spview-tg button.on{background:var(--accent);color:#fff}
   .gaplegend{display:flex;flex-wrap:wrap;align-items:center;gap:5px 12px;font-size:11px;color:#5a635d;margin-bottom:7px}
@@ -353,6 +359,14 @@
   .envrow .val{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
   .envrow .val b{color:var(--ink);font-weight:600}
   .envnote{font-size:11px;color:var(--faint);margin-top:8px}
+  /* 발견 계절 월별 막대. 월 숫자를 막대 안에 넣으면 값이 0 인 달에서 라벨이 잘리므로
+     막대와 라벨을 위아래 두 줄로 나눈다. */
+  .envrow.season{grid-template-columns:92px 1fr!important;position:relative;align-items:start}
+  .monthbars{display:flex;gap:2px;height:88px;align-items:flex-end;background:#f5f5f3;border-radius:4px 4px 0 0;padding:0 6px}
+  .mb{flex:1;background:var(--accent);border-radius:2px 2px 0 0}
+  .monthlbl{display:flex;gap:2px;padding:3px 6px 0;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .monthlbl span{flex:1;text-align:center}
+  .season-table{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border-width:0}
   /* 지도 — 환경변수 레이어 컨트롤 */
   .env-ctrl{position:absolute;top:8px;left:8px;z-index:2;background:#fff;border:1px solid #cdd5d1;border-radius:8px;
     box-shadow:0 1px 4px rgba(0,0,0,.14);padding:7px 9px;width:188px;font:12px system-ui,sans-serif}
@@ -444,10 +458,12 @@
     #tbl td:nth-child(3),#tbl td:nth-child(4){margin-right:6px}
     #tbl td:nth-child(5){display:block;margin-top:8px;color:var(--muted);font-size:12px;text-align:left}
     #tbl td:nth-child(5):empty{display:none}
-    #tbl td:nth-child(5):not(:empty)::before{content:"관심도 ";color:var(--faint)}
+    /* 항목 이름과 값이 같은 줄에 붙는다. 색이 같아진 이상 이름은 굵기로 구분한다
+       (종 카드의 .scard .row .k 와 같은 방식). */
+    #tbl td:nth-child(5):not(:empty)::before{content:"관심도 ";font-weight:600}
     #tbl td:nth-child(6){display:block;margin-top:4px;color:var(--muted);font-size:12px;text-align:left}
     #tbl td:nth-child(6):empty{display:none}
-    #tbl td:nth-child(6):not(:empty)::before{content:"관측 ";color:var(--faint)}
+    #tbl td:nth-child(6):not(:empty)::before{content:"관측 ";font-weight:600}
     #tbl tbody tr:not(.rowlink) td{display:block;padding:10px;white-space:normal}
     /* 국명 없는 종: td1이 학명(.sci) → td2 학명 중복 숨김(:has 미지원 브라우저는 기존대로) */
     #tbl tbody tr.rowlink td:nth-child(1):has(.sci)+td:nth-child(2){display:none}
@@ -477,9 +493,15 @@
     .sresults .r>.tg{grid-area:tg;margin-left:0;justify-self:end;align-self:center}
     .sresults .r>.nm:has(.sci)~.sci{display:none}  /* 국명 없는 종: nm이 학명 표시 → 중복 sci 숨김 */
 
+    /* 종 카드 분포 토글: 인라인 23px 로는 손가락으로 누르기 어렵다. 제목 줄에서 한 줄을 차지하게 두고
+       두 버튼이 폭을 나눠 갖도록 한다(위 .seg button 과 같은 처리). */
+    .spview-tg{flex:1 1 100%}
+    .spview-tg button{flex:1;min-height:44px;font-size:12.5px}
+
     /* 관심종·CSV 버튼 터치 타깃 */
     .watchbtn{min-height:44px}
     .nearbybtn{min-height:44px}
+    .rdl{min-height:44px;display:inline-flex;align-items:center;padding:5px 14px}
     .panel h2 .dl{min-height:44px;display:inline-flex;align-items:center}
   }
   /* 가로(landscape)·낮은 뷰포트: 지도 높이 축소로 이중 스크롤 완화 */
@@ -492,10 +514,7 @@
   .back{display:inline-flex;align-items:center;justify-content:center;color:var(--muted);text-decoration:none;
     margin-bottom:14px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--card)}
   .back:hover{color:var(--accent);border-color:var(--accent)}
-  .authcard p{margin:6px 0 14px;color:var(--muted);font-size:13px}
-  .authcard input[type=email]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:10px;font-family:inherit}
   .btn:disabled{opacity:.6;cursor:default}
-  .btn.goog svg{width:17px;height:17px;display:block;flex:none}
   .divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--faint);font-size:11.5px}
   .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
   .topline{display:flex;align-items:center;gap:10px;margin:22px 0 12px;flex-wrap:wrap}
@@ -593,7 +612,7 @@
           </select>
           <button type="button" class="sortdir" id="sortDirBtn" aria-label="정렬 방향 바꾸기">↓</button>
         </div>
-        <div class="recstrip" id="recStrip" hidden></div>
+        <div class="recstrip" id="recStrip" hidden aria-live="polite" aria-atomic="true"></div>
         <div class="tblwrap"><table id="tbl"></table></div>
       </div>
     </div>
@@ -725,7 +744,9 @@
   .rpt-modal{background:#fff;border-radius:14px;width:100%;max-width:460px;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.28)}
   .rpt-hd{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:2}
   .rpt-hd h3{margin:0;font-size:15px}
-  .rpt-hd .x{margin-left:auto;border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:#8a8f8c;padding:0 6px;min-height:44px}
+  /* 헤더 우측 닫기(×) 공통 기준: 44×44 타격영역 · 22px 글리프 · 색 #8a8f8c. 모달·패널 모두 이 규칙을 쓴다. */
+  .rpt-hd .x,.chathd .x{margin-left:auto;display:flex;align-items:center;justify-content:center;
+    border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:#8a8f8c;padding:0 6px;min-width:44px;min-height:44px}
   .rpt-bd{padding:14px 16px}
   .rpt-f{margin-bottom:13px}
   .rpt-f>label{display:block;font-size:12px;font-weight:600;color:#4f6f61;margin-bottom:5px}
@@ -769,7 +790,6 @@
   body.chatopen #chatDrawer{transform:none}
   .chathd{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);flex:none}
   .chathd h3{margin:0;font-size:15px}
-  .chathd .x{margin-left:auto;border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:#8a8f8c;padding:0 6px;min-height:44px}
   #chatDrawer .vintro{padding:12px 16px 0;flex:none}
   #chatDrawer #chatView{flex:1;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column}
   @media(max-width:880px){
@@ -931,6 +951,15 @@ function loadCells(t, cb){                                // 분류군별 종 �
   _cellCbs[t]=[cb];
   const done=()=>{ const cbs=_cellCbs[t]; _cellCbs[t]=null; cbs.forEach(f=>f&&f()); };
   _loadScript(`demo/data/cells_${_txfile(t)}.js`, done);
+}
+const _seasonCbs={};
+function seasonReady(t){ return !t || !!((window.__SEASON__||{})[t]); }
+function loadSeason(t, cb){                               // 분류군별 발견 계절(종별 월별 점유)
+  if(seasonReady(t)){ cb&&cb(); return; }
+  if(_seasonCbs[t]){ _seasonCbs[t].push(cb); return; }
+  _seasonCbs[t]=[cb];
+  const done=()=>{ const cbs=_seasonCbs[t]; _seasonCbs[t]=null; cbs.forEach(f=>f&&f()); };
+  _loadScript(`demo/data/season_${_txfile(t)}.js`, done);
 }
 function speciesEnvelope(sp){                             // 종 → {var:[lo,hi]} (IQR 엔벨로프; ndwi 는 수생 종만)
   const row=(window.__ENV__||{})[sp.k]; if(!row||!ENVMETA) return null;
@@ -1264,9 +1293,13 @@ async function shareView(){
   try{ await navigator.clipboard.writeText(url); toast('링크를 복사했습니다'); }
   catch(_){ toast('복사할 수 없어요 — 주소창에서 복사해 주세요'); }
 }
+/* 지도 오버레이로 내보내는 환경변수. ENVMETA.vars 자체는 줄이지 않는다 —
+   __ENV__ 행이 vars 순서의 인덱스로 값을 담고 있어 목록을 줄이면 종 카드·엔벨로프가 어긋난다. */
+const MAP_ENV=['bio01','bio12','dem','ndvi'];
 function initEnvLayers(layers){                           // ImageStatic 오버레이(EPSG:3857) — 변수당 1장, 기본 숨김
   if(!ENVMETA||!ENVMETA.layers) return;
   for(const v of ENVMETA.vars){
+    if(!MAP_ENV.includes(v.key)) continue;
     const L=ENVMETA.layers[v.key]; if(!L) continue;
     const img=new ol.layer.Image({visible:false, opacity:envOpacity,
       source:new ol.source.ImageStatic({url:'demo/data/'+L.png, imageExtent:L.extent, projection:'EPSG:3857'})});
@@ -1275,9 +1308,10 @@ function initEnvLayers(layers){                           // ImageStatic 오버�
 }
 function addEnvCtrl(){                                     // 지도 좌상단: 변수 선택 + 범례 + 투명도
   if(!ENVMETA||!ENVMETA.vars||!ENVMETA.vars.length) return;
+  const mv=ENVMETA.vars.filter(v=>MAP_ENV.includes(v.key)); if(!mv.length) return;
   const el=document.createElement('div'); el.className='ol-unselectable env-ctrl';
   const opts=['<option value="">환경변수 끄기</option>']
-    .concat(ENVMETA.vars.map(v=>`<option value="${v.key}">${v.label}</option>`)).join('');
+    .concat(mv.map(v=>`<option value="${v.key}">${v.label}</option>`)).join('');
   const op=Math.round(envOpacity*100);
   el.innerHTML=`<select id="envSel">${opts}</select>
     <div class="env-legend" id="envLegend">
@@ -1377,8 +1411,8 @@ function renderRecStrip(all){                              // 주목할 미발�
       `${nm}<span class="rc-iv" aria-hidden="true"><span style="width:${p}%"></span></span></button>`;
   }).join('');
   const tip=(reg+'에서 아직 기록 없는 관심도 높은 종').replace(/"/g,'&quot;');
+  el.hidden=false;                                         // 알림 영역이 먼저 표시돼야 이후 내용 교체가 스크린리더에 전달된다
   el.innerHTML=`<div class="rec-h">주목할 미발견 종 <button type="button" class="qtip" aria-label="설명 보기" data-tip="${tip}">?</button></div><div class="rec-chips">${chips}</div>`;
-  el.hidden=false;
 }
 // 물음표 툴팁: 모바일 탭 토글 + 외부 클릭 시 닫기(데스크톱은 호버·포커스로 표출)
 document.addEventListener('click',function(e){
@@ -1500,7 +1534,7 @@ function refreshSpeciesMap(){
 }
 function showSpecies(sp){                                // 선택 종의 분류군 obs 를 보장 로드 후 렌더
   if(!taxonReady(sp.t)||!window.__ENV__) sCard.innerHTML='<div class="scard"><span class="muted">관측자료 불러오는 중…</span></div>';
-  ensureEnv(()=>loadTaxon(sp.t, ()=>renderSpecies(sp)));
+  ensureEnv(()=>loadTaxon(sp.t, ()=>loadSeason(sp.t, ()=>renderSpecies(sp))));
 }
 function speciesSigungu(sp,a,b){                          // 종 obs → 시군구 단위 [{sido명, 시군구명, 발견수}] (토글 무관·항상 시군구)
   const m=new Map(), rows=(OBS[sp.t]&&OBS[sp.t].obs)||[];
@@ -1549,45 +1583,73 @@ function downloadSpeciesRegions(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download=`${selSpecies.n||selSpecies.s}_발견지역(시군구)_${sy0}-${sy1}.csv`; a.click(); URL.revokeObjectURL(a.href);
 }
-function envBars(sp){                                     // 발견지점 기후·고도 박스플롯(Q1–Q3 집중구간) + 평균±표준편차
-  if(!ENVMETA||!window.__ENV__) return '';               // 메타·데이터 준비 안 됨 → 섹션 생략
-  const row=window.__ENV__[sp.k]; if(!row) return '';
-  const vars=ENVMETA.vars, ref=ENVMETA.ref, NV=7; let bars='';   // 변수당 [min,q1,median,q3,max,mean,sd]
-  for(let i=0;i<vars.length;i++){
-    const v=vars[i], R=ref[v.key]; if(!R) continue;
-    const b=i*NV, mn=row[b], q1=row[b+1], md=row[b+2], q3=row[b+3], mx=row[b+4], mean=row[b+5], sd=row[b+6];
-    if(mn==null||mx==null) continue;
-    const t0=R.p01, t1=R.p99, span=(t1-t0)||1;
-    const pc=x=>Math.max(0,Math.min(100,((x-t0)/span)*100));
-    const wl=pc(mn), wr=pc(mx);                           // 수염: min–max 전체 범위
-    let bl=pc(q1), br=pc(q3); if(br-bl<2){ const c=(bl+br)/2; bl=Math.max(0,c-1); br=Math.min(100,c+1); }  // 박스: Q1–Q3
-    const sdTxt=(sd!=null&&sd>0)?` ± ${fmtVal(sd,v)}`:'';
-    bars+=`<div class="envrow"><span class="lbl">${v.label}</span>`+
-      `<div class="envtrack" title="전국 ${fmtVal(t0,v)}–${fmtVal(t1,v)}${v.unit} · 전국 중앙값 ${fmtVal(R.median,v)} · 이 종 Q1–Q3 ${fmtVal(q1,v)}–${fmtVal(q3,v)} · 중앙값 ${fmtVal(md,v)}">`+
-        `<div class="whisk" style="left:${wl.toFixed(1)}%;width:${(wr-wl).toFixed(1)}%"></div>`+
-        `<div class="seg" style="left:${bl.toFixed(1)}%;width:${(br-bl).toFixed(1)}%"></div>`+
-        `<div class="smed" style="left:${pc(md).toFixed(1)}%"></div>`+
-        `<div class="nmed" style="left:${pc(R.median).toFixed(1)}%"></div></div>`+
-      `<span class="val"><b>${fmtVal(mean,v)}</b>${sdTxt} ${v.unit}</span></div>`;
+function envBars(sp){                                     // 발견지점 고도 + 발견 계절
+  if(!ENVMETA||!window.__ENV__) return null;              // 메타·데이터 준비 안 됨 → 섹션 생략
+  const row=window.__ENV__[sp.k]; if(!row) return null;
+
+  // 고도(dem) 막대만 렌더링
+  const demVar=ENVMETA.vars.find(v=>v.key==='dem');
+  if(!demVar) return null;
+  const demIdx=ENVMETA.vars.indexOf(demVar), R=ENVMETA.ref[demVar.key]; if(!R) return null;
+  const NV=7, b=demIdx*NV, mn=row[b], q1=row[b+1], md=row[b+2], q3=row[b+3], mx=row[b+4], mean=row[b+5], sd=row[b+6];
+  if(mn==null||mx==null) return null;
+
+  const t0=R.p01, t1=R.p99, span=(t1-t0)||1;
+  const pc=x=>Math.max(0,Math.min(100,((x-t0)/span)*100));
+  const wl=pc(mn), wr=pc(mx);
+  let bl=pc(q1), br=pc(q3); if(br-bl<2){ const c=(bl+br)/2; bl=Math.max(0,c-1); br=Math.min(100,c+1); }
+  const sdTxt=(sd!=null&&sd>0)?` ± ${fmtVal(sd,demVar)}`:'';
+
+  let bars=`<div class="envrow"><span class="lbl">${demVar.label}</span>`+
+    `<div class="envtrack" title="전국 ${fmtVal(t0,demVar)}–${fmtVal(t1,demVar)}${demVar.unit} · 전국 중앙값 ${fmtVal(R.median,demVar)} · 이 종 Q1–Q3 ${fmtVal(q1,demVar)}–${fmtVal(q3,demVar)} · 중앙값 ${fmtVal(md,demVar)}">`+
+      `<div class="whisk" style="left:${wl.toFixed(1)}%;width:${(wr-wl).toFixed(1)}%"></div>`+
+      `<div class="seg" style="left:${bl.toFixed(1)}%;width:${(br-bl).toFixed(1)}%"></div>`+
+      `<div class="smed" style="left:${pc(md).toFixed(1)}%"></div>`+
+      `<div class="nmed" style="left:${pc(R.median).toFixed(1)}%"></div></div>`+
+    `<span class="val"><b>${fmtVal(mean,demVar)}</b>${sdTxt} ${demVar.unit}</span></div>`;
+
+  // 발견 계절 12개월
+  /* 값은 관측 건수가 아니라 조사 시기를 보정한 상대 점수다(가장 높은 달 = 100).
+     막대는 표와 같은 내용을 그림으로만 되풀이하므로 스크린리더에서는 가려 두고,
+     읽히는 것은 아래 표 하나로 둔다. */
+  const seasons=(window.__SEASON__||{})[sp.t], hasSeason=seasons&&seasons[sp.k];
+  if(hasSeason){
+    const m=hasSeason, max=Math.max(...m)||1;
+    bars+=`<div class="envrow season"><span class="lbl">발견 계절</span><div>`+
+      `<div class="monthbars" aria-hidden="true">`;
+    for(let i=0;i<12;i++)
+      bars+=`<div class="mb" style="height:${(m[i]/max*100).toFixed(1)}%" title="${i+1}월 — 관찰 가능성 ${m[i]}/100"></div>`;
+    bars+=`</div><div class="monthlbl" aria-hidden="true">`;
+    for(let i=0;i<12;i++) bars+=`<span>${i+1}</span>`;
+    bars+=`</div></div>`+
+      `<table class="season-table"><caption>월별 관찰 가능성(조사 시기 보정, 가장 높은 달 = 100)</caption><thead><tr>`;
+    for(let i=0;i<12;i++) bars+=`<th scope="col">${i+1}월</th>`;
+    bars+=`</tr></thead><tbody><tr>`;
+    for(let i=0;i<12;i++) bars+=`<td>${m[i]}</td>`;
+    bars+=`</tr></tbody></table></div>`;
   }
-  if(!bars) return '';
-  const head=`<div class="envhead"><span class="vh">평균 ± 표준편차</span></div>`;   // 값 컬럼 위 헤더
-  const legend=`<div class="envlegend foot">`+                                       // 막대 하단 도형 범례
+
+  const legend=`<div class="envlegend foot">`+
     `<span class="lgi"><i class="lg-area"></i>전국 분포</span>`+
     `<span class="lgi"><i class="lg-ncirc"></i>전국 중앙값</span>`+
     `<span class="lgi"><i class="lg-range"></i>종 발견 범위</span>`+
     `<span class="lgi"><i class="lg-box"></i>집중 구간(Q1–Q3)</span>`+
     `<span class="lgi"><i class="lg-smed"></i>발견 지점 중앙값</span></div>`;
-  return head + `<div class="envbars">${bars}</div>` + legend +
-    `<div class="envnote">발견 기록이 있는 지점의 환경값 분포 — 실제 분포역과 다를 수 있습니다.</div>`;
+
+  const note=hasSeason
+    ? '발견 기록이 있는 지점의 고도 분포와 월별 관찰 가능성 — 실제 분포역·발생 시기와 다를 수 있습니다.'
+    : '발견 기록이 있는 지점의 고도 분포 — 실제 분포역과 다를 수 있습니다.';
+  const html=`<div class="envbars">${bars}</div>`+legend+`<div class="envnote">${note}</div>`;
+
+  return {html, hasSeason};
 }
 function renderSpecies(sp){
   selSpecies=sp;
   window.fgTrack&&fgTrack('species_open',{ktsn:sp.k,taxon:sp.t});
   selRegions=speciesRegions(sp,sy0,sy1);                  // 지도 강조용(활성 레벨)
   const eg=isEndangered(sp.g);
-  const envHtml=envBars(sp);                              // 기후·지형 지위 막대(데이터 있을 때만)
-  const envRow=envHtml?`<div class="row"><div class="k khead">발견지점 기후 및 고도</div>${envHtml}</div>`:'';
+  const envInfo=envBars(sp);                              // 고도·발견계절 막대(데이터 있을 때만)
+  const envRow=envInfo?`<div class="row"><div class="k khead">${envInfo.hasSeason?'발견 계절 · 고도':'고도'}</div>${envInfo.html}</div>`:'';
   const reportLink=eg
     ? `<a class="lk danger" href="${NATURING}" target="_blank" rel="noopener noreferrer"><span><span class="t">Naturing 멸종위기종 제보</span><br><span class="d">시민과학 관찰 제보 프로젝트 →</span></span></a>`
     : `<a class="lk" href="${ECOBANK}" target="_blank" rel="noopener noreferrer"><span><span class="t">EcoBank 데이터 제보</span><br><span class="d">국립생태원 생태정보 제보 →</span></span></a>`;
@@ -1596,7 +1658,7 @@ function renderSpecies(sp){
       <div style="min-width:0"><h3>${sp.n||sp.s}</h3><div class="sci">${sp.s}</div></div>
       <button class="watchbtn" data-k="${sp.k}" style="margin-left:auto" hidden>☆ 관심 종</button>
     </div>
-    <div style="margin-top:8px">${badges(sp.g,sp.r)||'<span class="muted">일반종</span>'} <span class="badge" style="background:#eef3f1;color:#2f6f5e">${TAXON_KOR[sp.t]||sp.t}</span></div>
+    <div style="margin-top:8px">${badges(sp.g,sp.r)||'<span class="muted">일반종</span>'} <span class="badge" style="background:#eef3f1;color:var(--accent)">${TAXON_KOR[sp.t]||sp.t}</span></div>
     <div style="margin-top:8px;display:flex;align-items:center;gap:8px" title="같은 분류군·희귀도 그룹 안에서 이 종에 대한 대중 관심(관측 기록·한국어 위키 조회 기반)의 상대 위치">
       <span class="muted" style="font-size:12px;white-space:nowrap">관심도</span>
       <span style="flex:1;max-width:150px;height:6px;background:#eef1f0;border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(interestOf(sp.k)*100)}%;background:#6a9a86"></span></span>
@@ -2079,7 +2141,7 @@ function statusBadge(s){ const m=_RSTATUS[s]||_RSTATUS.pending; return `<span cl
 function reportLine(r,mine){
   const nm=r.korean_name||r.scientific_name||r.ktsn;
   const sci=(r.scientific_name&&r.scientific_name!==nm)?`<span class="sci">${esc(r.scientific_name)}</span>`:'';
-  const gap=r.fills_gap?`<span class="dbadge" style="background:#e7f1ee;color:#2f6f5e">공백 메움</span>`:'';
+  const gap=r.fills_gap?`<span class="dbadge" style="background:#e7f1ee;color:var(--accent)">공백 메움</span>`:'';
   const who=mine?'':(r.reporter?' · '+esc(r.reporter):' · 익명');
   const link=/^https?:\/\//i.test(r.url||'')?`<a class="muted2" href="${esc(r.url)}" target="_blank" rel="noopener nofollow ugc" style="margin-left:8px">근거 →</a>`:'';
   const del=mine?`<button class="rm" title="삭제">✕ 삭제</button>`:'';
