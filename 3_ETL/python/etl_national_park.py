@@ -6,8 +6,9 @@
          + 국립공원_생물자원현황_YYYY (NNNNN).zip × 22개 (2002-2023, CP949, YYYY-MM-DD 일자)
 - 매칭: 종명(학명) → managed_key → ktsn. 미스 시 분류명(국명) 폴백.
 - 시도: lon,lat EPSG:4326 → BND_SIDO_PG point-in-polygon → sido. 폴리곤 밖=미상.
-- 연도: 조사일자 파싱 (M/D/YYYY 또는 YYYY-MM-DD).
+- 연도·월: 조사일자 파싱 (M/D/YYYY 또는 YYYY-MM-DD) — obs_common.parse_ym 공용.
 - obs_count = COUNT(DISTINCT 좌표) per (ktsn, taxon_group, sido, year, source='nps').
+- 월: 계절성용으로 시도 집계와 독립된 observation_months_nps.csv 로 별도 산출.
 - source = 'nps' (고정).
 사용: python etl_national_park.py
 출력: 1_Data/processed/observation_nps.csv + observation_nps_report.txt (+ 콘솔 리포트)
@@ -17,29 +18,14 @@ from pathlib import Path
 from collections import defaultdict, Counter
 from taxon_key import managed_key
 from name_overrides import load_overrides
-from obs_common import load_master, resolve_ktsn, _kor, sido_lookup, write_points
+from obs_common import (load_master, resolve_ktsn, _kor, sido_lookup,
+                        write_points, parse_ym, write_months)
 
 BASE = Path(__file__).resolve().parents[2]
 PROC = BASE / "1_Data" / "processed"
 RAW_NP = BASE / "1_Data" / "raw" / "national_park"
 OUT = PROC / "observation_nps.csv"
 REPORT = PROC / "observation_nps_report.txt"
-
-
-def parse_date(date_str):
-    """조사일자 파싱: M/D/YYYY 또는 YYYY-MM-DD → 4자리 연도 추출."""
-    if not date_str:
-        return ""
-    date_str = date_str.strip()
-    # YYYY-MM-DD 형식
-    m = re.match(r"(\d{4})-\d{2}-\d{2}", date_str)
-    if m:
-        return m.group(1)
-    # M/D/YYYY 형식
-    m = re.search(r"(\d{4})", date_str)  # 4자리 숫자 찾기
-    if m:
-        return m.group(1)
-    return ""
 
 
 def read_ndjson_file(fpath, encoding="utf-8-sig"):
@@ -72,7 +58,7 @@ def main():
 
     # 2) 데이터 읽기 + 매칭
     t1 = time.time()
-    obs = []  # (ktsn, taxon_group, year, lon, lat)  — sido는 2단계 후 채움
+    obs = []  # (ktsn, taxon_group, year, lon, lat, month)  — sido는 2단계 후 채움
     n_all = n_override = n_both = n_sci = n_kor = n_conflict = 0
     unmatched = Counter()          # (종명, 분류명) → 폐기 건수(충돌+미매칭)
     unmatched_bunryu = {}          # (종명, 분류명) → 생물분류(원천 힌트)
@@ -86,7 +72,7 @@ def main():
             n_all += 1
             sciname = (r.get("종명") or "").strip()
             kor_name = (r.get("분류명") or "").strip()
-            year = parse_date(r.get("조사일자") or "")
+            year, month = parse_ym(r.get("조사일자"))
 
             try:
                 lon = float((r.get("경도") or "").strip()) if (r.get("경도") or "").strip() else None
@@ -116,7 +102,7 @@ def main():
                     unmatched_reason.setdefault(key, "미매칭")
                 continue
 
-            obs.append([ktsn, ktsn_tx.get(ktsn, ""), year, lon, lat])
+            obs.append([ktsn, ktsn_tx.get(ktsn, ""), year, lon, lat, month])
 
     # 2.2) 국립공원_생물자원현황_YYYY.zip (2002-2023, CP949, YYYY-MM-DD 일자)
     for zpath in sorted(RAW_NP.glob("국립공원_생물자원현황_*.zip")):
@@ -135,7 +121,7 @@ def main():
                         n_all += 1
                         sciname = (r.get("종명") or "").strip()
                         kor_name = (r.get("분류명") or "").strip()
-                        year = parse_date(r.get("조사일자") or "")
+                        year, month = parse_ym(r.get("조사일자"))
 
                         try:
                             lon = float((r.get("경도") or "").strip()) if (r.get("경도") or "").strip() else None
@@ -165,7 +151,7 @@ def main():
                                 unmatched_reason.setdefault(key, "미매칭")
                             continue
 
-                        obs.append([ktsn, ktsn_tx.get(ktsn, ""), year, lon, lat])
+                        obs.append([ktsn, ktsn_tx.get(ktsn, ""), year, lon, lat, month])
         except Exception as e:
             print(f"경고: {zpath.name} 읽기 실패 — {e}", file=sys.stderr)
 
@@ -186,9 +172,12 @@ def main():
     # 4) 집계: obs_count = COUNT(DISTINCT 좌표) per (ktsn, taxon_group, sido, year, source='nps')
     t3 = time.time()
     grp = defaultdict(set)
-    for ktsn, tx, year, lon, lat in obs:
+    mon = defaultdict(set)              # 계절성용 — grp 와 독립(월을 grp 키에 넣으면 obs_count 가 바뀐다)
+    for ktsn, tx, year, lon, lat, month in obs:
         sd = coord_sido.get((lon, lat), "미상") if lon is not None else "미상"
         grp[(ktsn, tx, sd, year, "nps")].add((lon, lat))
+        if month:
+            mon[(ktsn, tx, "nps", year, month)].add((lon, lat))
     rows = [{"ktsn": k, "taxon_group": tx, "sido": s, "year": y, "source": sr, "obs_count": len(p)}
             for (k, tx, s, y, sr), p in grp.items()]
     rows.sort(key=lambda r: (r["taxon_group"], r["sido"], r["year"], -r["obs_count"]))
@@ -203,6 +192,10 @@ def main():
     # 좌표 보존 점 단위 기본 DB(파생: 위 시도 집계와 카운트 일치) — bioclim 등 점 기반 분석용
     npt = write_points(PROC / "observation_points_nps.csv", grp)
     print(f"점 DB: observation_points_nps.csv 행 {npt:,}")
+
+    nmo = write_months(PROC / "observation_months_nps.csv", mon)
+    n_nomonth = sum(1 for o in obs if not o[5])
+    print(f"월 집계: observation_months_nps.csv 행 {nmo:,} · 월 미상 {n_nomonth:,}/{len(obs):,}")
 
     # 5) 리포트 생성
     yr_list = sorted({r["year"] for r in rows if r["year"]})

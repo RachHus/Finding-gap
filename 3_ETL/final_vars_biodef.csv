@@ -1,0 +1,6 @@
+"var","label","axis"
+"bio03","Isothermality (등온성: bio02/bio07)","기온변동(정규화)"
+"bio05","Max Temp of Warmest Month (가장따뜻한달최고기온)","기온극값(고)"
+"bio07","Annual Temp Range (연기온범위)","기온변동(범위)"
+"bio12","Annual Precipitation (연강수량)","강수절대값"
+"bio14","Precip of Driest Month (건조월강수)","강수극값(저)"

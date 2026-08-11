@@ -6,12 +6,15 @@
 - load_master()      : ktsn_master + 변종/품종 별칭(alias) → (학명키→ktsn, 국명→ktsn, ktsn→taxon_group)
 - resolve_ktsn(...)  : 학명·국명을 각각 ktsn 으로 해석 후 충돌 판정(확정불가 폐기), 보정 매핑(override) 최우선
 - sido_lookup(...)   : 고유 (lon,lat) 목록 → {(lon,lat): sido명}  (BND_SIDO_PG point-in-polygon, 폴리곤 밖=미상)
+- parse_ym(s)        : 조사일자 → (연 4자리, 월 1~12|None). YYYY-MM-DD · M/D/YYYY 공용
+- write_months(...)  : 월별 집계 CSV (계절성 산출용; 시도 집계·점 DB 와 독립)
 - _kor(s)            : 국명 정규화(공백 제거; 멱등)
 
 세 ETL 의 source/스키마는 동일(ktsn,taxon_group,sido,year,source,obs_count) → build_demo_data 가 union.
 """
 import re
 import csv
+from datetime import date, timedelta
 from pathlib import Path
 
 from taxon_key import managed_key
@@ -26,6 +29,38 @@ SIDO_SHP = BASE / "1_Data" / "spatial" / "BND_SIDO_PG" / "BND_SIDO_PG.shp"
 def _kor(s):
     """국명 정규화: 공백 제거(멱등 — 이미 정규화된 값에 다시 적용해도 동일)."""
     return re.sub(r"\s+", "", s or "")
+
+
+_YMD = re.compile(r"(\d{4})-(\d{1,2})-(\d{1,2})")
+_MDY = re.compile(r"(\d{1,2})/(\d{1,2})/(\d{4})")
+_EXCEL_EPOCH = date(1899, 12, 30)      # Excel 1900 날짜계 기준일
+
+
+def parse_ym(s):
+    """조사일자 → (연 4자리 문자열, 월 1~12 int|None). 파싱 실패 시 ('', None).
+    EcoBank examin_begin_de·GBIF eventDate·국립공원 zip 은 YYYY-MM-DD,
+    국립공원 2024 csv 만 M/D/YYYY — 세 ETL 이 같은 규칙을 쓰도록 여기 둔다.
+    연도만 있고 월이 없는 값(예: '2019')은 ('2019', None) — 계절 집계에서 제외되고 연도 집계는 그대로 살아난다.
+
+    생태계정밀조사 저서무척추 레이어는 날짜가 Excel 일련번호(예: '42131' = 2015-05-07)로 내려온다.
+    앞 4자리를 연도로 읽으면 4213년이 되므로 5자리 정수는 일련번호로 환산한다
+    (4자리는 연도 그 자체라 건드리지 않는다)."""
+    s = (s or "").strip()
+    if not s:
+        return "", None
+    if len(s) == 5 and s.isdigit():
+        d = _EXCEL_EPOCH + timedelta(days=int(s))
+        return str(d.year), d.month
+    m = _YMD.match(s)
+    if m:
+        mo = int(m.group(2))
+        return m.group(1), (mo if 1 <= mo <= 12 else None)
+    m = _MDY.match(s)
+    if m:
+        mo = int(m.group(1))
+        return m.group(3), (mo if 1 <= mo <= 12 else None)
+    m = re.search(r"(\d{4})", s)
+    return (m.group(1) if m else ""), None
 
 
 def load_master(master=MASTER):
@@ -113,4 +148,24 @@ def write_points(out_path, grp):
                 w.writerow([ktsn, tx, src, year, sido,
                             "" if lon is None else lon, "" if lat is None else lat])
                 n += 1
+    return n
+
+
+def write_months(out_path, mon):
+    """계절성 산출용 월별 집계 — mon{(ktsn,taxon_group,source,year,month): set((lon,lat))} 를
+    CSV(ktsn,taxon_group,source,year,month,n)로 쓴다. n 은 고유 좌표 수로, obs_count 와 같은 셈법이다.
+
+    시도 집계(observation_*.csv)·점 DB(observation_points_*.csv)와 완전히 독립된 산출물이다.
+    월을 좌표 dedup 키에 넣으면 같은 지점을 다른 달에 본 관측이 2건으로 갈라져 obs_count 가 바뀌고,
+    그러면 발견/미발견 판정 자체가 달라진다 — 그래서 기존 집계는 건드리지 않고 옆에 따로 쌓는다.
+    월을 못 읽은 기록(month=None)은 여기서 빠질 뿐 기존 집계에는 그대로 남는다. 반환: 기록 행 수."""
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    n = 0
+    with out_path.open("w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["ktsn", "taxon_group", "source", "year", "month", "n"])
+        for (ktsn, tx, src, year, month), coords in mon.items():
+            w.writerow([ktsn, tx, src, year, month, len(coords)])
+            n += 1
     return n

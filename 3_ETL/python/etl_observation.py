@@ -6,6 +6,7 @@ EcoBank 관측 NDJSON → observation_agg.csv (시도 spatial join + obs_count �
 - 시도: _coords[lon,lat] EPSG:4326 → BND_SIDO_PG point-in-polygon → sido. 폴리곤 밖=미상.
 - 연도: examin_year 우선, 없으면 examin_begin_de 시작연도(D5).
 - obs_count = COUNT(DISTINCT 좌표) per (ktsn, taxon_group, sido, year, source)  — 종·연도·좌표 고유(D2).
+- 월: examin_begin_de 의 월(계절성용) — 시도 집계와 독립된 observation_months_ecobank.csv 로 별도 산출.
 - source = 조사사업 코드(bgts/ecpe/ntee/wtl). 미매칭 관측은 집계 제외 + 리포트(§1.5).
 사용: python etl_observation.py <ndjson> [<ndjson> ...]
 출력: 1_Data/processed/observation_agg.csv  (+ 콘솔 리포트)
@@ -14,7 +15,8 @@ import sys, csv, json, time, re
 from pathlib import Path
 from collections import defaultdict, Counter
 from name_overrides import load_overrides
-from obs_common import load_master, resolve_ktsn, _kor, sido_lookup, write_points
+from obs_common import (load_master, resolve_ktsn, _kor, sido_lookup,
+                        write_points, parse_ym, write_months)
 import fetch_ecobank as fe
 
 BASE = Path(__file__).resolve().parents[2]
@@ -23,11 +25,17 @@ OUT = PROC / "observation_agg.csv"
 
 
 def year_of(rec):
-    y = (rec.get("examin_year") or "").strip()
-    if re.fullmatch(r"\d{4}", y):
-        return y
-    m = re.match(r"(\d{4})", (rec.get("examin_begin_de") or "").strip())
-    return m.group(1) if m else ""
+    """연도: examin_year → examin_begin_de 순. 습지(wtl) 레이어만 필드명에 wtl_ 접두사가 붙어
+    앞의 두 키가 통째로 비므로 wtl_examin_year / wtl_examin_de 를 함께 본다."""
+    for k in ("examin_year", "wtl_examin_year"):
+        y = (rec.get(k) or "").strip()
+        if re.fullmatch(r"\d{4}", y):
+            return y
+    for k in ("examin_begin_de", "wtl_examin_de"):
+        y, _ = parse_ym(rec.get(k))      # Excel 일련번호 환산까지 parse_ym 에 위임
+        if y:
+            return y
+    return ""
 
 
 def source_of(path):
@@ -77,7 +85,9 @@ def main():
                 unmatched[sciname or kn or "(빈값)"] += 1
                 continue
             c = r.get("_coords") or [None, None]
-            obs.append([ktsn, ktsn_tx.get(ktsn, ""), year_of(r), src, c[0], c[1]])
+            # 연도는 examin_year 우선(year_of) · 월은 조사 시작일에서만 얻는다(습지는 wtl_ 접두사)
+            _, month = parse_ym(r.get("examin_begin_de") or r.get("wtl_examin_de"))
+            obs.append([ktsn, ktsn_tx.get(ktsn, ""), year_of(r), src, c[0], c[1], month])
     n_match = n_override + n_both + n_sci + n_kor
     n_discard = n_all - n_match
     print(f"매칭: 총 {n_all:,} | 매칭 {n_match:,} ({n_match/n_all*100:.1f}%) "
@@ -94,9 +104,12 @@ def main():
     # 3) 집계: obs_count = COUNT(DISTINCT 좌표) per (ktsn, taxon_group, sido, year, source)
     t3 = time.time()
     grp = defaultdict(set)
-    for ktsn, tx, year, src, lon, lat in obs:
+    mon = defaultdict(set)              # 계절성용 — grp 와 독립(월을 grp 키에 넣으면 obs_count 가 바뀐다)
+    for ktsn, tx, year, src, lon, lat, month in obs:
         sd = coord_sido.get((lon, lat), "미상") if lon is not None else "미상"
         grp[(ktsn, tx, sd, year, src)].add((lon, lat))
+        if month:
+            mon[(ktsn, tx, src, year, month)].add((lon, lat))
     rows = [{"ktsn": k, "taxon_group": tx, "sido": s, "year": y, "source": sr, "obs_count": len(p)}
             for (k, tx, s, y, sr), p in grp.items()]
     rows.sort(key=lambda r: (r["taxon_group"], r["sido"], r["year"], -r["obs_count"]))
@@ -109,6 +122,10 @@ def main():
     # 좌표 보존 점 단위 기본 DB(파생: 위 시도 집계와 카운트 일치) — bioclim 등 점 기반 분석용
     npt = write_points(PROC / "observation_points_ecobank.csv", grp)
     print(f"점 DB: observation_points_ecobank.csv 행 {npt:,}")
+
+    nmo = write_months(PROC / "observation_months_ecobank.csv", mon)
+    n_nomonth = sum(1 for o in obs if not o[6])
+    print(f"월 집계: observation_months_ecobank.csv 행 {nmo:,} · 월 미상 {n_nomonth:,}/{len(obs):,}")
 
     # 4) 리포트
     yr = sorted({r["year"] for r in rows if r["year"]})

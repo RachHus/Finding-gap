@@ -117,6 +117,37 @@ def step_gap_data():
     need(APP / "demo" / "data" / "gap_meta.js", "gap_meta.js")
 
 
+def step_env_grid_model():
+    """관찰 추천도 모델용 격자 — env_grid.csv + bio03·bio14·bio18, 배포 정밀도로 반올림.
+    env_grid.csv 보다 최신이면 건너뛴다."""
+    script = (RDIR / "env_grid_model.R").as_posix()
+    sh([RSCRIPT, "-e", f"source('{script}')"])
+    need(PROC / "env_grid_model.csv", "env_grid_model.csv")
+
+
+def step_season():
+    """종별 계절 적합성 — obs_month 를 (자료원×분류군) 조사 노력으로 보정한 12개월 점수."""
+    sh([sys.executable, PYDIR / "build_season.py"])
+    need(PROC / "species_season.csv", "species_season.csv")
+
+
+def step_model():
+    """종별 maxnet 증분 적합 + 4겹 CV. 점유 셀 지문이 같은 종은 건너뛰므로 갱신분만 다시 돈다.
+    변수·특징·배경수·겹수·구간 규칙이나 환경 격자가 바뀌면 cfg 해시가 달라져 전량 재적합한다."""
+    script = (RDIR / "model_species.R").as_posix()
+    sh([RSCRIPT, "-e", f"source('{script}')"])
+    need(PROC / "model_store", "model_store/")
+
+
+def step_model_data():
+    """관찰 추천도 클라 자산 — env_model.js·model_<T>.js·season_<T>.js·model_meta.js.
+    공간 축은 교차검증 TSS 가 기준선 이상인 종만 싣는다(나머지는 계절 축만)."""
+    import datetime
+    sh([sys.executable, APP / "build_model_data.py", datetime.date.today().isoformat()])
+    need(APP / "demo" / "data" / "model_meta.js", "model_meta.js")
+    need(APP / "demo" / "data" / "env_model.js", "env_model.js")
+
+
 def step_dist():
     """공개 배포본 — 반드시 --osm-only(vworld 키 미주입, docs/config.js 빈 키 유지)."""
     sh([sys.executable, APP / "build_dist.py", "--osm-only", "--out", "docs"])
@@ -131,10 +162,17 @@ STEPS = [  # 순서 = 의존관계
     ("ndwi_sp", "build_ndwi_species.py (어류+저서무척추)", step_ndwi_sp),
     ("env_data", "build_env_data.py (species_env.js·env_meta.js)", step_env_data),
     ("gap_data", "build_gap_data.py (env_grid.js·cells_<T>.js·gap_meta.js)", step_gap_data),
+    ("env_grid_model", "env_grid_model.R (모델 격자 + bio03·bio14·bio18)", step_env_grid_model),
+    ("season", "build_season.py (종별 12개월 점수, 조사노력 보정)", step_season),
+    ("model", "model_species.R (종별 maxnet 증분 적합 + 4겹 CV)", step_model),
+    ("model_data", "build_model_data.py (env_model.js·model_<T>.js·season_<T>.js)", step_model_data),
     ("dist", "build_dist.py --osm-only --out docs (배포본)", step_dist),
 ]
-# dist 는 명시 요청 시만. 나머지가 발견공백 A 데이터 재빌드 체인.
-DEFAULT = ["sentinel", "env_layers", "species_cells", "cell_sigungu", "ndwi_sp", "env_data", "gap_data"]
+# dist 는 명시 요청 시만. 나머지가 발견공백 A + 관찰 추천도 데이터 재빌드 체인.
+# season 은 observations.sqlite 의 obs_month 만 쓰므로 앞 단계와 독립이다(관측 ETL 이후면 언제든).
+# model 은 species_cells·env_grid_model 이후여야 한다.
+DEFAULT = ["sentinel", "env_layers", "species_cells", "cell_sigungu", "ndwi_sp", "env_data", "gap_data",
+           "env_grid_model", "season", "model", "model_data"]
 
 
 def main():

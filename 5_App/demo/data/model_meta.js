@@ -1,0 +1,1 @@
+window.__MODELMETA__={"generated":"2026-08-04","gate_tss":0.4,"vars_grid":["dem","ndvi","bio01"],"vars_model":["bio03","bio14","bio18"],"n_spatial":4849,"n_season":20228};

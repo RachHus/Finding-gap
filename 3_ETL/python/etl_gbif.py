@@ -5,8 +5,9 @@ GBIF 점유자료(gbif_<group>.csv) → observation_gbif.csv (시도 spatial joi
 - 매칭: 학명(scientificName→species) → managed_key → ktsn. (GBIF vernacular은 노이즈라 미사용,
         학명 단독 매칭. 보정 매핑(override) 최우선. taxon_group은 매칭된 ktsn 기준으로 확정.)
 - 시도: decimalLongitude,decimalLatitude EPSG:4326 → BND_SIDO_PG point-in-polygon → sido. 폴리곤 밖=미상.
-- 연도: year 컬럼(없으면 eventDate에서 4자리).
+- 연도: year 컬럼(없으면 eventDate에서 4자리). 월: eventDate 에서만(month 컬럼 없음).
 - obs_count = COUNT(DISTINCT 좌표) per (ktsn, taxon_group, sido, year, source='gbif').
+- 월: 계절성용으로 시도 집계와 독립된 observation_months_gbif.csv 로 별도 산출.
 - source = 'gbif' (고정). observation_agg(EcoBank)·observation_nps(국립공원)와 동일 스키마 → build_demo_data가 union.
 사용: python etl_gbif.py
 출력: 1_Data/processed/observation_gbif.csv + observation_gbif_report.txt
@@ -15,7 +16,8 @@ import sys, csv, re, time
 from pathlib import Path
 from collections import defaultdict, Counter
 
-from obs_common import load_master, resolve_ktsn, sido_lookup, write_points   # 마스터+별칭·충돌판정(override 최우선)·시도조인·점DB
+from obs_common import (load_master, resolve_ktsn, sido_lookup, write_points,  # 마스터+별칭·충돌판정(override 최우선)·시도조인·점DB
+                        parse_ym, write_months)
 from name_overrides import load_overrides
 
 csv.field_size_limit(10**7)
@@ -48,6 +50,8 @@ def main():
 
     # (ktsn, taxon_group, year) → set((lon,lat))  : 스트리밍 dedup으로 메모리 절감
     grp_pre = defaultdict(set)
+    mon = defaultdict(set)            # 계절성용 — grp_pre 와 독립(월을 dedup 키에 넣으면 obs_count 가 바뀐다)
+    n_nomonth = 0
     uniq = set()
     n_all = n_match = n_override = n_sci = n_none = n_nocoord = n_taxon_mismatch = 0
     per_group_files = 0
@@ -67,6 +71,7 @@ def main():
                 n_g += 1
                 sciname = (r.get("scientificName") or "").strip() or (r.get("species") or "").strip()
                 year = parse_year(r.get("year"), r.get("eventDate"))
+                month = parse_ym(r.get("eventDate"))[1]     # month 컬럼이 없어 eventDate 가 유일한 출처
                 try:
                     lon = float(r.get("decimalLongitude"))
                     lat = float(r.get("decimalLatitude"))
@@ -92,6 +97,10 @@ def main():
                     mismatch_pairs[(g, tx)] += 1
                 grp_pre[(ktsn, tx, year)].add((lon, lat))
                 uniq.add((lon, lat))
+                if month:
+                    mon[(ktsn, tx, "gbif", year, month)].add((lon, lat))
+                else:
+                    n_nomonth += 1
         print(f"  [{g}] {n_g:,} 행 처리")
 
     print(f"매칭: 총 {n_all:,} | 매칭 {n_match:,} ({n_match/max(n_all,1)*100:.1f}%) "
@@ -125,6 +134,9 @@ def main():
     # 좌표 보존 점 단위 기본 DB(파생: 위 시도 집계와 카운트 일치) — bioclim 등 점 기반 분석용
     npt = write_points(PROC / "observation_points_gbif.csv", grp)
     print(f"점 DB: observation_points_gbif.csv 행 {npt:,}")
+
+    nmo = write_months(PROC / "observation_months_gbif.csv", mon)
+    print(f"월 집계: observation_months_gbif.csv 행 {nmo:,} · 월 미상 {n_nomonth:,}/{n_match:,}")
 
     # 리포트
     tx_sp = {}
