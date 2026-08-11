@@ -218,7 +218,8 @@ def test_trending_species_structure():
     assert isinstance(r["species"], list)
     vals = [s["watch_count"] for s in r["species"]]
     assert vals == sorted(vals, reverse=True)              # 내림차순(있으면)
-    assert all(s["watch_count"] > 0 for s in r["species"])  # watch_count>0만
+    # 공개 하한: 담은 사람이 적은 종은 집계라도 개인 관심을 드러내므로 내보내지 않는다
+    assert all(s["watch_count"] >= tools.MIN_PUBLIC_WATCH for s in r["species"])
     assert r["watched_species"] >= len(r["species"])        # 집계 종수 ≥ 반환 수
 
 
@@ -226,6 +227,8 @@ def test_get_interest_has_watch_count():
     k = tools.search_species("수달")[0]["ktsn"]
     r = tools.get_interest(k)
     assert "user_watch_count" in r and r["user_watch_count"] >= 0
+    # 하한 미만은 0으로 가려 나온다 — 1·2 같은 값이 그대로 보이면 개인 관심이 드러난다
+    assert r["user_watch_count"] == 0 or r["user_watch_count"] >= tools.MIN_PUBLIC_WATCH
 
 
 def test_region_profile_consistency():

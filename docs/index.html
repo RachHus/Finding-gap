@@ -2124,8 +2124,8 @@ async function renderTrending(){
   if(!card||!host) return;
   card.hidden=false;
   try{
-    const counts=await watchCounts();                       // [{ktsn,count}] (RPC 미배포/무데이터면 [])
-    if(!counts.length){ host.innerHTML='<li class="muted2">아직 담긴 종이 없습니다. 종 정보 페이지에서 ☆를 눌러 관심 종을 추가해 보세요.</li>'; return; }
+    const counts=await watchCounts();                       // [{ktsn,count}] — 여러 사람이 담은 종만 집계로 나온다
+    if(!counts.length){ host.innerHTML='<li class="muted2">여러 사람이 담은 종이 모이면 여기에 표시됩니다. 종 정보 페이지에서 ☆를 눌러 관심 종을 추가해 보세요.</li>'; return; }
     host.innerHTML='';
     counts.slice(0,15).forEach((c,i)=>{ const sp=spName(c.ktsn); const li=document.createElement('li');
       li.innerHTML=`<span class="rank">${i+1}</span><span class="nm">${sp.n}</span> <span class="sci">${sp.s}</span> ${discBadge(c.ktsn)}`+

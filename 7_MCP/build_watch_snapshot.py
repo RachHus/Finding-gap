@@ -26,6 +26,11 @@ ENV = ROOT / "5_App" / ".env"
 DB = Path(__file__).resolve().parent / "data" / "fg_mcp.sqlite"
 OUT = Path(__file__).resolve().parent / "data" / "watch_counts.json"
 
+# 공개 하한 — 이 수 미만으로 담긴 종은 스냅샷에 남기지 않는다. 스냅샷은 공개 리포에 커밋되고
+# 트렌딩으로도 나가므로, 담은 사람이 한둘인 종은 '종별 집계' 라도 그 사람의 관심 목록이 된다.
+# RPC(species_watch_counts) 에도 같은 하한이 있으나, 미배포 환경에서 새어 들어오지 않게 여기서도 거른다.
+K_ANON = 3
+
 # 분류군 대중성(카리스마) 가중 — 합성 시뮬에서 담길 확률에 곱함.
 # 실제 관심종은 척추동물에 강하게 쏠림 → 종수 많은 곤충 롱테일이 지배하지 않도록 per-species 배율을 크게.
 TAXON_POP = {"MM": 40, "AV": 22, "AM": 8, "RP": 8, "-P": 5, "VP": 1.5, "IN": 0.25, "IV": 0.2, "MS": 0.1}
@@ -100,7 +105,10 @@ def main():
         try:
             counts = rpc_counts(url, key)
             ok = True
-            print(f"RPC 집계: {sum(counts.values())}건 · {len(counts)}종")
+            raw_n, raw_s = len(counts), sum(counts.values())
+            counts = {k: v for k, v in counts.items() if v >= K_ANON}
+            print(f"RPC 집계: {raw_s}건 · {raw_n}종 → 공개 하한({K_ANON}명 이상) 적용 "
+                  f"{sum(counts.values())}건 · {len(counts)}종")
         except urllib.error.HTTPError as ex:
             print(f"(경고) RPC 실패 status={ex.code} — species_watch_counts RPC 미배포? "
                   f"5_App/supabase/species_watch_counts.sql 적용 필요.")

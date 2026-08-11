@@ -9,6 +9,9 @@ import datetime
 from . import db
 
 DISCOVERY_WINDOW = 10
+# 관심종 집계 공개 하한 — 이 수 미만으로 담긴 종은 트렌딩에 내보내지 않는다.
+# 담은 사람이 한둘이면 '종별 익명 집계' 라도 그 사람이 무엇을 담았는지가 드러난다.
+MIN_PUBLIC_WATCH = 3
 _SP_COLS = ("ktsn,korean_name,scientific_name,taxon_group,taxon_group_kor,"
             "endangered_grade,national_redlist_category,has_media,interest")
 
@@ -333,7 +336,8 @@ def get_interest(ktsn):
     if not sp:
         return {"error": f"종을 찾을 수 없습니다: ktsn={ktsn}"}
     sp["interest_fallback"] = bool(sp["interest_fallback"])
-    sp["user_watch_count"] = sp.pop("watch_count")          # 관심종 익명 집계수(개인식별 불가)
+    wc = sp.pop("watch_count") or 0                         # 관심종 익명 집계수 — 하한 미만은 0으로 가린다
+    sp["user_watch_count"] = wc if wc >= MIN_PUBLIC_WATCH else 0
     strat = sp["national_redlist_category"] or ""
     rk = db.one("SELECT COUNT(*) n, SUM(CASE WHEN interest>? THEN 1 ELSE 0 END) above "
                 "FROM species WHERE taxon_group=? AND national_redlist_category=?",
@@ -452,20 +456,25 @@ def region_profile(region, top=5):
 
 
 def trending_species(taxon_group=None, redlist_category=None, limit=20):
-    """가장 많이 관심종으로 담긴 종(익명 집계) — 집단 사용자 관심(watchlist). watch_count>0만 반환하며,
-    사용자 관심종 미수집 시 빈 목록. 개인정보 미포함(종별 집계수만). taxon_group·redlist_category 로 한정."""
+    """가장 많이 관심종으로 담긴 종(익명 집계) — 집단 사용자 관심(watchlist). 최소 MIN_PUBLIC_WATCH 명
+    이상이 담은 종만 반환하며, 표본이 그에 못 미치면 빈 목록. 개인정보 미포함(종별 집계수만).
+    taxon_group·redlist_category 로 한정."""
     limit = max(1, min(int(limit), 200))
     sw, swp = _species_where(taxon_group, None, redlist_category)
     rows = db.rows(
-        f"SELECT {_SP_COLS}, watch_count FROM species WHERE watch_count>0{sw} "
-        "ORDER BY watch_count DESC, interest DESC, korean_name LIMIT ?", swp + [limit])
+        f"SELECT {_SP_COLS}, watch_count FROM species WHERE watch_count>=?{sw} "
+        "ORDER BY watch_count DESC, interest DESC, korean_name LIMIT ?",
+        [MIN_PUBLIC_WATCH] + swp + [limit])
     for r in rows:
         r["has_media"] = bool(r["has_media"])
-    agg = db.one("SELECT COUNT(*) n, COALESCE(SUM(watch_count),0) s FROM species WHERE watch_count>0")
+    agg = db.one("SELECT COUNT(*) n, COALESCE(SUM(watch_count),0) s FROM species WHERE watch_count>=?",
+                 (MIN_PUBLIC_WATCH,))
     return {"level": "species", "taxon_group": taxon_group, "redlist_category": redlist_category,
+            "min_watch_count": MIN_PUBLIC_WATCH,
             "watched_species": agg["n"], "total_marks": agg["s"], "count": len(rows),
             "note": ("관심종 익명 집계 기반(개인식별 불가)." if rows
-                     else "사용자 관심종 미수집 — 빈 목록. Supabase RPC(species_watch_counts) 배포·집계 후 활성."),
+                     else f"{MIN_PUBLIC_WATCH}명 이상이 담은 종 없음 — 빈 목록. "
+                          "적은 표본은 개인을 드러낼 수 있어 공개하지 않는다."),
             "species": rows}
 
 

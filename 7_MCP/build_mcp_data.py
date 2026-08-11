@@ -132,6 +132,7 @@ def main():
     #   ko 전용: total(ko+en)은 영어권에 지배돼 국내관심 왜곡 → 국내 신호로 ko 조회수만 채점(en은 참고 저장).
     W = {"occ": 0.5, "wiki": 0.2, "user": 0.3}
     MIN_STRATUM = 5
+    MIN_WATCH_MARKS, MIN_WATCH_SPECIES = 100, 30    # user 신호를 켜는 최소 표본(아래 주석)
     occ_total = reg.groupby("ktsn")["obs_count"].sum()
     sp["occ_total"] = sp["ktsn"].map(occ_total).fillna(0.0)
     wiki = _load_json(OUT / "wiki_pageviews.json")
@@ -141,7 +142,11 @@ def main():
     sp["wiki_has"] = sp["ktsn"].isin(ko_article)
     watch = _load_json(OUT / "watch_counts.json")
     sp["watch_count"] = sp["ktsn"].map({k: int(v) for k, v in watch.items()}).fillna(0).astype("int64")  # 익명 집계(트렌딩·user신호)
-    user_active = bool(sp["watch_count"].sum() > 0)                  # watchlist 수집 전이면 user 신호 미적용(몫 재분배)
+    # user 신호는 표본이 쌓인 뒤에만 켠다. 켜지는 순간 재정규화 분모 Z 가 바뀌어 모든 종의 interest 가
+    # 위키 문서 보유 여부에 따라 서로 다른 배율(0.7/1.0 vs 0.5/0.8)로 재조정된다 — 즉 관심종 한두 건이
+    # 두 집단의 상대순위까지 뒤집는다. 합계·종수를 함께 요구해야 층 내 백분위가 의미를 갖는다.
+    n_marks, n_watched = int(sp["watch_count"].sum()), int((sp["watch_count"] > 0).sum())
+    user_active = n_marks >= MIN_WATCH_MARKS and n_watched >= MIN_WATCH_SPECIES
 
     sp["_stratum"] = sp["national_redlist_category"].replace("", "none")
     grp = ["taxon_group", "_stratum"]
@@ -169,7 +174,9 @@ def main():
     n_user = int((sp["interest_user"] > 0).sum())
     sp = sp.drop(columns=["occ_total", "wiki_has", "_stratum"])   # wiki_ko·wiki_en·watch_count 은 보존(참고·트렌딩)
     print(f"관심도: 층=분류군×적색목록 · 가중치 occ{W['occ']}/wiki{W['wiki']}/user{W['user']}(재정규화) · "
-          f"위키신호(ko문서) {n_wiki}종 · 사용자신호 {n_user}종 · user_active={user_active}")
+          f"위키신호(ko문서) {n_wiki}종 · 사용자신호 {n_user}종 · "
+          f"user_active={user_active}(관심종 {n_marks}건/{n_watched}종, "
+          f"기준 {MIN_WATCH_MARKS}건·{MIN_WATCH_SPECIES}종)")
 
     # ── SQLite 기록 ──
     if DB.exists():

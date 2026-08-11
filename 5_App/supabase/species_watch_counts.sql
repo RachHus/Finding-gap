@@ -4,6 +4,8 @@
 -- 적용: Supabase 대시보드 SQL Editor 또는 MCP apply_migration 으로 실행.
 -- 소비: build_watch_snapshot.py(빌드타임 집계) · fg_supabase.js watchCounts()(웹 실시간 위젯).
 
+-- 집계라도 담은 사람이 한둘이면 그 사람이 무엇을 담았는지가 그대로 드러난다.
+-- 3명 이상이 담은 종만 내보내 개인 관심 목록이 역추적되지 않게 한다(초기 사용자 수가 적을수록 중요).
 create or replace function public.species_watch_counts()
 returns table(ktsn text, watch_count bigint)
 language sql
@@ -14,6 +16,7 @@ as $$
   select ktsn, count(*)::bigint as watch_count
   from public.watchlist
   group by ktsn
+  having count(*) >= 3
 $$;
 
 -- 익명/로그인 사용자 모두 집계 카운트는 조회 가능(개인 행은 여전히 RLS 로 보호).
