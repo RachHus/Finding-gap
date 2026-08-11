@@ -93,21 +93,26 @@ def main():
 
     url = env_val("SUPABASE_URL")
     key = env_val("SUPABASE_KEY") or env_val("SUPABASE_SERVICE_ROLE_KEY")   # publishable 우선(anon RPC)
-    counts = {}
+    counts, ok = {}, False
     if not url or not key:
-        print("(정보) SUPABASE_URL/키 없음 → 빈 스냅샷. 사용자 성분=0.")
+        print("(정보) SUPABASE_URL/키 없음 → 조회 생략.")
     else:
         try:
             counts = rpc_counts(url, key)
+            ok = True
             print(f"RPC 집계: {sum(counts.values())}건 · {len(counts)}종")
         except urllib.error.HTTPError as ex:
             print(f"(경고) RPC 실패 status={ex.code} — species_watch_counts RPC 미배포? "
-                  f"5_App/supabase/species_watch_counts.sql 적용 필요. 빈 스냅샷.")
+                  f"5_App/supabase/species_watch_counts.sql 적용 필요.")
         except Exception as ex:
-            print(f"(경고) 조회 오류: {ex}. 빈 스냅샷.")
+            print(f"(경고) 조회 오류: {ex}")
+    if not ok and OUT.exists():
+        # 조회 실패를 '관심종 0건' 으로 오해해 기존 스냅샷을 지우면 관심도 user 성분이 조용히 사라진다.
+        print(f"(보존) 조회 실패 → 기존 스냅샷 유지: {OUT.relative_to(ROOT)}")
+        return 1
     OUT.write_text(json.dumps(counts, ensure_ascii=False), encoding="utf-8")
     print(f"출력: {OUT.relative_to(ROOT)} · {len(counts)}종")
-    return 0
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":
