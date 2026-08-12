@@ -20,7 +20,11 @@ DATA = APP / "demo" / "data"
 
 # dist 에 포함할 정적 자산(서비스/대문이 실제 참조하는 것만)
 PAGES = ["index.html", "service.html", "fg_supabase.js", "fg_analytics.js", "quiz.html", "chat.html",
-         "favicon.svg", "favicon.ico", "apple-touch-icon.png", "icon-512.png"]
+         "favicon.svg", "favicon.ico", "apple-touch-icon.png", "icon-512.png",
+         # 로고(헤더) + 기관 마크(상세·제보 버튼) + 자체 마크(발견 제보·동정 연습).
+         # build_logo.py 산출물 — 핫링크하지 않는다.
+         "logo.png", "logo_nibr.png", "logo_ecobank.png", "logo_naturing.png",
+         "logo_report.png", "logo_quiz.png"]
 DATA_FILES = ["taxa_summary.js", "demo_mm.js",
               "species_index.js", "species_state.js", "species_interest.js", "sido.geojson", "sigungu.geojson",
               "env_meta.js", "species_env.js",
@@ -29,7 +33,7 @@ DATA_FILES = ["taxa_summary.js", "demo_mm.js",
               "missions.js"]                       # 시민과학 B: 유망 공백 미션보드(정적)
 # 분류군별 관측·점유·미디어·계절은 분할 산출 — obs_/cells_/media_/season_<T>.js + media_meta.js 전부 복사(지연 로드)
 # model_*.js·env_model.js(공간 추천도)는 화면에서 아직 안 읽으므로 배포본에서 뺀다 — 붙일 때 여기에 추가할 것.
-DATA_GLOBS = ["obs_*.js", "cells_*.js", "media_*.js", "season_*.js"]
+DATA_GLOBS = ["obs_*.js", "cells_*.js", "media_*.js", "season_*.js", "rep_*.js"]
 # 환경변수 래스터 오버레이(서브디렉터리 보존)
 DATA_DIRS = ["env"]
 

@@ -37,6 +37,49 @@ def load(path):
     return data
 
 
+NIBR_PREFIX = "https://species.nibr.go.kr/gwsvc/digital/api/v1/minio/view?filePath="
+REP_KINDS = ["photo", "drawing", "specimen"]      # 대표 이미지 선호 순서(소리·영상·3d 는 제외)
+
+
+def build_rep(merged, groups, gen):
+    """종 카드 대표 이미지 — rep_<T>.js(분류군별 지연 로드).
+
+    media_<T>.js 는 종당 이미지를 전부 담아 곤충만 7MB 다. 카드는 한 장만 쓰므로
+    종당 한 건으로 줄인 별도 자산을 낸다. NIBR URL 은 접두어가 모두 같아 뒷부분만,
+    촬영자·라이선스는 419종뿐이라 표 색인으로 담는다.
+    """
+    def fname(t):
+        return "rep_" + re.sub(r"[^A-Za-z0-9]", "_", t or "NA") + ".js"
+
+    out = {}
+    for t, ks in sorted(groups.items()):
+        bys, lics, m = {}, {}, {}
+        for k in ks:
+            recs = merged[k]
+            pick = next((r for kind in REP_KINDS for r in recs
+                         if r.get("type") == kind and str(r.get("thumb", "")).startswith(NIBR_PREFIX)), None)
+            if pick is None:
+                continue
+            by = pick.get("by") or ""
+            lic = pick.get("lic") or ""
+            m[k] = [pick["thumb"][len(NIBR_PREFIX):],
+                    bys.setdefault(by, len(bys)),
+                    lics.setdefault(lic, len(lics)),
+                    REP_KINDS.index(pick["type"])]
+        body = json.dumps({"g": gen, "t": t,
+                           "p": list(bys), "l": list(lics), "m": m},
+                          ensure_ascii=False, separators=(",", ":"))
+        path = OUT_DIR / fname(t)
+        path.write_text("window.__SPREP__=window.__SPREP__||{};window.__SPREP__[" +
+                        json.dumps(t, ensure_ascii=False) + "]=" + body + ";\n", encoding="utf-8")
+        out[t] = (len(m), path.stat().st_size)
+
+    print(f"[출력] 분류군별 rep_<T>.js {len(out)}개 (종 카드 대표 이미지)")
+    for t in sorted(out):
+        n, sz = out[t]
+        print(f"    {fname(t)}: {n}종 · {sz/1024:.0f} KB")
+
+
 def main():
     print("[병합] 소스 로드")
     per_source = [(name, load(path)) for name, path in SOURCES]
@@ -73,6 +116,14 @@ def main():
     gen = date.today().isoformat()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    groups = {}
+    for k in merged:
+        groups.setdefault(tgmap.get(k) or "NA", []).append(k)
+
+    if "--rep-only" in sys.argv:                        # 대표 이미지만 재생성(무거운 media_<T>.js 는 건드리지 않음)
+        build_rep(merged, groups, gen)
+        return 0
+
     # 전체 결합본(기록·디버그용 json만; 브라우저는 분류군별 분할 로드)
     (OUT_DIR / "species_media.json").write_text(
         json.dumps({"generated": gen, "m": merged, "tax": tax}, ensure_ascii=False, separators=(",", ":")),
@@ -81,9 +132,6 @@ def main():
     # 분류군별 분할: media_<T>.js — 퀴즈가 해당 분류군만 지연 로드(6MB 단일 로드 방지)
     def fname(t):
         return "media_" + re.sub(r"[^A-Za-z0-9]", "_", t or "NA") + ".js"
-    groups = {}
-    for k in merged:
-        groups.setdefault(tgmap.get(k) or "NA", []).append(k)
     meta = {}
     for t, ks in sorted(groups.items()):
         body = json.dumps({"generated": gen, "t": t,
@@ -105,6 +153,8 @@ def main():
     print(f"[출력] 분류군별 media_<T>.js {len(meta)}개 + media_meta.js")
     for t in sorted(meta):
         print(f"    {fname(t)}: {meta[t]}종")
+
+    build_rep(merged, groups, gen)
 
     if not merged:
         print("경고: 병합 결과가 비었습니다(입력 json 확인).")

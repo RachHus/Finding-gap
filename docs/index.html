@@ -21,8 +21,10 @@
        두 색 사이에 눈으로 구분될 여지가 남지 않아(4.71:1 대 4.83:1) 색으로는 더 이상
        단계를 만들 수 없다. 보조 텍스트 색은 하나로 두고, 그 아래 단계는 색이 아니라
        글자 크기(10~11.5px)와 굵기로 준다. 이름은 쓰임새를 남기기 위해 유지한다. */
-    --ink:#1b201d; --muted:#6b7280; --faint:var(--muted); --line:#e7e7e2; --bg:#fafaf8; --card:#fff;
-    --accent:#2f6f5e;
+    --ink:#1b201d; --muted:#6b7280; --faint:var(--muted); --line:#e2e9e2; --bg:#f5f8f4; --card:#fff;
+    /* 강조색은 로고의 진녹(고리·"Finding")에서 딴다. 흰 글자를 얹는 배경으로도,
+       흰 바탕 위 글자로도 쓰이므로 양방향 대비가 필요하다 — 8.8:1 로 둘 다 만족한다. */
+    --accent:#015543;
     --eg1:#7F1D1D; --eg2:#C2410C;                    /* 발견공백 강조(짙은 적갈 → 주황) */
     --radius:12px;
     /* 적색목록 등급색은 여기 두지 않는다 — 지도·범례·표가 모두 스크립트의 RL_FILL 을 참조하므로
@@ -36,8 +38,12 @@
     font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.5}
   a{color:inherit}
   /* ── header ── */
-  header h1{margin:0 0 4px;font-size:23px;letter-spacing:-.01em}
+  header h1{margin:0 0 6px;font-size:23px;letter-spacing:-.01em}
   header h1 b{color:var(--accent)}
+  /* 로고에 이름과 부제가 함께 들어 있어 h1 은 이미지 한 장이다.
+     width/height 를 속성으로 박아 로드 전에도 자리를 잡게 한다(글이 밀려 올라갔다 내려오지 않게). */
+  header h1 img{display:block;height:72px;width:auto}
+  @media(max-width:560px){ header h1 img{height:56px} }
   header .sub{color:var(--muted);font-size:13.5px;margin:0;max-width:60ch}
   /* ── hero tiles ── */
   .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:24px 0 8px}
@@ -203,6 +209,26 @@
   .mapmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
     padding:20px;color:#3f4542;font-size:13px;pointer-events:none;background:rgba(250,250,248,.78)}
   .legend{display:flex;align-items:center;gap:8px;font-size:11px;color:#666;margin-top:8px}
+  /* 종 카드가 지도보다 길면 지도 아래가 비어 있다. 그 자리를 대표 사진으로 채운다.
+     남는 만큼 늘어나게(flex:1) 두되, 너무 납작하면 무엇을 찍은 것인지 알 수 없어 최소 높이를 준다. */
+  #modeB .split>div:first-child{display:flex;flex-direction:column;min-height:0}
+  #modeB .split>div:first-child>#mapB,#modeB .split>div:first-child>.legend{flex:none}
+  .repshot{position:relative;margin:8px 0 0;flex:1 1 auto;min-height:150px;max-height:230px;
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#eef0ee}
+  .repshot[hidden]{display:none}
+  .repshot>.ph{display:block;width:100%;height:100%}
+  /* 판을 꽉 채우는 것은 사진뿐이다. 버튼 안의 마크까지 잡으면 상자만큼 늘어난다 */
+  .repshot>.ph>img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
+  /* 사진 위에 얹히는 버튼이라 바닥이 사진마다 다르다. 흰 판을 깔아 글자 대비를 고정하고,
+     판 자체는 그림자로 사진에서 떼어 놓는다. 크기는 img 의 width/height 속성이 정한다. */
+  .repshot .quiz{position:absolute;top:10px;left:10px;z-index:2;display:inline-flex;align-items:center;gap:8px;
+    min-height:44px;padding:0 16px 0 12px;border-radius:999px;background:#fff;color:var(--accent);
+    font-size:13.5px;font-weight:700;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.28)}
+  .repshot .quiz img{display:block;flex:none}
+  .repshot .quiz:hover{background:#f1f6f0}
+  .repshot .quiz:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .repshot figcaption{position:absolute;left:0;right:0;bottom:0;padding:14px 10px 5px;text-align:right;
+    font-size:10.5px;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.66))}
   .ramp{height:10px;width:120px;border-radius:3px;background:linear-gradient(90deg,#1a9850,#fee08b,#d73027)}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
     display:flex;flex-direction:column;max-height:560px}
@@ -285,6 +311,13 @@
   .sresults .r:last-child{border-bottom:0}
   .sresults .nm{font-weight:600}.sresults .sci{font-style:italic;color:var(--muted);font-size:12px}
   .sresults .tg{margin-left:auto;font-size:11px;color:var(--faint)}
+  /* 종 목록 접기 — 좁은 화면에서만 켠다(아래 반응형). 목록이 스스로 스크롤하는 상자라
+     손가락이 그 안에 갇히면 아래 지도·사진·카드로 내려가기 어렵다. */
+  .sfold{display:none;width:100%;align-items:center;gap:8px;min-height:44px;margin-bottom:8px;padding:0 14px;
+    border:1px solid var(--line);border-radius:var(--radius);background:#fff;font-size:13px;color:var(--ink);
+    font-weight:600;cursor:pointer;text-align:left}
+  .sfold .c{margin-left:auto;font-size:12px;font-weight:400;color:var(--muted)}
+  .sfold .ar{font-size:11px;color:var(--accent)}
   .scard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;max-width:720px}
   .scard h3{margin:0 0 2px;font-size:18px}
   .scard .sci{font-style:italic;color:var(--muted);font-size:13.5px}
@@ -383,11 +416,24 @@
   .links{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
   .lk{display:inline-flex;align-items:center;gap:7px;text-decoration:none;border:1px solid var(--line);
     border-radius:10px;padding:10px 14px;font-size:13px;background:#fff}
+  /* .lk 가 display 를 지정하는 순간 브라우저 기본 [hidden]{display:none} 을 덮어써서
+     hidden 을 걸어도 그대로 보인다 — 스크립트가 hidden 으로 여닫는 버튼들이 여기 있다. */
+  .lk[hidden]{display:none}
   .lk:hover{border-color:var(--accent)}
   .lk .t{font-weight:600}.lk .d{font-size:11px;color:var(--muted)}
   .lk.primary{border-color:#cdddc8;background:#f4f8f6}
   .lk.danger{border-color:#e7c9c0;background:#fdf4f1}
   .lk.danger .t{color:#a23b1a}
+  /* 기관 마크 버튼 — 상자 안에 로고만 넣는다. 세 마크는 가로세로비가 제각각이라
+     상자 크기를 고정하고 그 안에서 가운데 맞춘다. 이름은 눈에 보이지 않으므로
+     title(마우스)·aria-label(스크린리더) 로 반드시 준다. */
+  .lk.brand{padding:8px 12px;justify-content:center;min-width:136px;height:46px;background:var(--card)}
+  /* 크기는 width/height 속성이 정한다(원본은 모두 표시 크기의 2배로 뽑았다).
+     여기서 width:auto 를 주면 속성이 무시돼 원본 크기로 커진다 — 주지 않는다. */
+  .lk.brand img{display:block;max-width:100%;object-fit:contain}
+  .lk.brand:hover{border-color:var(--accent);background:#f4f8f6}
+  /* 자체 제보 버튼의 마크 — 기관 마크와 달리 글과 함께 서므로 상자를 고정하지 않는다 */
+  .lk:not(.brand)>img{display:block;flex:none}
   .muted{color:var(--muted);font-size:13.5px}
   footer{margin-top:24px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.7}
 
@@ -484,6 +530,17 @@
     .scard h3{font-size:17px;word-break:keep-all;overflow-wrap:anywhere}
     .links{gap:8px}
     .lk{flex:1 1 100%}
+    /* 마크 버튼은 글이 없어 한 줄을 다 쓸 이유가 없다 — 한 줄에 둘씩 놓는다 */
+    .lk.brand{flex:0 1 calc(50% - 4px);min-width:0}
+
+    /* 지도 아래 대표 사진: 세로로 쌓이면 왼쪽 칸이 늘어날 일이 없어 flex 기준이 사진 없는
+       빈 상자 높이로 잡힌다(150~230px 사이에서 상태마다 달라진다). 높이를 못 박는다. */
+    .repshot{flex:none;height:220px;max-height:none}
+
+    /* 종 목록 접기 — 접었을 때 display 를 건드리지 않는다. 목록의 표시 여부는
+       스크립트가 인라인 style.display 로 쥐고 있어 클래스로는 이길 수 없다. */
+    .sfold{display:flex}
+    .sresults.folded{max-height:0;border-width:0;margin-bottom:0;overflow:hidden}
 
     /* Mode B 검색결과: 3요소 한 줄 겹침 → 2행 배치 + 44px 터치 타깃 */
     .sresults{max-height:260px}
@@ -554,7 +611,7 @@
 <body>
 <div class="wrap">
   <header>
-    <h1><b>Finding gap</b> · 국가 생물종 발견공백</h1>
+    <h1><img src="logo.png" width="177" height="72" alt="Finding gap · 국가 생물종 발견공백"></h1>
     <p class="sub">국가생물종목록(KTSN)을 기준으로, 국내 조사자료에서 <b>아직 발견되지 않은 종</b>을 분류군·지역·시기로 조회합니다.</p>
   </header>
 
@@ -629,6 +686,9 @@
       </div>
       <div class="field"><label>&nbsp;</label><span class="scount" id="sCount"></span></div>
     </div>
+    <button type="button" class="sfold" id="sFold" style="display:none" aria-expanded="true" aria-controls="sResults">
+      <span class="t">종 목록 접기</span><span class="c" id="sFoldC"></span><span class="ar" aria-hidden="true">▲</span>
+    </button>
     <div class="sresults" id="sResults" style="display:none"></div>
     <div class="split">
       <div>
@@ -636,6 +696,7 @@
         <div class="legend"><span>기록</span><span>적음</span><span class="ramp" style="background:linear-gradient(90deg,#d73027,#fee08b,#1a9850)"></span><span>많음</span>
           <span class="dot" style="background:#cfd3cf;margin-left:10px"></span><span>미발견(공백)</span>
           <span style="margin-left:8px" id="legCapB" class="muted"></span></div>
+        <figure class="repshot" id="repShot" hidden></figure>
       </div>
       <div id="sCard"></div>
     </div>
@@ -710,8 +771,8 @@
 <style>
   .dbadge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;margin-left:4px;vertical-align:middle}
   .trendlist li{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .trendlist .rank{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:#eef3f1;color:#2f6f5e;border-radius:50%;font-size:12px;font-weight:700;flex:none}
-  .trendlist .cnt{margin-left:auto;font-weight:700;color:#2f6f5e;white-space:nowrap}
+  .trendlist .rank{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:#eef3f1;color:#015543;border-radius:50%;font-size:12px;font-weight:700;flex:none}
+  .trendlist .cnt{margin-left:auto;font-weight:700;color:#015543;white-space:nowrap}
   .ctarow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 16px}
   .btn.cta{display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap}
   .btn.cta.sm{padding:7px 12px;font-size:13px}
@@ -725,15 +786,15 @@
   .mission .msci{font-style:italic;color:var(--muted);font-size:12px;margin:2px 0 4px}
   .mission .mreg{font-size:11.5px;color:#4f6f61}
   .lblist li{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .lblist .rank{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:#eef3f1;color:#2f6f5e;border-radius:50%;font-size:12px;font-weight:700;flex:none}
-  .lblist .cnt{margin-left:auto;font-weight:600;color:#2f6f5e;white-space:nowrap;font-size:12.5px}
+  .lblist .rank{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:#eef3f1;color:#015543;border-radius:50%;font-size:12px;font-weight:700;flex:none}
+  .lblist .cnt{margin-left:auto;font-weight:600;color:#015543;white-space:nowrap;font-size:12.5px}
   .btn.sm{padding:5px 12px;font-size:12px}
   .btn.sm.rej{background:#f3eeee;color:#a03027}
   .admbtns{margin-left:auto;display:inline-flex;gap:6px;flex:none}
   .feedlist .fphoto{flex-basis:100%;margin-top:4px}
   .feedlist .fphoto img{max-width:220px;max-height:160px;border-radius:8px;display:block;border:1px solid var(--line)}
 
-  .watchbtn{appearance:none;border:1px solid #e7e7e2;background:#fff;border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer;color:#5a5f5c;white-space:nowrap}
+  .watchbtn{appearance:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer;color:#5a5f5c;white-space:nowrap}
   .watchbtn.on{background:#fff7e6;border-color:#f0d9a0;color:#9a7b2e}
   .watchbtn:hover{border-color:#cfcfc7}
   .watchbtn:disabled{opacity:.6;cursor:default}
@@ -961,6 +1022,22 @@ function loadSeason(t, cb){                               // 분류군별 발견
   const done=()=>{ const cbs=_seasonCbs[t]; _seasonCbs[t]=null; cbs.forEach(f=>f&&f()); };
   _loadScript(`demo/data/season_${_txfile(t)}.js`, done);
 }
+const _repCbs={};
+function repReady(t){ return !t || !!((window.__SPREP__||{})[t]); }
+function loadRep(t, cb){                                  // 분류군별 대표 이미지(종당 한 장)
+  if(repReady(t)){ cb&&cb(); return; }
+  if(_repCbs[t]){ _repCbs[t].push(cb); return; }
+  _repCbs[t]=[cb];
+  const done=()=>{ const cbs=_repCbs[t]; _repCbs[t]=null; cbs.forEach(f=>f&&f()); };
+  _loadScript(`demo/data/rep_${_txfile(t)}.js`, done);
+}
+// rep_<T>.js 는 자리를 아끼려고 접두어를 떼고 촬영자·라이선스를 표 색인으로 담았다 — 여기서 되돌린다.
+const REP_PREFIX='https://species.nibr.go.kr/gwsvc/digital/api/v1/minio/view?filePath=';
+const REP_KIND=['사진','세밀화','표본'];
+function repOf(sp){
+  const d=(window.__SPREP__||{})[sp.t]; const r=d&&d.m[sp.k]; if(!r) return null;
+  return {url:REP_PREFIX+r[0], by:(d.p||[])[r[1]]||'', lic:(d.l||[])[r[2]]||'', kind:REP_KIND[r[3]]||''};
+}
 function speciesEnvelope(sp){                             // 종 → {var:[lo,hi]} (IQR 엔벨로프; ndwi 는 수생 종만)
   const row=(window.__ENV__||{})[sp.k]; if(!row||!ENVMETA) return null;
   const vi={}; ENVMETA.vars.forEach((v,i)=>{ vi[v.key]=i; });
@@ -1100,7 +1177,7 @@ function styleFn(feature){
   const v=METRIC.get(code)||0, sel=selSidos.has(code);  // 모드 A choropleth
   return new ol.style.Style({
     fill:new ol.style.Fill({color:colorFor(v)}),
-    stroke:new ol.style.Stroke({color:sel?'#2f6f5e':'#9aa39c', width:sel?1.4:0.6}),   // 시도·시군구 동일 회색 얇게·선택만 accent
+    stroke:new ol.style.Stroke({color:sel?'#015543':'#9aa39c', width:sel?1.4:0.6}),   // 시도·시군구 동일 회색 얇게·선택만 accent
     text:txt});
 }
 function initMap(){
@@ -1492,9 +1569,16 @@ function speciesRegions(sp,a,b){
   for(const [k,s,yy,c] of rows){ if(k!==sp.k)continue; const y=+yy; if(y<a||y>b)continue; const rk=rkey(s); m.set(rk,(m.get(rk)||0)+c); }
   return m;
 }
+function setFold(on){                                      // 종 목록 접기(좁은 화면 전용 · 데스크톱에선 규칙이 없어 무해)
+  sResults.classList.toggle('folded',!!on);
+  if(!sFold) return;
+  sFold.setAttribute('aria-expanded',on?'false':'true');
+  sFold.querySelector('.t').textContent=on?'종 목록 펼치기':'종 목록 접기';
+  sFold.querySelector('.ar').textContent=on?'▼':'▲';
+}
 function doSearch(){
   const raw=q.value.trim();
-  if(!raw){ sResults.style.display='none'; sCount.textContent=''; return; }
+  if(!raw){ sResults.style.display='none'; sCount.textContent=''; if(sFold) sFold.style.display='none'; setFold(false); return; }
   const ql=raw.toLowerCase();
   const isCho=/^[ㄱ-ㅎ]+$/.test(raw);     // 초성쿼리일 때만 초성매칭(전체 한글엔 오매칭 방지)
   const pool=sTax?(SP_BY_TAX[sTax]||[]):SPIDX;
@@ -1511,6 +1595,8 @@ function doSearch(){
   SRES=scored.slice(0,60).map(x=>x[1]);
   sCount.textContent=`${nf(total)}건${total>60?' · 상위 60 표시':''}`;
   sResults.style.display='';
+  if(sFold){ sFold.style.display=''; sFoldC.textContent=sCount.textContent; }
+  setFold(false);                                         // 새로 찾았으면 결과부터 보여준다
   sResults.innerHTML=SRES.length?SRES.map((sp,i)=>
     `<div class="r" onclick="showIdx(${i})">`+
     `<span class="nm">${sp.n||'<span class=sci>'+sp.s+'</span>'}</span> <span class="sci">${sp.s}</span>`+
@@ -1518,6 +1604,7 @@ function doSearch(){
     :'<div class="r" style="cursor:default;color:#999">검색 결과가 없습니다.</div>';
 }
 function showIdx(i){ if(SRES[i]) showSpecies(SRES[i]); }
+if(sFold) sFold.onclick=()=>setFold(!sResults.classList.contains('folded'));
 function refreshSpeciesMap(){
   const vals=[...selRegions.entries()].filter(([c])=>!isUnknownReg(c)).map(([,c])=>c);
   selRegMax=vals.length?Math.max(...vals):0;
@@ -1533,6 +1620,7 @@ function refreshSpeciesMap(){
   if(mapMode==='B'&&sidoLayer) sidoLayer.changed();
 }
 function showSpecies(sp){                                // 선택 종의 분류군 obs 를 보장 로드 후 렌더
+  if(window.innerWidth<=880) setFold(true);              // 고른 뒤에는 목록이 길을 막는다 — 접어서 아래를 연다
   if(!taxonReady(sp.t)||!window.__ENV__) sCard.innerHTML='<div class="scard"><span class="muted">관측자료 불러오는 중…</span></div>';
   ensureEnv(()=>loadTaxon(sp.t, ()=>loadSeason(sp.t, ()=>renderSpecies(sp))));
 }
@@ -1650,9 +1738,16 @@ function renderSpecies(sp){
   const eg=isEndangered(sp.g);
   const envInfo=envBars(sp);                              // 고도·발견계절 막대(데이터 있을 때만)
   const envRow=envInfo?`<div class="row"><div class="k khead">${envInfo.hasSeason?'발견 계절 · 고도':'고도'}</div>${envInfo.html}</div>`:'';
-  const reportLink=eg
-    ? `<a class="lk danger" href="${NATURING}" target="_blank" rel="noopener noreferrer"><span><span class="t">Naturing 멸종위기종 제보</span><br><span class="d">시민과학 관찰 제보 프로젝트 →</span></span></a>`
-    : `<a class="lk" href="${ECOBANK}" target="_blank" rel="noopener noreferrer"><span><span class="t">EcoBank 데이터 제보</span><br><span class="d">국립생태원 생태정보 제보 →</span></span></a>`;
+  // 제보처는 멸종위기 여부로 갈리지 않는다 — 멸종위기종 관찰도 EcoBank 로 보낼 수 있고,
+  // 멸종위기종일 때만 시민과학 제보 프로젝트(Naturing)를 하나 더 붙인다.
+  const brand=(href,file,w,h,name,what)=>
+    `<a class="lk brand" href="${href}" target="_blank" rel="noopener noreferrer" title="${name} — ${what}" aria-label="${name} ${what}(새 창)"><img src="${file}" width="${w}" height="${h}" alt=""></a>`;
+  const reportLink=brand(ECOBANK,'logo_ecobank.png',116,20,'EcoBank','국립생태원 생태정보 제보')
+    +(eg?brand(NATURING,'logo_naturing.png',61,26,'네이처링','시민과학 멸종위기종 관찰 제보'):'');
+  // 동정 연습은 대표 사진 위 버튼이 기본이다. 사진이 없는 종에서는 입구가 사라지므로
+  // 카드 안의 글 버튼을 남겨 두고, 사진이 뜨면 그때 감춘다(renderRepShot).
+  const quizLink=quizOn(sp)
+    ? `<a class="lk quiz-lk" href="quiz.html?mode=species&ktsn=${sp.k}"><span><span class="t">이 종 동정 연습</span><br><span class="d">유사종 사진과 비교하는 퀴즈 →</span></span></a>` : '';
   sCard.innerHTML=`<div class="scard">
     <div style="display:flex;align-items:flex-start;gap:10px">
       <div style="min-width:0"><h3>${sp.n||sp.s}</h3><div class="sci">${sp.s}</div></div>
@@ -1671,25 +1766,49 @@ function renderSpecies(sp){
         </span></div>
       <div id="spViewHost"></div></div>
     ${envRow}
-    <div class="row"><div class="k">상세 정보 · 데이터 제보</div>
+    <div class="row"><div class="k">상세 정보</div>
       <div class="links">
-        <a class="lk primary" href="${NIBR(sp.k)}" target="_blank" rel="noopener noreferrer"><span><span class="t">한반도의 생물다양성</span><br><span class="d">국립생물자원관 종 상세 →</span></span></a>
-        <a class="lk report-lk" data-k="${sp.k}" role="button" tabindex="0" hidden><span><span class="t">이 곳에서 발견 제보</span><br><span class="d">관찰 위치·근거 URL로 발견공백 메우기 →</span></span></a>
-        ${reportLink}
-        ${(((window.__SPMEDIA_META__||{}).taxa||{})[sp.t]>=4)?`<a class="lk" href="quiz.html?mode=species&ktsn=${sp.k}"><span><span class="t">이 종 동정 연습</span><br><span class="d">유사종 사진과 비교하는 퀴즈 →</span></span></a>`:''}
+        ${brand(NIBR(sp.k),'logo_nibr.png',90,26,'한반도의 생물다양성','국립생물자원관 종 상세')}
+        ${quizLink}
       </div>
-      <div class="muted" style="margin-top:8px">${eg?'멸종위기 야생생물 — 관찰 시 Naturing 제보 프로젝트로':'일반종 — 관찰 자료는 EcoBank로 제보'}</div>
+    </div>
+    <div class="row"><div class="k">발견 제보</div>
+      <div class="links">
+        <a class="lk report-lk" data-k="${sp.k}" role="button" tabindex="0" hidden><img src="logo_report.png" width="26" height="30" alt=""><span><span class="t">이 곳에서 발견 제보</span><br><span class="d">관찰 위치·근거 URL로 발견공백 메우기 →</span></span></a>
+        ${reportLink}
+      </div>
     </div>
   </div>`;
   sCard.querySelectorAll('.spview-tg [data-v]').forEach(b=>{ b.onclick=()=>setSpView(b.dataset.v); });
   renderSpView();                                        // 현재 뷰(발견/미발견)로 우측 표 + 지도
   if(window.fgWatch) window.fgWatch.decorate(sp.k);     // 관심 종 ☆ 버튼(로그인 시 활성)
   if(window.fgReport) window.fgReport.decorateCard(sp); // 발견 제보 버튼(Supabase 설정 시 노출)
+  clearRepShot();                                       // 앞 종의 사진이 남아 있지 않게 먼저 비운다
+  loadRep(sp.t, ()=>renderRepShot(sp));                 // 지도 아래 대표 사진(분류군별 지연 로드)
   if(window.innerWidth<=880) sCard.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function quizOn(sp){ return (((window.__SPMEDIA_META__||{}).taxa||{})[sp.t]||0)>=4; }
+function clearRepShot(){ const h=document.getElementById('repShot'); if(h){ h.hidden=true; h.innerHTML=''; } }
+function renderRepShot(sp){                               // 지도 아래 빈 자리 = 종 대표 이미지 + 동정 연습 버튼
+  const host=document.getElementById('repShot'); if(!host) return;
+  if(!selSpecies||selSpecies.k!==sp.k) return;            // 로드 중 다른 종을 골랐으면 버린다
+  const r=repOf(sp); if(!r) return;                       // 이미지 없는 종 — 카드의 글 버튼이 그대로 입구가 된다
+  const nm=sp.n||sp.s;
+  // by 에 이미 기관명이 들어 있는 경우가 대부분이라 앞에 또 붙이면 같은 말이 두 번 나온다
+  const cred=['© '+(r.by||'국립생물자원관'), r.lic].filter(Boolean).join(' · ');
+  host.innerHTML=`<a class="ph" href="${NIBR(sp.k)}" target="_blank" rel="noopener noreferrer"
+      title="${nm} — 한반도의 생물다양성 종 상세"><img src="${r.url}" alt="${nm} ${r.kind}"></a>`
+    +(quizOn(sp)?`<a class="quiz" href="quiz.html?mode=species&ktsn=${sp.k}"><img src="logo_quiz.png" width="23" height="26" alt="">동정연습</a>`:'')
+    +`<figcaption>${r.kind} · ${cred}</figcaption>`;
+  host.hidden=false;
+  const q=sCard.querySelector('.quiz-lk');
+  if(q) q.hidden=true;                                    // 같은 입구가 둘이 되지 않게 글 버튼은 접는다
+  const im=host.querySelector('img');
+  im.onerror=()=>{ clearRepShot(); if(q) q.hidden=false; };  // 원본이 안 열리면 판을 접고 글 버튼을 되살린다
 }
 function clearSelSpecies(){ selSpecies=null; selRegions=new Map(); GAPRES=null;
   if(gapLayer)gapLayer.setVisible(false); if(gapSource)gapSource.clear();
-  sCard.innerHTML=''; refreshSpeciesMap(); }
+  sCard.innerHTML=''; clearRepShot(); refreshSpeciesMap(); }
 
 /* 분류군별 조회 테이블의 종 클릭 → 종별 검색(Mode B)으로 전환 + 해당 종 카드 표시 */
 function openSpecies(k){
@@ -1756,7 +1875,7 @@ function boot(){
   tblCnt.textContent='관측자료 불러오는 중…';
   loadTaxon(curTaxon, ()=>{ recompute(); renderTable(); if(sidoLayer)sidoLayer.changed(); });
   initMap();
-  foot.innerHTML=`<a href="regions/index.html" style="color:#2f6f5e;font-weight:600;text-decoration:none">지역·분류군별 발견공백 요약 →</a><br>배경지도 © VWorld / © OpenStreetMap 기여자 · 종 상세 © 국립생물자원관 한반도의 생물다양성 · 출처 ${OMETA.citation||'KTSN·EcoBank·국립공원'}<br>`+
+  foot.innerHTML=`<a href="regions/index.html" style="color:#015543;font-weight:600;text-decoration:none">지역·분류군별 발견공백 요약 →</a><br>배경지도 © VWorld / © OpenStreetMap 기여자 · 종 상세 © 국립생물자원관 한반도의 생물다양성 · 출처 ${OMETA.citation||'KTSN·EcoBank·국립공원'}<br>`+
     `${TAXA.length}개 분류군 · 생성 ${OMETA.generated||'-'} · 종 검색 ${nf(SPIDX.length)}종 · 갱신주기 ${OMETA.update_cycle==='6mo'?'6개월':(OMETA.update_cycle||'6개월')}. 발견공백 = 국가생물종목록 − 관측(동적).`;
   if(p.get('taxon')||p.get('sido')||p.get('sigungu')) setMode('A');
   // 딥링크 ?sp=<ktsn> — 마이데이터 관심 종에서 진입(모드 B로 해당 종 카드 열기)
@@ -2050,7 +2169,7 @@ function renderFoot(){
   const totRec=TAXA_ALL.reduce((a,t)=>a+(t.n_records||0),0);
   const nData=TAXA_ALL.filter(t=>t.has_data).length;
   document.getElementById('foot').innerHTML=
-    `<a href="regions/index.html" style="color:#2f6f5e;font-weight:600;text-decoration:none">지역·분류군별 발견공백 요약 →</a><br>`+
+    `<a href="regions/index.html" style="color:#015543;font-weight:600;text-decoration:none">지역·분류군별 발견공백 요약 →</a><br>`+
     `출처: 국가생물종목록(KTSN) · 국립생태원 EcoBank · 국립공원공단 생물자원현황 · GBIF<br>`+
     `생성 ${gen} · 좌표계 EPSG:4326 · 갱신주기 6개월 · 누적관측 ${nf(totRec)} · ${nData}개 분류군 데이터<br>`+
     `gap = 국가생물종목록(마스터) − 관측(동적 complement). 데이터는 정기 수집으로 갱신됩니다.`;
@@ -2115,7 +2234,7 @@ const spName=k=>{ const sp=(window.__SPIDX__||[]).find(x=>x.k===k); return sp?{n
 const _MY=()=>(window.__SPSTATE__||{}).maxyear||{};
 function discState(k){ const y=_MY()[k]; if(y===undefined||y===null) return 'undiscovered'; return y>=(new Date().getFullYear()-10)?'found':'dormant'; }
 const _DLABEL={found:'발견',dormant:'휴면',undiscovered:'미발견'};
-function discBadge(k){ const s=discState(k); const c={found:'#2f6f5e',dormant:'#9a7b2f',undiscovered:'#b5482f'}[s], bg={found:'#e7f1ee',dormant:'#f5eede',undiscovered:'#f7e7e2'}[s];
+function discBadge(k){ const s=discState(k); const c={found:'#015543',dormant:'#9a7b2f',undiscovered:'#b5482f'}[s], bg={found:'#e7f1ee',dormant:'#f5eede',undiscovered:'#f7e7e2'}[s];
   return `<span class="dbadge" style="background:${bg};color:${c}">${_DLABEL[s]}</span>`; }
 
 // ── ① 많이 담긴 종(익명 집계) 위젯 — 시민과학 축 ──
@@ -2136,7 +2255,7 @@ async function renderTrending(){
 }
 
 // ── ② 시민 제보(reports) 렌더 — 공개 피드 + 마이데이터 내 제보 공용 ──
-const _RSTATUS={pending:['검토 중','#9a7b2f','#f5eede'], approved:['승인','#2f6f5e','#e7f1ee']};
+const _RSTATUS={pending:['검토 중','#9a7b2f','#f5eede'], approved:['승인','#015543','#e7f1ee']};
 function statusBadge(s){ const m=_RSTATUS[s]||_RSTATUS.pending; return `<span class="dbadge" style="background:${m[2]};color:${m[1]}">${m[0]}</span>`; }
 function reportLine(r,mine){
   const nm=r.korean_name||r.scientific_name||r.ktsn;
