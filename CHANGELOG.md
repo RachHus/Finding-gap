@@ -16,8 +16,8 @@ Finding gap의 릴리스 단위 변경 이력입니다.
 - 발견공백 도우미(chat)에 **강·목·과·속(class/order/family/genus) 단위 질의** 지원 — "사슴벌레과에 아직 기록되지 않은 종은?" 같은 질문에 응답. 과·속의 한글 분류명은 `fg_taxon_name`(taxon_ko.js 기반)으로 라틴명 해석(강·목은 한글 매핑 없어 라틴명만). KTSN 마스터 분류 단계가 강-목-과-속-종/아종뿐이라 아과·족 등은 지원 범위 밖.
 - 발견공백 도우미: **분류군 질의 커버리지 전체화 + 발견공백 순위 도구** — (1) `fg_taxon_name`을 KTSN 전체(강·목·과·속 4계층)로 확대해 한글명 해석률을 과 60→96%·속 42→69%로 높이고 강·목도 한글 질의 지원(`7_MCP/build_taxon_names.py` → `taxon_names.json.gz`), (2) 한글명 정확 일치 실패 시 `pg_trgm` 유사도로 후보(`suggestions`) 제시(딱따구리↔딱다구리 등 철자변형·'나비' 통칭 완화), (3) 신규 도구 `taxon_gap_ranking` — "곤충류에서 미발견 종 많은 과", "전남에서 한 번도 기록 안 된 과" 등 과·속 단위 발견공백 순위. (4) 분류군명 해석을 **검증된 라틴명만 쿼리에 사용**하도록 강화(사전 정확일치→실데이터 라틴 존재확인→퍼지 근사 순, 어디에도 없으면 조회 미실행·후보만 반환), 근사 해석 시 `approximate`/`matched_taxon`으로 "가장 비슷한 분류군으로 안내".
 
-- 브랜드 파비콘 추가(svg/ico·apple-touch-icon) — 실제 시도 경계(sido.geojson)를 저해상도 격자로 래스터화해 "한국 지도 + 발견공백(격자 결손)" 모티프로 구성(색은 기존 발견/미발견 배지 색 재사용). 생성 스크립트: `5_App/design/gen_brand_icon.py`.
 - 4개 페이지(index/service/quiz/chat)에 파비콘 링크 + OG/Twitter 공유 메타 태그 추가 — 공유 이미지는 `build_profiles.py`가 만드는 `og.png`로 site 공통 통일(지역·분류군 SEO 페이지와 동일 이미지).
+- 파비콘·OG 카드를 실제 헤더 로고(`4_References/finding_gap_logo.png`) 기반으로 교체 — 처음엔 자체 격자 지도 디자인(`gen_brand_icon.py`)으로 시작했다가, 정식 로고가 나온 뒤 그걸로 통일. `build_logo.py`가 헤더 로고·파비콘류(favicon.ico·apple-touch-icon·icon-512)·`og.png`를 모두 같은 원본에서 생성 — 워드마크 앞 배지만 잘라 파비콘류로, 로고 전체를 1200×630 카드로. `og.png`는 `build_profiles.py`의 `make_og()`가 빌드 때마다 다시 그리므로(정적 파일 아님) 로고를 못 찾으면 예전 텍스트형으로 자동 폴백. 벡터 원본이 없어 `favicon.svg`는 제거(ico·png만).
 
 ### 버그 수정
 - 종별 검색(조사정보 탭)에서 검색이 전혀 동작하지 않던 문제 — `service.html`·`chat.html`이 `index.html`로 통합되면서 종 검색창과 대화형 입력창이 둘 다 `id="q"`를 쓰게 됨. 문서에 같은 id가 두 개 있으면 `window.q`가 그 엘리먼트 하나가 아니라 HTMLCollection이 되어, 검색창에 이벤트 리스너를 붙이는 코드(`q.addEventListener(...)`)가 페이지 로드 시 조용히 에러를 내고 죽어있었음. 대화형 입력창 id를 `chatQ`로 분리해 해결.

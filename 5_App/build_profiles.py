@@ -261,18 +261,34 @@ def hub_html(sidos, taxa):
 
 
 def make_og(path):
-    """공유 카드용 단일 OG 이미지(1200×630). PIL·한글 폰트 없으면 조용히 건너뜀 → True/False."""
+    """공유 카드용 단일 OG 이미지(1200×630). 헤더 로고 원본(build_logo.load_master)을 그대로
+    재사용해 실제 브랜드 마크가 보이는 카드로 구성. 로고 원본·PIL 이 없으면 기존 텍스트형으로
+    폴백(조용히 건너뛰지는 않음 — 카드가 아예 없는 것보다는 텍스트형이 낫다) → True/False."""
     try:
         from PIL import Image, ImageDraw, ImageFont
     except Exception:
         return False
+    W, H = 1200, 630
+    try:
+        from build_logo import load_master
+        logo = load_master()
+    except Exception:
+        logo = None
+    if logo is not None:
+        target_w = 900
+        w, h = logo.size
+        logo = logo.resize((target_w, round(h * target_w / w)), Image.LANCZOS)
+        img = Image.new("RGB", (W, H), "#fafaf8")
+        img.paste(logo, ((W - logo.width) // 2, (H - logo.height) // 2), logo)
+        ImageDraw.Draw(img).rectangle([0, H - 10, W, H], fill="#2f6f5e")
+        img.save(path, "PNG", optimize=True)
+        return True
     font_path = None
     for cand in (r"C:\Windows\Fonts\malgunbd.ttf", r"C:\Windows\Fonts\malgun.ttf",
                  "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"):
         if Path(cand).exists():
             font_path = cand
             break
-    W, H = 1200, 630
     img = Image.new("RGB", (W, H), "#0f2e26")
     d = ImageDraw.Draw(img)
     d.rectangle([0, H - 12, W, H], fill="#2f6f5e")
