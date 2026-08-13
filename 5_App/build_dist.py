@@ -20,7 +20,7 @@ DATA = APP / "demo" / "data"
 
 # dist 에 포함할 정적 자산(서비스/대문이 실제 참조하는 것만)
 PAGES = ["index.html", "service.html", "fg_supabase.js", "fg_analytics.js", "quiz.html", "chat.html",
-         "favicon.svg", "favicon.ico", "apple-touch-icon.png", "icon-512.png",
+         "favicon.ico", "apple-touch-icon.png", "icon-512.png",
          # 로고(헤더) + 기관 마크(상세·제보 버튼) + 자체 마크(발견 제보·동정 연습).
          # build_logo.py 산출물 — 핫링크하지 않는다.
          "logo.png", "logo_nibr.png", "logo_ecobank.png", "logo_naturing.png",

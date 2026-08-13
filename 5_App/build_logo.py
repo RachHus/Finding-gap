@@ -5,11 +5,17 @@
    원본은 1448×1086 에 흰 여백이 절반 가까이라 그대로 쓰면 870KB 다. 여백을 잘라내고
    흰 배경을 투명으로 바꿔(페이지 배경이 순백이 아니라 네모가 드러난다) 표시 높이의 2배로 줄인다.
 
-2) 제보·상세 링크의 기관 마크 — `--brands` 로 각 사이트에서 내려받아 5_App/logo_*.png 생성.
+2) 파비콘류 — 같은 원본에서 워드마크 앞의 배지(돋보기+동물 아이콘)만 잘라
+   favicon.ico·apple-touch-icon.png·icon-512.png 생성. 예전엔 sido.geojson 을 저해상도
+   격자로 래스터화한 자체 디자인(5_App/design/gen_brand_icon.py)을 썼는데, 실제 로고가
+   생긴 뒤로는 그걸 그대로 쓰는 게 브랜드 일관성이 맞아 대체한다. 벡터 원본이 없어 SVG
+   파비콘은 생성하지 않는다(ico·png만).
+
+3) 제보·상세 링크의 기관 마크 — `--brands` 로 각 사이트에서 내려받아 5_App/logo_*.png 생성.
    핫링크하지 않는 이유: naturing 은 짧은 시간에 여러 번 요청하면 IP 를 막고,
    기관 사이트는 리퍼러 검사가 바뀔 수 있다. 링크가 끊기면 버튼이 빈칸이 된다.
 
-3) 전달받은 원본 마크 — `--brands` 에 함께 딸려 나온다. 내려받은 것과 달리 알파가 없고
+4) 전달받은 원본 마크 — `--brands` 에 함께 딸려 나온다. 내려받은 것과 달리 알파가 없고
    흰 배경에 얹힌 그림이라, 헤더 로고와 같은 흰색 키잉을 거쳐야 버튼 위에서 네모가 되지 않는다.
 
 사용: python 5_App/build_logo.py [--brands]
@@ -24,6 +30,14 @@ from PIL import Image, ImageOps
 APP = Path(__file__).resolve().parent
 SRC = APP.parent / "4_References" / "finding_gap_logo.png"
 OUT = APP / "logo.png"
+
+# 파비콘용 배지 크롭 — load_master() 크롭 좌표계 기준(원본이 바뀌면 재조정 필요).
+# 워드마크 시작 전, 돋보기+동물 아이콘 배지만 담는 영역.
+FAVICON_BADGE = (0, 0, 412, 469)
+FAVICON_ICO = APP / "favicon.ico"
+TOUCH_ICON = APP / "apple-touch-icon.png"
+ICON_512 = APP / "icon-512.png"
+TOUCH_BG = (250, 250, 248, 255)   # --bg — iOS는 투명배경을 임의로 채우므로 미리 채워둠
 
 BRAND_H = 26        # 버튼 안 마크의 표시 높이(px) 상한
 BRAND_W = 116       # 같은 폭 상한 — 가로로 긴 워드마크가 상자를 넘지 않게
@@ -113,21 +127,14 @@ def build_locals():
         print(f"  - {name}: {im.size[0]}×{im.size[1]} · {p.stat().st_size/1024:.1f} KB (표시 {dw}×{dh})")
 
 
-def main():
-    if "--brands" in sys.argv:
-        print("[기관 마크]")
-        build_brands()
-        print("[전달받은 마크]")
-        build_locals()
-        return 0
+def load_master():
+    """원본(4_References/finding_gap_logo.png)의 여백을 자르고 흰 배경을 투명화해
+    원본 해상도 그대로 반환. 헤더 로고·OG 카드(build_profiles.py)가 함께 쓴다."""
     if not SRC.exists():
-        print(f"원본 없음: {SRC}")
-        return 1
+        return None
     im = Image.open(SRC).convert("RGBA")
     px = im.load()
     W, H = im.size
-
-    # 내용 경계
     minx, miny, maxx, maxy = W, H, 0, 0
     for y in range(H):
         for x in range(W):
@@ -136,14 +143,59 @@ def main():
                 maxx, maxy = max(maxx, x), max(maxy, y)
     box = (max(0, minx - PAD), max(0, miny - PAD), min(W, maxx + 1 + PAD), min(H, maxy + 1 + PAD))
     im = im.crop(box)
+    return key_white(im, KEY_LO, KEY_HI)
 
-    im = key_white(im, KEY_LO, KEY_HI)
+
+def _fit_square(im, size, pad_ratio=0.08):
+    """비율 유지한 채 size×size 투명 캔버스 중앙에 배치."""
+    pad = round(size * pad_ratio)
+    avail = size - 2 * pad
+    s = min(avail / im.width, avail / im.height)
+    w, h = max(1, round(im.width * s)), max(1, round(im.height * s))
+    resized = im.resize((w, h), Image.LANCZOS)
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    canvas.alpha_composite(resized, ((size - w) // 2, (size - h) // 2))
+    return canvas
+
+
+def build_favicons(master=None):
+    """헤더 로고와 같은 원본에서 배지(워드마크 앞부분)만 잘라 파비콘류 생성."""
+    master = master if master is not None else load_master()
+    if master is None:
+        print("  원본 없음 → 파비콘 건너뜀")
+        return
+    badge = master.crop(FAVICON_BADGE)
+
+    _fit_square(badge, 512).save(ICON_512, optimize=True)
+    _fit_square(badge, 256, pad_ratio=0.04).save(FAVICON_ICO, sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
+
+    touch = Image.new("RGBA", (180, 180), TOUCH_BG)
+    inset = _fit_square(badge, 164, pad_ratio=0)
+    touch.alpha_composite(inset, (8, 8))
+    touch.convert("RGB").save(TOUCH_ICON)
+
+    print(f"  favicon.ico · apple-touch-icon.png · icon-512.png (배지 {badge.size[0]}×{badge.size[1]} 기준)")
+
+
+def main():
+    if "--brands" in sys.argv:
+        print("[기관 마크]")
+        build_brands()
+        print("[전달받은 마크]")
+        build_locals()
+        return 0
+    im = load_master()
+    if im is None:
+        print(f"원본 없음: {SRC}")
+        return 1
     w, h = im.size
 
     tw = round(w * (DISPLAY_H * SCALE) / h)
-    im = im.resize((tw, DISPLAY_H * SCALE), Image.LANCZOS)
-    im.save(OUT, optimize=True)
-    print(f"{OUT.name}: {im.size[0]}×{im.size[1]} · {OUT.stat().st_size/1024:.0f} KB "
+    header = im.resize((tw, DISPLAY_H * SCALE), Image.LANCZOS)
+    header.save(OUT, optimize=True)
+    print("[파비콘]")
+    build_favicons(im)
+    print(f"{OUT.name}: {header.size[0]}×{header.size[1]} · {OUT.stat().st_size/1024:.0f} KB "
           f"(표시 {tw//SCALE}×{DISPLAY_H})")
     return 0
 
