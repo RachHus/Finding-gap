@@ -164,6 +164,31 @@
   .loading{text-align:center;padding:40px 20px;color:var(--muted)}
   .loading svg{width:36px;height:36px;animation:spin 1.6s linear infinite;margin-bottom:10px}
   @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+  /* ── 탭(분류군 퀴즈 · 종 퀴즈) ── */
+  .tab-bar{display:flex;gap:2px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .tab-btn{appearance:none;background:transparent;border:0;padding:12px 16px;font-size:15px;font-weight:600;
+    color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;position:relative;top:1px;
+    min-height:44px;font-family:inherit;transition:color .15s,border-color .15s}
+  .tab-btn:hover{color:var(--ink)}
+  .tab-btn[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+  .tab-panel[hidden]{display:none}
+  /* 종 이름은 과·속보다 길어 입력칸을 넓게 */
+  #speciesInput{width:300px}
+  /* 아직 고르지 않았을 때의 안내 — 퀴즈 자리를 대신한다 */
+  .notice{display:none;text-align:center;padding:34px 16px;font-size:13.5px;color:var(--muted);line-height:1.7}
+  .notice.active{display:block}
+  .notice .cta{display:inline-block;margin-top:12px;padding:11px 16px;border-radius:10px;
+    background:var(--accent);color:#fff;font-weight:600;line-height:22px}
+  /* 셀렉터는 좁은 화면에서 가로로 늘어놓을 자리가 없다 — 세로로 쌓는다.
+     손가락으로 여는 입력이므로 높이도 타격 최소치까지 올린다 */
+  @media(max-width:880px){
+    .scope-bar{flex-direction:column;align-items:stretch;gap:6px}
+    .scope-label{display:none}
+    .scope-combo{width:100%}
+    .scope-input,#speciesInput{width:100%;max-width:none;min-height:44px}
+    /* 좁은 화면에서는 학명이 상자를 넘는다 — 줄바꿈을 허용하고 행 높이를 타격 최소치로 */
+    .scope-opt{padding:12px 10px;flex-wrap:wrap;white-space:normal}
+  }
   @media(max-width:400px){
     .wrap{padding:20px 12px 56px}
     .streak-card{padding:8px 11px}.streak-card .v{font-size:17px}
@@ -172,6 +197,8 @@
     .gallery{grid-template-columns:repeat(3,1fr)}
     header h1{font-size:18px}
     .taxon-buttons{grid-template-columns:repeat(2,1fr)}
+    .tab-bar{gap:0;margin-bottom:12px}
+    .tab-btn{flex:1;padding:11px 8px;font-size:14px;border-bottom-width:2px}
   }
 </style>
 </head>
@@ -191,30 +218,54 @@
     <div class="streak-card"><div class="v" id="total">0</div><div class="l">풀이한 문제</div></div>
   </div>
 
-  <!-- 퀴즈 범위: 분류군 안에서 과·속으로 좁히기 (드롭다운 + 검색) -->
-  <div class="scope-bar" id="scopeBar" hidden>
-    <span class="scope-label">퀴즈 범위</span>
-    <div class="scope-combo" id="famCombo">
-      <input class="scope-input" id="famInput" type="text" placeholder="과 전체 · 검색"
-             autocomplete="off" spellcheck="false" aria-label="과 선택 또는 검색">
-      <div class="scope-menu" id="famMenu" hidden></div>
-    </div>
-    <div class="scope-combo" id="genCombo" hidden>
-      <input class="scope-input" id="genInput" type="text" placeholder="속 전체 · 검색"
-             autocomplete="off" spellcheck="false" aria-label="속 선택 또는 검색">
-      <div class="scope-menu" id="genMenu" hidden></div>
-    </div>
-    <span class="scope-count" id="scopeCount"></span>
+  <div class="tab-bar" role="tablist" aria-label="퀴즈 방식">
+    <button class="tab-btn" id="taxonTab" role="tab" aria-selected="true" aria-controls="taxonTabPanel">분류군 퀴즈</button>
+    <button class="tab-btn" id="speciesTab" role="tab" aria-selected="false" aria-controls="speciesTabPanel">종 퀴즈</button>
   </div>
 
-  <!-- Taxon picker -->
-  <section class="taxon-picker" id="taxonPicker">
-    <h2>분류군을 선택하세요</h2>
-    <div class="taxon-buttons" id="taxonButtons"></div>
-  </section>
+  <!-- 분류군 탭: 분류군 → 과 → 속으로 범위를 좁힌다 -->
+  <div class="tab-panel" id="taxonTabPanel" role="tabpanel" aria-labelledby="taxonTab">
+    <div class="scope-bar" id="scopeBar">
+      <span class="scope-label">퀴즈 범위</span>
+      <div class="scope-combo" id="taxonCombo">
+        <input class="scope-input" id="taxonInput" type="text" placeholder="분류군 선택"
+               autocomplete="off" spellcheck="false" aria-label="분류군 선택">
+        <div class="scope-menu" id="taxonMenu" hidden></div>
+      </div>
+      <div class="scope-combo" id="famCombo" hidden>
+        <input class="scope-input" id="famInput" type="text" placeholder="과 전체 · 검색"
+               autocomplete="off" spellcheck="false" aria-label="과 선택 또는 검색">
+        <div class="scope-menu" id="famMenu" hidden></div>
+      </div>
+      <div class="scope-combo" id="genCombo" hidden>
+        <input class="scope-input" id="genInput" type="text" placeholder="속 전체 · 검색"
+               autocomplete="off" spellcheck="false" aria-label="속 선택 또는 검색">
+        <div class="scope-menu" id="genMenu" hidden></div>
+      </div>
+      <span class="scope-count" id="scopeCount"></span>
+    </div>
 
-  <!-- Quiz mode -->
-  <section class="quiz active" id="quizMode">
+    <section class="taxon-picker" id="taxonPicker">
+      <h2>분류군을 선택하세요</h2>
+      <div class="taxon-buttons" id="taxonButtons"></div>
+    </section>
+  </div>
+
+  <!-- 종 탭: 한 종을 골라 그 종의 사진을 찾는다 -->
+  <div class="tab-panel" id="speciesTabPanel" role="tabpanel" aria-labelledby="speciesTab" hidden>
+    <div class="scope-bar" id="speciesBar">
+      <span class="scope-label">퀴즈 대상</span>
+      <div class="scope-combo" id="speciesCombo">
+        <input class="scope-input" id="speciesInput" type="text" placeholder="종 이름 검색"
+               autocomplete="off" spellcheck="false" aria-label="종 검색 또는 선택">
+        <div class="scope-menu" id="speciesMenu" hidden></div>
+      </div>
+    </div>
+    <div class="notice" id="speciesNotice"></div>
+  </div>
+
+  <!-- 퀴즈 화면 — 두 탭이 함께 쓴다. 탭이 바꾸는 것은 출제할 종을 고르는 방법뿐이다 -->
+  <section class="quiz" id="quizMode">
     <div class="loading" id="qLoad" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 1 0 20"></path>
@@ -297,7 +348,8 @@ let state = {
   answered: false,
   currentSpecies: null,
   currentPhoto: null,
-  mode: null,           // 'taxon' | 'species' | 'picker'
+  mode: null,           // 'taxon' | 'species' | 'picker' (퀴즈 상태)
+  tabMode: 'taxon',     // 'taxon' | 'species' (현재 활성 탭)
   taxonGroup: null,
   fixedKtsn: null,
   scope: {family:null, genus:null},   // 과·속으로 범위 좁히기(taxon 모드)
@@ -307,6 +359,7 @@ const TAXON_LABELS = {
   'MM':'포유류','AV':'조류','RP':'파충류','AM':'양서류',
   '-P':'어류','IV':'무척추동물','IN':'곤충','VP':'관속식물','MS':'선태류'
 };
+let _taxonCombo=null,_famCombo=null,_genCombo=null,_speciesCombo=null;
 
 // ── UTIL ───────────────────────────────────────────────────────
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
@@ -321,15 +374,64 @@ function weightedPick(pool){
 }
 function loadState(){state.best=parseInt(localStorage.getItem('quiz_best')||'0');state.total=parseInt(localStorage.getItem('quiz_total')||'0');state.current=0;updateScoreDisplay();}
 function saveState(){localStorage.setItem('quiz_best',state.best);localStorage.setItem('quiz_total',state.total);}
-function updateScoreDisplay(){document.getElementById('current').textContent=state.current;document.getElementById('best').textContent=state.best;document.getElementById('total').textContent=state.total;}
+function updateScoreDisplay(){
+  document.getElementById('current').textContent=state.current;
+  document.getElementById('best').textContent=state.best;
+  document.getElementById('total').textContent=state.total;
+}
+// 종 퀴즈에서는 state.taxonGroup(분류군 탭의 선택)이 아니라 출제된 종의 분류군을 기록한다
+function currentTaxon(){
+  if(state.mode==='species') return (state.currentSpecies&&state.currentSpecies.t)||'';
+  return state.taxonGroup||'';
+}
+
+function updateUrlState(){
+  const p=new URLSearchParams();
+  if(state.tabMode==='species'){
+    p.set('tab','species');
+    if(state.fixedKtsn) p.set('ktsn',state.fixedKtsn);
+  } else if(state.tabMode==='taxon'){
+    p.set('tab','taxon');
+    if(state.taxonGroup) p.set('taxon',state.taxonGroup);
+    if(state.scope.family) p.set('family',state.scope.family);
+    if(state.scope.genus) p.set('genus',state.scope.genus);
+  }
+  const newUrl=p.toString()?'?'+p.toString():location.pathname;
+  history.replaceState(null,'',newUrl);
+}
 
 function parseParams(){
   const p=new URLSearchParams(location.search);
-  const mode=p.get('mode'),taxon=p.get('taxon'),ktsn=p.get('ktsn');
-  if(mode==='taxon'&&taxon){state.mode='taxon';state.taxonGroup=taxon;
-    state.scope.family=p.get('family')||null;state.scope.genus=p.get('genus')||null;}
-  else if(mode==='species'&&ktsn){state.mode='species';state.fixedKtsn=ktsn;}
-  else state.mode='picker';
+  const tab=p.get('tab')||'taxon';
+  const mode=p.get('mode');    // 구형 호환
+  const taxon=p.get('taxon');
+  const ktsn=p.get('ktsn');
+
+  // 구형 호환: mode 파라미터 → tab 으로 변환
+  if(mode==='species'&&ktsn){
+    state.tabMode='species';
+    state.mode='species';
+    state.fixedKtsn=ktsn;
+  } else if(mode==='taxon'&&taxon){
+    state.tabMode='taxon';
+    state.mode='taxon';
+    state.taxonGroup=taxon;
+    state.scope.family=p.get('family')||null;
+    state.scope.genus=p.get('genus')||null;
+  } else if(tab==='species'&&ktsn){
+    state.tabMode='species';
+    state.mode='species';
+    state.fixedKtsn=ktsn;
+  } else if(tab==='taxon'&&taxon){
+    state.tabMode='taxon';
+    state.mode='taxon';
+    state.taxonGroup=taxon;
+    state.scope.family=p.get('family')||null;
+    state.scope.genus=p.get('genus')||null;
+  } else {
+    state.tabMode='taxon';
+    state.mode='picker';
+  }
 }
 
 // ── DATA QUERIES ───────────────────────────────────────────────
@@ -340,6 +442,55 @@ function getTaxonomyForKtsn(ktsn){return ((window.__SPMEDIA__||{}).tax||{})[ktsn
 function hasPhoto(ktsn){const r=((window.__SPMEDIA__||{}).m||{})[ktsn];return !!(r&&r.some(x=>x.type==='photo'));}
 // 퀴즈 풀은 사진(photo) 보유 종만 — 표본·세밀화뿐인 종은 무작위 출제서 제외(무척추·곤충 로딩 안정화)
 function getMediaSpeciesInTaxon(taxon){return speciesInTaxon(taxon).filter(s=>hasPhoto(s.k));}
+
+// ── TAB SWITCHING ─────────────────────────────────────────────
+// 탭이 바꾸는 것은 출제할 종을 고르는 방법뿐이다. 퀴즈 화면·채점·학습 카드는 두 탭이 함께 쓴다.
+function switchTab(tab){
+  state.tabMode=tab;
+  document.getElementById('taxonTab').setAttribute('aria-selected',tab==='taxon');
+  document.getElementById('speciesTab').setAttribute('aria-selected',tab==='species');
+  document.getElementById('taxonTabPanel').hidden=tab!=='taxon';
+  document.getElementById('speciesTabPanel').hidden=tab!=='species';
+  hideQuiz();
+  updateUrlState();
+  if(tab==='species') showSpeciesTab(); else showTaxonTab();
+}
+
+function hideQuiz(){
+  document.getElementById('quizMode').classList.remove('active');
+  document.getElementById('learningMode').classList.remove('active');
+  document.getElementById('loading').style.display='none';
+}
+
+function showTaxonTab(){
+  buildScopeUI();
+  if(!state.taxonGroup){
+    state.mode='picker';
+    showTaxonPicker();
+    return;
+  }
+  state.mode='taxon';
+  document.getElementById('taxonPicker').classList.remove('active');
+  startQuizForTaxon(state.taxonGroup);
+}
+
+function showSpeciesTab(){
+  buildSpeciesCombo();
+  _speciesCombo.refresh();
+  if(state.fixedKtsn){
+    startQuizForSpecies(state.fixedKtsn);
+    return;
+  }
+  state.mode='picker';
+  notice(SPECIES_HINT);
+}
+
+// 종 탭에서 퀴즈 대신 보여 줄 안내(선택 전·사진 없음·자료 오류)
+function notice(html){
+  const el=document.getElementById('speciesNotice');
+  el.innerHTML=html||'';
+  el.classList.toggle('active',!!html);
+}
 
 // ── SCOPE: 분류군 안에서 과·속으로 좁히기 ─────────────────────
 function scopeSpecies(){
@@ -371,22 +522,28 @@ function famLabel(la){return famKo(la)||la;}
 function genLabel(la){return genKo(la)||la;}
 
 // 드롭다운(클릭 열람) + 검색(입력 필터)을 겸하는 콤보박스.
-// cfg: {options():[{value,ko,la,count,reset}], current():value, onPick(value)}
+// cfg: {options():[{value,ko,la,count,reset}], current():value, onPick(value), minQuery, limit, hint}
+// minQuery·limit 은 후보가 수만 건인 목록(종)에서만 쓴다 — 전부 그리면 여는 순간 입력이 멎는다.
 function makeCombo(input, menu, cfg){
   let open=false, active=-1, rows=[];
   const optFor=v=>cfg.options().find(o=>o.value===v);
   const labelOf=v=>{const o=optFor(v);if(!o||o.reset)return '';return (o.ko&&o.la&&o.ko!==o.la)?o.ko+' ('+o.la+')':(o.ko||o.la);};
   function render(q){
     const ql=(q||'').trim().toLowerCase();
+    if(cfg.minQuery&&ql.length<cfg.minQuery){
+      rows=[];menu.innerHTML='<div class="scope-empty">'+(cfg.hint||'이름을 입력하세요')+'</div>';return;
+    }
     rows=cfg.options().filter(o=>o.reset||!ql||(o.ko&&o.ko.toLowerCase().includes(ql))||(o.la&&o.la.toLowerCase().includes(ql)));
     if(!rows.length){menu.innerHTML='<div class="scope-empty">검색 결과 없음</div>';return;}
+    let more=0;
+    if(cfg.limit&&rows.length>cfg.limit){more=rows.length-cfg.limit;rows=rows.slice(0,cfg.limit);}
     const cur=cfg.current();
     menu.innerHTML=rows.map((o,i)=>{
       const koPart='<span class="ko">'+(o.ko||o.la)+'</span>';
       const laPart=(!o.reset&&o.la&&o.ko&&o.la!==o.ko)?'<span class="la">'+o.la+'</span>':'';
       const cnt=(o.count!=null)?'<span class="cnt">'+o.count+'종</span>':'';
       return '<div class="scope-opt'+(o.value===cur?' active':'')+'" data-i="'+i+'">'+koPart+laPart+cnt+'</div>';
-    }).join('');
+    }).join('')+(more?'<div class="scope-empty">그 밖에 '+more+'종 — 더 좁혀 검색하세요</div>':'');
   }
   function open_(){open=true;menu.hidden=false;render('');active=-1;input.select();}
   function close_(){open=false;menu.hidden=true;input.value=labelOf(cfg.current());}
@@ -407,7 +564,6 @@ function makeCombo(input, menu, cfg){
   return {refresh(){input.value=labelOf(cfg.current());}};
 }
 
-let _famCombo=null,_genCombo=null;
 function famOptions(){
   const fam=taxonScopeData();
   const total=getMediaSpeciesInTaxon(state.taxonGroup).length;
@@ -432,23 +588,80 @@ function syncGenusCombo(){
   if(!has) state.scope.genus=null;
   if(_genCombo) _genCombo.refresh();
 }
+
+function getTaxonOptions(){
+  const meta=(window.__SPMEDIA_META__||{}).taxa||{};
+  const taxa=Object.keys(meta)
+    .filter(t=>(meta[t]||0)>=4)
+    .sort((a,b)=>meta[b]-meta[a]);
+
+  return [{value:'',ko:'분류군 선택',la:'',reset:true}]
+    .concat(taxa.map(t=>({
+      value:t,
+      ko:TAXON_LABELS[t]||t,
+      la:t,
+      count:meta[t]
+    })));
+}
+
+function buildTaxonCombo(){
+  if(_taxonCombo) return;
+  _taxonCombo=makeCombo(
+    document.getElementById('taxonInput'),
+    document.getElementById('taxonMenu'),
+    {
+      options:getTaxonOptions,
+      current:()=>state.taxonGroup||'',
+      onPick:(taxon)=>{
+        state.taxonGroup=taxon||null;
+        state.scope.family=null;
+        state.scope.genus=null;
+        updateUrlState();
+        hideQuiz();
+        showTaxonTab();
+      }
+    }
+  );
+}
+
 function buildScopeUI(){
   const bar=document.getElementById('scopeBar');
-  if(state.mode!=='taxon'){bar.hidden=true;return;}
-  const fam=taxonScopeData();                                  // 현재 분류군에 없는 범위는 초기화
+  buildTaxonCombo();
+  _taxonCombo.refresh();
+  bar.hidden=false;
+
+  // 분류군을 고르기 전에는 과·속을 좁힐 대상이 없다
+  if(!state.taxonGroup){
+    document.getElementById('famCombo').hidden=true;
+    document.getElementById('genCombo').hidden=true;
+    document.getElementById('scopeCount').textContent='';
+    return;
+  }
+  // 미디어 자산이 아직 안 실렸으면 과·속 목록을 만들 수 없다 — 자산이 실린 뒤 다시 부른다
+  if(!window.__SPMEDIA__||window.__SPMEDIA__.t!==state.taxonGroup){
+    document.getElementById('famCombo').hidden=true;
+    document.getElementById('genCombo').hidden=true;
+    document.getElementById('scopeCount').textContent='';
+    return;
+  }
+  document.getElementById('famCombo').hidden=false;
+
+  const fam=taxonScopeData();
   if(state.scope.family&&!fam[state.scope.family]){state.scope.family=null;state.scope.genus=null;}
   if(state.scope.genus&&(!state.scope.family||!(fam[state.scope.family]||{}).genera[state.scope.genus])) state.scope.genus=null;
+
   if(!_famCombo){
     _famCombo=makeCombo(document.getElementById('famInput'),document.getElementById('famMenu'),
       {options:famOptions,current:()=>state.scope.family||'',
-       onPick:v=>{state.scope.family=v||null;state.scope.genus=null;syncGenusCombo();updateScopeCount();restartScopeQuiz();}});
+       onPick:v=>{state.scope.family=v||null;state.scope.genus=null;syncGenusCombo();updateScopeCount();updateUrlState();restartScopeQuiz();}});
     _genCombo=makeCombo(document.getElementById('genInput'),document.getElementById('genMenu'),
       {options:genOptions,current:()=>state.scope.genus||'',
-       onPick:v=>{state.scope.genus=v||null;updateScopeCount();restartScopeQuiz();}});
+       onPick:v=>{state.scope.genus=v||null;updateScopeCount();updateUrlState();restartScopeQuiz();}});
   }
   _famCombo.refresh(); syncGenusCombo(); updateScopeCount();
-  bar.hidden=false;
 }
+
+
 
 // ── DISTRACTORS (genus→family→order→taxon) ─────────────────────
 function getDistractors(targetKtsn,count=3,preferMedia=true){
@@ -499,8 +712,13 @@ function preload(url,timeout=9000){
 function orderForQuiz(photos){const ph=photos.filter(p=>p.type==='photo');const rest=photos.filter(p=>p.type!=='photo');return [...shuffle(ph),...shuffle(rest)];}
 async function pickLoadablePhoto(photos){for(const p of orderForQuiz(photos||[])){if(await preload(p.full)) return p;}return null;}
 
+// 오류 안내가 이 자리를 덮어쓰므로, 다시 켤 때마다 대기 표시를 되돌려 놓는다
+const QLOAD_HTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+
+  '<circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 1 0 20"></path></svg><div>사진을 불러오는 중…</div>';
 function qLoad(on){
-  document.getElementById('qLoad').style.display=on?'':'none';
+  const el=document.getElementById('qLoad');
+  if(on) el.innerHTML=QLOAD_HTML;
+  el.style.display=on?'':'none';
   document.getElementById('imageNameSection').style.display=on?'none':'';
   document.getElementById('nameImageSection').style.display=on?'none':'';
   if(on){document.getElementById('resultBanner').hidden=true;document.getElementById('postAnswer').hidden=true;}
@@ -611,8 +829,9 @@ function showQuiz(){
   document.getElementById('resultBanner').hidden=true;
   document.getElementById('postAnswer').hidden=true;
   if(state.mode==='picker'){showTaxonPicker();return;}
+  // 고른 종이 하나뿐이면 사진→이름은 성립하지 않는다(보기가 곧 답이다)
   if(state.mode==='species'){showNameToImageQuiz();return;}
-  // taxon: 문제마다 방향 무작위(양방향)
+  // 분류군: 문제마다 방향 무작위(양방향)
   const dir=Math.random()<0.5?'image_to_name':'name_to_image';
   if(dir==='image_to_name') showImageToNameQuiz(); else showNameToImageQuiz();
 }
@@ -621,7 +840,7 @@ function showQuiz(){
 function answerQuiz(el,correct,ktsn){
   if(state.answered) return;
   state.answered=true;
-  window.fgTrack&&fgTrack('quiz_answer',{correct:!!correct,taxon:state.taxonGroup||'',mode:state.mode||''});
+  window.fgTrack&&fgTrack('quiz_answer',{correct:!!correct,taxon:currentTaxon(),mode:state.mode||''});
   const correctK=String(state.currentSpecies.k);
   const isPhoto=document.getElementById('nameImageSection').classList.contains('active');
 
@@ -654,6 +873,69 @@ function answerQuiz(el,correct,ktsn){
   banner.innerHTML=(correct?'정답입니다 · 이 종은 ':'오답입니다 · 정답은 ')+'<b>'+sp.n+'</b>'+sci+' 입니다.';
   banner.hidden=false;
   document.getElementById('postAnswer').hidden=false;
+}
+
+// ── 종 퀴즈: 출제할 한 종 고르기 ────────────────────────────────
+const SPECIES_HINT='퀴즈로 풀 종을 검색해 고르세요.<br>고른 종의 사진을 유사종 사진 사이에서 찾는 문제가 나옵니다.';
+
+// 후보가 수만 건이라 목록을 열 때마다 다시 만들면 입력이 멎는다 — 한 번만 만들어 재사용한다.
+let _spOpts=null;
+function speciesOptions(){
+  if(_spOpts) return _spOpts;
+  // 사진 보유 여부는 그 분류군 자산을 실어야 알 수 있다. 여기서는 문제를 낼 만큼 사진이
+  // 쌓인 분류군까지만 좁히고, 사진 없는 종은 고른 뒤 안내로 처리한다.
+  const meta=(window.__SPMEDIA_META__||{}).taxa||{};
+  const ok=new Set(Object.keys(meta).filter(t=>(meta[t]||0)>=4));
+  _spOpts=[{value:'',ko:'종 선택 해제',la:'',reset:true}]
+    .concat((window.__SPIDX__||[]).filter(s=>ok.has(s.t)).map(s=>({value:s.k,ko:s.n,la:s.s||''})));
+  return _spOpts;
+}
+
+function buildSpeciesCombo(){
+  if(_speciesCombo) return;
+  _speciesCombo=makeCombo(
+    document.getElementById('speciesInput'),
+    document.getElementById('speciesMenu'),
+    { options:speciesOptions, minQuery:1, limit:60, hint:'종 이름을 한 글자 이상 입력하세요',
+      current:()=>state.fixedKtsn||'',
+      onPick:(ktsn)=>{
+        state.fixedKtsn=ktsn||null;
+        updateUrlState(); hideQuiz();
+        if(!ktsn){state.mode='picker';notice(SPECIES_HINT);return;}
+        startQuizForSpecies(ktsn);
+      } });
+}
+
+function startQuizForSpecies(ktsn){
+  const sp=speciesById(ktsn);
+  if(!sp){notice('고른 종을 찾을 수 없습니다. 다시 검색해 주세요.');return;}
+  state.mode='species'; state.fixedKtsn=ktsn;
+  updateUrlState();
+  window.fgTrack&&fgTrack('quiz_start',{taxon:sp.t,mode:'species'});
+  notice('');
+  document.getElementById('quizMode').classList.add('active');
+  qLoad(true);
+  loadTaxonMedia(sp.t,ok=>{
+    if(!ok||!window.__SPMEDIA__||window.__SPMEDIA__.t!==sp.t){
+      showLoadError('이 분류군의 자료를 불러오지 못했습니다.');return;
+    }
+    // 사진이 없으면 문제를 낼 수 없다 — 같은 분류군으로 유사종을 익히도록 넘긴다
+    if(!hasPhoto(ktsn)){
+      hideQuiz();
+      notice('<b>'+(sp.n||sp.s)+'</b><br>아직 학습용 사진이 없는 종입니다. 같은 분류군의 유사종으로 눈을 익혀 보세요.'+
+        '<br><a class="cta" href="#" onclick="taxonQuizFrom(\''+sp.t+'\');return false;">'+
+        (TAXON_LABELS[sp.t]||sp.t)+' 퀴즈로 가기 →</a>');
+      return;
+    }
+    showQuiz();
+  });
+}
+
+// 사진 없는 종 → 같은 분류군 퀴즈로 옮겨 간다
+function taxonQuizFrom(taxon){
+  state.taxonGroup=taxon; state.scope.family=null; state.scope.genus=null;
+  state.fixedKtsn=null;
+  switchTab('taxon');
 }
 
 // ── LEARNING CARD (항상 정답 종) ───────────────────────────────
@@ -721,13 +1003,12 @@ function nextQuiz(){
   document.getElementById('learningMode').classList.remove('active');
   document.getElementById('resultBanner').hidden=true;
   document.getElementById('postAnswer').hidden=true;
-  const el=document.getElementById('qLoad');el.innerHTML=
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 1 0 20"></path></svg><div>사진을 불러오는 중…</div>';
   document.getElementById('quizMode').classList.add('active');
   showQuiz();
 }
 function goBack(){
-  if(state.mode==='species'&&state.taxonGroup) location.href='service.html?taxon='+state.taxonGroup;
+  const t=currentTaxon();
+  if(state.mode==='species'&&t) location.href='service.html?taxon='+t;
   else location.href='index.html';
 }
 
@@ -739,22 +1020,18 @@ function loadTaxonMedia(taxon,cb){
   s.onload=()=>cb(true);s.onerror=()=>cb(false);document.head.appendChild(s);
 }
 function startQuizForTaxon(taxon){
-  window.fgTrack&&fgTrack('quiz_start',{taxon:taxon,mode:state.mode||'taxon'});
+  state.mode='taxon'; state.taxonGroup=taxon;
+  updateUrlState();
+  window.fgTrack&&fgTrack('quiz_start',{taxon:taxon,mode:'taxon'});
   document.getElementById('loading').style.display='';
   loadTaxonMedia(taxon,ok=>{
     if(!ok||!window.__SPMEDIA__||window.__SPMEDIA__.t!==taxon){
       document.getElementById('loading').textContent='이 분류군의 자료를 불러오지 못했습니다.';return;
     }
-    if(state.mode==='species'&&getMediaForKtsn(state.fixedKtsn).length===0){
-      const sp=speciesById(state.fixedKtsn);
-      document.getElementById('loading').innerHTML=
-        '<div style="max-width:340px;margin:0 auto">'+(sp?(sp.n||sp.s):'이 종')+'은 아직 학습용 사진이 없어요.<br>'+
-        '<a href="quiz.html?mode=taxon&taxon='+taxon+'" style="display:inline-block;margin-top:12px;padding:10px 16px;border-radius:10px;background:var(--accent);color:#fff;text-decoration:none;font-weight:600">'+(TAXON_LABELS[taxon]||taxon)+' 퀴즈로 유사종 익히기 →</a></div>';
-      return;
-    }
     document.getElementById('loading').style.display='none';
     document.getElementById('taxonPicker').classList.remove('active');
     document.getElementById('quizMode').classList.add('active');
+    // 과·속 목록은 이 분류군 자산이 실린 뒤에야 만들 수 있다
     buildScopeUI();
     showQuiz();
   });
@@ -767,16 +1044,18 @@ function boot(){
     document.getElementById('loading').textContent='데이터를 불러오지 못했습니다. 로컬 서버로 여세요.';return;
   }
   parseParams();loadState();
+  buildSpeciesCombo();
+
+  // 탭 이벤트
+  document.getElementById('taxonTab').addEventListener('click',()=>switchTab('taxon'));
+  document.getElementById('speciesTab').addEventListener('click',()=>switchTab('species'));
+
   document.getElementById('detailBtn').onclick=()=>{if(state.currentSpecies)showLearning(state.currentSpecies.k);};
   document.getElementById('backFromLearning').onclick=goBack;
   document.getElementById('backLink').onclick=(e)=>{e.preventDefault();goBack();};
 
-  if(state.mode==='taxon') startQuizForTaxon(state.taxonGroup);
-  else if(state.mode==='species'){
-    const sp=speciesById(state.fixedKtsn);
-    if(!sp){document.getElementById('loading').style.display='';document.getElementById('loading').textContent='종을 찾을 수 없습니다.';return;}
-    state.taxonGroup=sp.t;startQuizForTaxon(sp.t);
-  } else {document.getElementById('loading').style.display='none';showTaxonPicker();}
+  document.getElementById('loading').style.display='none';
+  switchTab(state.tabMode);   // 화면을 그리는 유일한 입구
 }
 
 document.addEventListener('keydown',e=>{if(state.answered&&(e.key==='Enter'||e.key===' ')){e.preventDefault();nextQuiz();}});
