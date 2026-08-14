@@ -411,27 +411,14 @@
   .regchips{display:flex;flex-wrap:wrap;gap:6px}
   .regchips .rc{background:#eef3f1;border:1px solid #d7e3df;border-radius:8px;padding:4px 9px;font-size:12px}
   .regchips .rc b{font-variant-numeric:tabular-nums;color:var(--accent)}
-  .links{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
-  .lk{display:inline-flex;align-items:center;gap:7px;text-decoration:none;border:1px solid var(--line);
-    border-radius:10px;padding:10px 14px;font-size:13px;background:#fff}
-  /* .lk 가 display 를 지정하는 순간 브라우저 기본 [hidden]{display:none} 을 덮어써서
-     hidden 을 걸어도 그대로 보인다 — 스크립트가 hidden 으로 여닫는 버튼들이 여기 있다. */
-  .lk[hidden]{display:none}
-  .lk:hover{border-color:var(--accent)}
-  .lk .t{font-weight:600}.lk .d{font-size:11px;color:var(--muted)}
-  .lk.primary{border-color:#cdddc8;background:#f4f8f6}
-  .lk.danger{border-color:#e7c9c0;background:#fdf4f1}
-  .lk.danger .t{color:#a23b1a}
-  /* 기관 마크 버튼 — 상자 안에 로고만 넣는다. 세 마크는 가로세로비가 제각각이라
-     상자 크기를 고정하고 그 안에서 가운데 맞춘다. 이름은 눈에 보이지 않으므로
-     title(마우스)·aria-label(스크린리더) 로 반드시 준다. */
-  .lk.brand{padding:8px 12px;justify-content:center;min-width:136px;height:46px;background:var(--card)}
-  /* 크기는 width/height 속성이 정한다(원본은 모두 표시 크기의 2배로 뽑았다).
-     여기서 width:auto 를 주면 속성이 무시돼 원본 크기로 커진다 — 주지 않는다. */
-  .lk.brand img{display:block;max-width:100%;object-fit:contain}
-  .lk.brand:hover{border-color:var(--accent);background:#f4f8f6}
-  /* 자체 제보 버튼의 마크 — 기관 마크와 달리 글과 함께 서므로 상자를 고정하지 않는다 */
-  .lk:not(.brand)>img{display:block;flex:none}
+  .links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:6px}
+  .lk{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;text-decoration:none;
+    border:1px solid var(--line);border-radius:10px;font-size:13px;background:#fff;color:var(--ink)}
+  .lk[hidden]{display:none}   /* .lk 가 display 를 선언해 UA 의 [hidden] 기본값을 이긴다 */
+  .lk:hover{border-color:var(--accent);background:#f4f8f6}
+  .lk .mk{flex:none;width:100px;display:flex;align-items:center;justify-content:center}
+  .lk .mk img{display:block;max-width:100%;object-fit:contain}
+  .lk .t{font-weight:600;line-height:1.3;word-break:keep-all;min-width:0}
   .muted{color:var(--muted);font-size:13.5px}
   footer{margin-top:24px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.7}
 
@@ -526,10 +513,7 @@
     /* 종 카드 */
     .scard{padding:14px 16px;max-width:100%}
     .scard h3{font-size:17px;word-break:keep-all;overflow-wrap:anywhere}
-    .links{gap:8px}
-    .lk{flex:1 1 100%}
-    /* 마크 버튼은 글이 없어 한 줄을 다 쓸 이유가 없다 — 한 줄에 둘씩 놓는다 */
-    .lk.brand{flex:0 1 calc(50% - 4px);min-width:0}
+    .links{grid-template-columns:1fr}
 
     /* 지도 아래 대표 사진: 세로로 쌓이면 왼쪽 칸이 늘어날 일이 없어 flex 기준이 사진 없는
        빈 상자 높이로 잡힌다(150~230px 사이에서 상태마다 달라진다). 높이를 못 박는다. */
@@ -1738,14 +1722,14 @@ function renderSpecies(sp){
   const envRow=envInfo?`<div class="row"><div class="k khead">${envInfo.hasSeason?'발견 계절 · 고도':'고도'}</div>${envInfo.html}</div>`:'';
   // 제보처는 멸종위기 여부로 갈리지 않는다 — 멸종위기종 관찰도 EcoBank 로 보낼 수 있고,
   // 멸종위기종일 때만 시민과학 제보 프로젝트(Naturing)를 하나 더 붙인다.
-  const brand=(href,file,w,h,name,what)=>
-    `<a class="lk brand" href="${href}" target="_blank" rel="noopener noreferrer" title="${name} — ${what}" aria-label="${name} ${what}(새 창)"><img src="${file}" width="${w}" height="${h}" alt=""></a>`;
-  const reportLink=brand(ECOBANK,'logo_ecobank.png',116,20,'EcoBank','국립생태원 생태정보 제보')
-    +(eg?brand(NATURING,'logo_naturing.png',61,26,'네이처링','시민과학 멸종위기종 관찰 제보'):'');
+  const brand=(href,file,w,h,name,label,what)=>
+    `<a class="lk" href="${href}" target="_blank" rel="noopener noreferrer" title="${name} — ${what}" aria-label="${name} ${label}(새 창)"><span class="mk"><img src="${file}" width="${w}" height="${h}" alt=""></span><span class="t">${label}</span></a>`;
+  const reportLink=brand(ECOBANK,'logo_ecobank.png',100,17,'EcoBank','시민참여 게시판','국립생태원 생태정보 제보')
+    +(eg?brand(NATURING,'logo_naturing.png',61,26,'네이처링','멸종위기종 발견 제보','시민과학 멸종위기종 관찰 제보'):'');
   // 동정 연습은 대표 사진 위 버튼이 기본이다. 사진이 없는 종에서는 입구가 사라지므로
   // 카드 안의 글 버튼을 남겨 두고, 사진이 뜨면 그때 감춘다(renderRepShot).
   const quizLink=quizOn(sp)
-    ? `<a class="lk quiz-lk" href="quiz.html?mode=species&ktsn=${sp.k}"><span><span class="t">이 종 동정 연습</span><br><span class="d">유사종 사진과 비교하는 퀴즈 →</span></span></a>` : '';
+    ? `<a class="lk quiz-lk" href="quiz.html?mode=species&ktsn=${sp.k}"><span class="mk"><img src="logo_quiz.png" width="23" height="26" alt=""></span><span class="t">동정 연습</span></a>` : '';
   sCard.innerHTML=`<div class="scard">
     <div style="display:flex;align-items:flex-start;gap:10px">
       <div style="min-width:0"><h3>${sp.n||sp.s}</h3><div class="sci">${sp.s}</div></div>
@@ -1766,13 +1750,13 @@ function renderSpecies(sp){
     ${envRow}
     <div class="row"><div class="k">상세 정보</div>
       <div class="links">
-        ${brand(NIBR(sp.k),'logo_nibr.png',90,26,'한반도의 생물다양성','국립생물자원관 종 상세')}
+        ${brand(NIBR(sp.k),'logo_nibr.png',90,26,'한반도의 생물다양성','종 상세 정보','국립생물자원관 종 상세')}
         ${quizLink}
       </div>
     </div>
     <div class="row"><div class="k">발견 제보</div>
       <div class="links">
-        <a class="lk report-lk" data-k="${sp.k}" role="button" tabindex="0" hidden><img src="logo_report.png" width="26" height="30" alt=""><span><span class="t">이 곳에서 발견 제보</span><br><span class="d">관찰 위치·근거 URL로 발견공백 메우기 →</span></span></a>
+        <a class="lk report-lk" data-k="${sp.k}" role="button" tabindex="0" hidden><span class="mk"><img src="logo_report.png" width="23" height="26" alt=""></span><span class="t">Finding gap에 제보하기</span></a>
         ${reportLink}
       </div>
     </div>
@@ -2453,7 +2437,7 @@ let photoFile = null, photoBlob = null;                 // 업로드용 압축 �
 function todayStr(){ const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-// 종 카드의 '이 곳에서 발견 제보' 버튼 노출·배선(Supabase 설정 시)
+// 종 카드의 'Finding gap에 제보하기' 버튼 노출·배선(Supabase 설정 시)
 function decorateCard(sp){
   const b=document.querySelector('.report-lk[data-k="'+(window.CSS&&CSS.escape?CSS.escape(sp.k):sp.k)+'"]');
   if(!b) return;
