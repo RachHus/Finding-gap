@@ -9,7 +9,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-flash-lite-latest";
-const DAILY_CAP = Number(Deno.env.get("CHAT_DAILY_CAP") ?? "20");
+// 이용 횟수 제한은 두지 않는다. 이 값은 자동화된 남용으로 무료 사용량이 한 번에 소진되는 것만 막는 안전판이다.
+const ABUSE_CAP = Number(Deno.env.get("CHAT_ABUSE_CAP") ?? "300");
 const MAX_STEPS = 4;               // 에이전트 루프 상한(툴 호출 왕복)
 const MAX_HISTORY = 12;            // 클라이언트가 보내는 대화 이력 상한
 const GEMINI_TIMEOUT_MS = 10000;   // Gemini 호출당 타임아웃
@@ -483,16 +484,14 @@ Deno.serve(async (req) => {
   const history = (body.messages ?? []).filter((m) => m && typeof m.content === "string" && m.content.trim());
   if (!history.length || history[history.length - 1].role !== "user") return json({ error: "메시지가 필요합니다." }, 400);
 
-  // 일일 한도: 원자적 증가(초과 시 반영 안 됨).
-  let remaining: number;
+  // 사용량 기록: 원자적 증가. 평상시 쓰기를 막지 않고, 자동화된 남용만 걸러내는 상한만 둔다.
   try {
     const cap = await sql`
       insert into chat_usage (user_id, day, count) values (${user.id}, current_date, 1)
       on conflict (user_id, day) do update set count = chat_usage.count + 1, updated_at = now()
-      where chat_usage.count < ${DAILY_CAP}
+      where chat_usage.count < ${ABUSE_CAP}
       returning count`;
-    if (!cap.length) return json({ error: `오늘 사용 한도(${DAILY_CAP}회)를 모두 사용했습니다. 내일 다시 이용해 주세요.`, remaining: 0 }, 429);
-    remaining = DAILY_CAP - (cap[0].count as number);
+    if (!cap.length) return json({ error: "요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요." }, 429);
   } catch (_e) {
     return json({ error: "일시적인 오류가 발생했습니다." }, 500);
   }
@@ -515,7 +514,7 @@ Deno.serve(async (req) => {
       const calls = parts.filter((p: Record<string, unknown>) => p.functionCall);
       if (!calls.length) {
         const text = parts.filter((p: Record<string, unknown>) => p.text).map((p: Record<string, string>) => p.text).join("").trim();
-        return json({ reply: text || "답변을 생성하지 못했습니다. 질문을 바꿔 다시 시도해 주세요.", remaining, used_tools: usedTools, map: spHint ?? regHint });
+        return json({ reply: text || "답변을 생성하지 못했습니다. 질문을 바꿔 다시 시도해 주세요.", used_tools: usedTools, map: spHint ?? regHint });
       }
       contents.push({ role: "model", parts });
       const responses = [];
@@ -547,7 +546,7 @@ Deno.serve(async (req) => {
       contents.push({ role: "user", parts: responses });
     }
     try { await sql`update chat_usage set count = greatest(count - 1, 0) where user_id = ${user.id} and day = current_date`; } catch (_e) { /* noop */ }
-    return json({ reply: "질문이 복잡해 한 번에 처리하지 못했습니다. 조금 더 구체적으로 나눠 물어봐 주세요.", remaining: remaining + 1, used_tools: usedTools });
+    return json({ reply: "질문이 복잡해 한 번에 처리하지 못했습니다. 조금 더 구체적으로 나눠 물어봐 주세요.", used_tools: usedTools });
   } catch (e) {
     console.error("chat error:", e);
     try { await sql`update chat_usage set count = greatest(count - 1, 0) where user_id = ${user.id} and day = current_date`; } catch (_e) { /* noop */ }
@@ -556,7 +555,6 @@ Deno.serve(async (req) => {
       error: rateLimited
         ? "지금 이용이 몰려 잠시 후 다시 시도해 주세요. (무료 사용량 분당 제한)"
         : "답변 생성 중 오류가 발생했습니다.",
-      remaining: remaining + 1,
     }, rateLimited ? 429 : 502);
   }
 });

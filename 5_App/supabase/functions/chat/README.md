@@ -16,7 +16,7 @@
 
 3. **Gemini 키** — 함수 비밀키 설정:
    - `supabase secrets set GEMINI_API_KEY=...` (필수)
-   - 선택: `GEMINI_MODEL`(기본 `gemini-flash-lite-latest`), `CHAT_DAILY_CAP`(기본 20)
+   - 선택: `GEMINI_MODEL`(기본 `gemini-flash-lite-latest`), `CHAT_ABUSE_CAP`(기본 300)
    - ⚠ 무료 tier 한도는 모델별 하루 요청수(RPD)로 매우 낮다: `gemini-flash-latest`(=gemini-3.6-flash)는 **20/일**(실측). 질문 1개당 2~4요청이라 기본값을 별도 할당량이 있는 `gemini-flash-lite-latest`로 둔다(함수호출 정상). 실사용 규모라면 Gemini 종량제 결제 권장.
    - `SUPABASE_URL`·`SUPABASE_ANON_KEY`·`SUPABASE_DB_URL`은 Supabase가 자동 주입.
 
@@ -29,8 +29,9 @@
 
 `POST /functions/v1/chat` · 헤더 `Authorization: Bearer <user_jwt>` (로그인 필수).
 - 본문: `{ "messages": [{ "role": "user"|"assistant", "content": "..." }] }`
-- 응답: `{ "reply": "...", "remaining": <int>, "used_tools": ["..."] }`
-- 한도 초과 시 429, 미로그인 401, 키 미설정 503.
+- 응답: `{ "reply": "...", "used_tools": ["..."] }`
+- 미로그인 401, 키 미설정 503. `CHAT_ABUSE_CAP`은 자동화된 남용으로 무료 사용량이 한 번에
+  소진되는 것만 막는 안전판이라, 사람이 쓰다가 닿을 값이 아니고 화면에도 표시하지 않는다(초과 시 429).
 
 ## 도구
 
