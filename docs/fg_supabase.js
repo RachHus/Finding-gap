@@ -50,6 +50,22 @@ export async function watchCounts() {
                      .sort((a, b) => b.count - a.count);
 }
 
+// ── 알림 설정(활동 지역) — Auth user_metadata 에 둔다 ──
+// 별도 표를 만들면 마이그레이션과 RLS 정책이 늘어나는데, 이 값은 본인만 읽고 쓰는 설정이라
+// 세션과 함께 실려 오는 user_metadata 로 충분하다. 좌표가 아니라 시군구 코드만 담는다.
+export function readProfile(user) {
+  const m = (user && user.user_metadata) || {};
+  return { sgg: m.fg_sgg || '', sggName: m.fg_sgg_name || '', sido: m.fg_sido || '', onboarded: !!m.fg_onboarded };
+}
+export async function saveProfile(p) {
+  if (!sb) throw new Error('not configured');
+  const { data, error } = await sb.auth.updateUser({ data: {
+    fg_sgg: p.sgg || null, fg_sgg_name: p.sggName || null, fg_sido: p.sido || null, fg_onboarded: true
+  } });
+  if (error) throw error;
+  return data ? data.user : null;
+}
+
 // ── 시민과학 제보(reports) — Feature B. 근거는 사진(권장) 또는 URL, 최소 하나 ──
 // user_id 는 DB default auth.uid() 로 자동 채움. 정밀 좌표는 원시 행(본인 RLS)에만 저장.
 // r = { ktsn, scientific_name, korean_name, taxon_group, url?, photo_path?, lat, lon, observed_date, note }
@@ -110,6 +126,12 @@ export async function leaderboard(limit = 20) {
   const { data, error } = await sb.rpc('report_leaderboard', { lim: limit });
   if (error) throw error;
   return (data || []).map(r => ({ reporter: r.reporter, reports: Number(r.reports) || 0, gaps: Number(r.gaps_filled) || 0 }));
+}
+// 리더보드에서 내 줄을 찾기 위한 표시 이름(profiles.display_name) — 본인 행만 RLS 로 보인다.
+export async function myDisplayName() {
+  if (!sb) return null;
+  const { data } = await sb.from('profiles').select('display_name').maybeSingle();
+  return data ? data.display_name : null;
 }
 // 내 역할(profiles.role) — 관리자 UI 게이트용. 비로그인/미설정이면 null.
 export async function myRole() {

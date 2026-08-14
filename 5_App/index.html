@@ -43,29 +43,13 @@
   header h1 img{display:block;height:72px;width:auto}
   @media(max-width:560px){ header h1 img{height:56px} }
   header .sub{color:var(--muted);font-size:13.5px;margin:0;max-width:60ch}
-  /* ── hero tiles ── */
-  .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:24px 0 8px}
-  @media(max-width:900px){.tiles{grid-template-columns:repeat(3,1fr)}}
-  @media(max-width:520px){.tiles{grid-template-columns:repeat(2,1fr)}}
-  .tile{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-    padding:14px 12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:8px;
-    transition:border-color .12s, box-shadow .12s, transform .12s;position:relative}
-  .tile:hover{border-color:#cfcfc7;box-shadow:0 4px 14px rgba(0,0,0,.05);transform:translateY(-1px)}
-  .tile.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-  .tile .chip{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff}
-  .tile .nm{font-weight:700;font-size:15px}
-  .tile .meta{font-size:11.5px;color:var(--muted)}
-  .tile.nodata{opacity:.62}
-  .tile.nodata .chip{filter:grayscale(.35)}
-  .tile .soon{position:absolute;top:10px;right:10px;font-size:9.5px;font-weight:700;color:#9a7b2e;
-    background:#fdf6e3;border:1px solid #efe3bf;border-radius:999px;padding:1px 6px}
   /* ── dashboard ── */
   .dash{margin-top:18px}
   .dhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 14px}
   .dhead .chip{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff}
   /* 아이콘은 flex 자식이라 flex:none 이 없으면 상자 폭에 맞춰 눌린다 —
      22px 로 그린 그림이 8px 로 납작해져 무엇인지 알아볼 수 없게 된다. */
-  .tile .chip>svg,.dhead .chip>svg{flex:none;display:block}
+  .dhead .chip>svg{flex:none;display:block}
   .dhead h2{margin:0;font-size:18px}
   /* ── 홈 3축 내비 ── */
   .axes{display:flex;gap:2px;margin:20px 0 2px;border-bottom:1px solid var(--line)}
@@ -172,14 +156,63 @@
   header .back{color:var(--muted);text-decoration:none;border:1px solid var(--line);
     border-radius:8px;padding:7px 9px;background:#fff;display:inline-flex;align-items:center;justify-content:center}
   header .back:hover{border-color:var(--accent);color:var(--accent)}
-  .tabs{display:flex;gap:6px;margin:16px 0 14px;border-bottom:1px solid var(--line)}
-  .tabs button{border:0;background:none;padding:11px 16px;font-size:14px;cursor:pointer;color:#666;
-    border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:600}
-  .tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+  /* 계정·알림 묶음 — 머리말 오른쪽 끝. 알림 목록이 이 묶음을 기준으로 떠야 해서 위치 기준점을 준다. */
+  header .acct{margin-left:auto;position:relative;display:flex;align-items:center;gap:6px;flex:none}
+  header .acct button{border:1px solid var(--line);border-radius:9px;background:#fff;color:#3a4a43;cursor:pointer;
+    min-height:40px;padding:0 12px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+  header .acct[hidden],header .acct button[hidden]{display:none}   /* display 지정이 hidden 속성을 덮는다 */
+  header .acct button:hover{border-color:var(--accent);color:var(--accent)}
+  header .acct .who{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;line-height:38px}
+  header .acct .bell{position:relative;padding:0;width:40px;justify-content:center}
+  header .acct .bell .ndot{position:absolute;top:5px;right:5px;min-width:16px;height:16px;padding:0 4px;border-radius:9px;
+    background:#b8541f;color:#fff;font-size:10.5px;line-height:16px;font-weight:700;text-align:center}
+  .notifpop{position:absolute;right:0;top:calc(100% + 8px);width:min(320px,86vw);z-index:150;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.14);padding:6px;max-height:60vh;overflow:auto}
+  .notifpop ul{list-style:none;margin:0;padding:0}
+  .notifpop li{border-radius:8px}
+  .notifpop li button{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;
+    padding:9px 10px;font-size:13px;color:var(--ink);line-height:1.5;min-height:44px}
+  .notifpop li button:hover{background:#f2f7f4}
+  .notifpop li .when{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+  .notifpop .empty{padding:12px 10px;color:var(--muted);font-size:13px}
+  /* 마이페이지 알림 목록 — 종 모양 팝오버와 같은 내용을 넓은 폭에서 다시 보여준다 */
+  .notiflist{list-style:none;margin:0;padding:0}
+  .notiflist li{border-top:1px solid var(--line)}
+  .notiflist li:first-child{border-top:0}
+  .notiflist li button{display:flex;align-items:baseline;gap:10px;width:100%;text-align:left;border:0;background:none;
+    cursor:pointer;font:inherit;font-size:13.5px;color:var(--ink);line-height:1.55;padding:11px 6px;min-height:44px;border-radius:8px}
+  .notiflist li button:hover{background:#f2f7f4}
+  .notiflist li .when{margin-left:auto;color:var(--faint);font-size:11.5px;white-space:nowrap}
+  .notiflist li .go{color:var(--accent);font-size:12px;white-space:nowrap}
+  /* 활동 지역·관심 종 설정 — 첫 로그인 모달과 마이페이지 카드가 같은 부품을 쓴다 */
+  .selrow{display:flex;gap:8px;flex-wrap:wrap}
+  .selrow select{flex:1 1 140px;min-width:0;border:1px solid #d7ded9;border-radius:8px;background:#fff;
+    padding:10px;font:inherit;font-size:13px;min-height:44px;color:var(--ink)}
+  .selrow select:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
+  /* 관심 종 칩은 이름을 따로 쓴다 — 대화형 도우미의 예시 질문도 .chips 를 쓰는데,
+     그쪽 규칙이 뒤에 있어 같은 이름을 쓰면 여백·글자 크기를 덮어쓴다 */
+  .wlchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+  .wlchips .wlchip{display:inline-flex;align-items:center;background:#eef4f0;border:1px solid #d7e5dd;
+    border-radius:999px;padding:0 0 0 13px;font-size:12.5px;overflow:hidden}
+  /* 빼기 단추가 칩 높이를 정한다 — 겹치는 투명 영역을 만들면 옆 칩의 단추를 가로챈다 */
+  .wlchips .wlchip button{border:0;background:none;cursor:pointer;color:#6b7280;font-size:16px;line-height:1;
+    padding:0;width:40px;min-height:44px;margin-left:4px}
+  .wlchips .wlchip button:hover{background:#dde8e2;color:var(--ink)}
+  .regstat{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .regstat .rs{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font:inherit;font-size:12.5px;
+    background:#fbfdfc;color:var(--ink);cursor:pointer;min-height:44px;text-align:left}
+  .regstat .rs:hover{background:#eef4f0;border-color:#c6d8ce}
+  .regstat .rs b{color:#b5482f}
+  /* 로그인해야 열리는 통로(자료 내려받기)는 누르기 전에 표시해 둔다 */
+  body.fg-anon [data-gate=login]::after{content:' 🔒';font-size:11px}
+  /* 지도 위 도구띠 — 종 검색은 두 화면에서 같은 것을 가리키므로 화면 밖으로 꺼내 항상 보이게 둔다 */
+  .tabs{display:flex;align-items:center;gap:6px;margin:16px 0 14px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+  .tabs .qfield{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+  .tabs .qfield input{flex:1 1 auto;max-width:400px;min-width:0;min-height:40px}
   /* 현재 화면 공유(딥링크) · 대화형 도우미 토글 — 오른쪽 정렬 그룹 */
   .tabs .tabsright{margin-left:auto;display:flex;align-items:center;gap:6px}
-  .tabs button.sharebtn{align-self:center;border:1px solid var(--line);border-radius:8px;
-    padding:6px 12px;font-size:12.5px;color:#3a4a43;margin-bottom:6px;display:inline-flex;align-items:center;gap:5px}
+  .tabs button.sharebtn{align-self:center;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;
+    padding:8px 12px;font-size:12.5px;color:#3a4a43;display:inline-flex;align-items:center;gap:5px}
   .tabs button.sharebtn:hover{border-color:var(--accent);color:var(--accent)}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2b332e;color:#fff;
     padding:9px 15px;border-radius:9px;font-size:12.5px;box-shadow:0 6px 20px rgba(0,0,0,.22);
@@ -187,6 +220,7 @@
   .toast.show{opacity:1}
   .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px}
   .field{display:flex;flex-direction:column;gap:4px}
+  .field[hidden]{display:none}                          /* display 지정이 hidden 속성을 덮는다 */
   /* 선택 지역은 남은 폭을 채우되, 좁아지면 찌그러지지 말고 다음 줄로 내려간다. */
   #modeA .controls .field:last-child{min-width:240px}
   .field label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em}
@@ -198,20 +232,21 @@
   .selchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:#555}
   .selchips .c{background:#eef3f1;border:1px solid #d7e3df;border-radius:999px;padding:3px 9px}
   .selchips .clr{cursor:pointer;color:var(--accent);text-decoration:underline;background:none;border:0;font-size:12px}
-  .split{display:grid;grid-template-columns:1.15fr 1fr;gap:16px}
-  @media(max-width:880px){.split{grid-template-columns:1fr}}
-  #map,#mapB{width:100%;height:560px;border:1px solid var(--line);border-radius:var(--radius);background:#eef0ee;position:relative}
+  /* 지도 서비스는 지도를 먼저 크게 보여준다 — 지도가 위, 목록·종 상세가 아래. */
+  .split{display:grid;grid-template-columns:1fr;gap:16px}
+  #map,#mapB{width:100%;height:600px;border:1px solid var(--line);border-radius:var(--radius);background:#eef0ee;position:relative}
   @media(max-width:880px){#map,#mapB{height:400px}}
   /* 지도 타일 위에 얹히는 안내문이라 글자색만으로는 대비를 보장할 수 없다.
      안내문이 뜨는 동안은 보여줄 지도 내용이 없으므로 옅은 판을 깔아 바닥을 고정한다. */
   .mapmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
     padding:20px;color:#3f4542;font-size:13px;pointer-events:none;background:rgba(250,250,248,.78)}
   .legend{display:flex;align-items:center;gap:8px;font-size:11px;color:#666;margin-top:8px}
-  /* 종 카드가 지도보다 길면 지도 아래가 비어 있다. 그 자리를 대표 사진으로 채운다.
-     남는 만큼 늘어나게(flex:1) 두되, 너무 납작하면 무엇을 찍은 것인지 알 수 없어 최소 높이를 준다. */
-  #modeB .split>div:first-child{display:flex;flex-direction:column;min-height:0}
-  #modeB .split>div:first-child>#mapB,#modeB .split>div:first-child>.legend{flex:none}
-  .repshot{position:relative;margin:8px 0 0;flex:1 1 auto;min-height:150px;max-height:230px;
+  /* 종별 화면: 지도와 대표 사진을 3:1로 나란히 두고, 종 상세는 그 아래 전폭으로 내린다. */
+  #modeB .split>div:first-child{display:grid;grid-template-columns:3fr 1fr;column-gap:12px}
+  #modeB .split>div:first-child>#mapB{grid-column:1;grid-row:1}
+  #modeB .split>div:first-child>.legend{grid-column:1;grid-row:2}
+  #modeB .split>div:first-child>.repshot{grid-column:2;grid-row:1/3;margin:0;min-height:0;max-height:none}
+  .repshot{position:relative;margin:8px 0 0;min-height:150px;max-height:230px;
     border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#eef0ee}
   .repshot[hidden]{display:none}
   .repshot>.ph{display:block;width:100%;height:100%}
@@ -227,7 +262,8 @@
   .repshot .quiz:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
   .repshot figcaption{position:absolute;left:0;right:0;bottom:0;padding:14px 10px 5px;text-align:right;
     font-size:10.5px;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.66))}
-  .ramp{height:10px;width:120px;border-radius:3px;background:linear-gradient(90deg,#1a9850,#fee08b,#d73027)}
+  .ramp{height:10px;width:120px;border-radius:3px;border:1px solid rgba(0,0,0,.14);
+    background:linear-gradient(90deg,#FFF59D,#7CB342,#1E5631)}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
     display:flex;flex-direction:column;max-height:560px}
   @media(max-width:880px){.panel{max-height:none}}
@@ -255,6 +291,8 @@
   .badge{font-size:10px;font-weight:700;border-radius:999px;padding:1px 6px;white-space:nowrap}
   .st{display:inline-flex;align-items:center;gap:4px;font-size:11.5px}
   .dot{width:7px;height:7px;border-radius:999px;display:inline-block}
+  .dot-pt{width:9px;height:9px;background:#FF8F00;border:1px solid rgba(74,40,0,.85)}     /* 발견 지점 */
+  .dot-none{width:9px;height:9px;background:#fffceb;border:1px solid rgba(0,0,0,.2)}      /* 기록 없음 */
   .num{font-variant-numeric:tabular-nums;text-align:right}
   /* 관심도 셀: 미니 막대 + 수치 */
   td.ivcell{white-space:nowrap}
@@ -316,7 +354,8 @@
     font-weight:600;cursor:pointer;text-align:left}
   .sfold .c{margin-left:auto;font-size:12px;font-weight:400;color:var(--muted)}
   .sfold .ar{font-size:11px;color:var(--accent)}
-  .scard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;max-width:720px}
+  /* 종 상세는 위의 지도+사진과 같은 폭을 쓴다 — 폭을 묶어 두면 넓은 화면에서 오른쪽이 통째로 빈다. */
+  .scard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;max-width:100%}
   .scard h3{margin:0 0 2px;font-size:18px}
   .scard .sci{font-style:italic;color:var(--muted);font-size:13.5px}
   .scard .row{margin-top:14px}
@@ -325,7 +364,7 @@
   .reg-toggle{display:flex;background:#fff;border:1px solid #cdd5d1;border-radius:7px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.14)}
   .reg-toggle button{border:0;background:#fff;padding:5px 11px;font:600 12px system-ui,sans-serif;color:#5a665f;cursor:pointer}
   .reg-toggle button.on{background:var(--accent);color:#fff}
-  /* 확대 버튼이 좌상단 환경변수 컨트롤에 가려지므로 좌하단으로 내린다(저작권 표기는 우하단). */
+  /* 확대 버튼이 좌상단 분류군 필터에 가려지므로 좌하단으로 내린다(저작권 표기는 우하단). */
   #map .ol-zoom,#mapB .ol-zoom{top:auto;bottom:.6em;left:.6em}
   #map .ol-zoom button,#mapB .ol-zoom button{width:44px;height:44px;font-size:16px}
   /* 맨휠은 페이지 스크롤로 넘기므로, 확대 방법을 그 자리에서 알려 준다.
@@ -339,14 +378,6 @@
   @media(hover:none){.wheel-hint{display:none}}
   .reg-toggle button+button{border-left:1px solid #e3e8e5}
   .reg-toggle button.poly{min-width:44px;text-align:center;letter-spacing:.3px}
-  /* 내 주변(geolocation → 시군구 발견공백) */
-  .nearbybtn{appearance:none;border:1px solid #cdd5d1;background:#fff;border-radius:8px;padding:8px 12px;
-    font:600 12.5px system-ui,sans-serif;color:#3a4a43;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
-  .nearbybtn:hover{border-color:var(--accent);color:var(--accent)}
-  .nearbybtn:disabled{opacity:.6;cursor:default}
-  .nearby-msg{font-size:11px;line-height:1.4;color:#a03027}
-  .nearby-msg:empty{display:none}
-  .nearby-msg.ok{color:var(--muted)}
   .regtbl-wrap{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px}
   .regtbl{width:100%;border-collapse:collapse;font-size:13px}
   .regtbl thead th{position:sticky;top:0;background:#f4f6f4;text-align:left;padding:6px 10px;font-weight:600;color:#3b463f;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -398,16 +429,21 @@
   .monthlbl{display:flex;gap:2px;padding:3px 6px 0;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
   .monthlbl span{flex:1;text-align:center}
   .season-table{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border-width:0}
-  /* 지도 — 환경변수 레이어 컨트롤 */
-  .env-ctrl{position:absolute;top:8px;left:8px;z-index:2;background:#fff;border:1px solid #cdd5d1;border-radius:8px;
+  /* 지도 — 분류군 필터(좌상단) */
+  .taxon-ctrl{position:absolute;top:8px;left:8px;z-index:2;background:#fff;border:1px solid #cdd5d1;border-radius:8px;
     box-shadow:0 1px 4px rgba(0,0,0,.14);padding:7px 9px;width:188px;font:12px system-ui,sans-serif}
-  .env-ctrl select{width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
-  .env-legend{margin-top:7px;display:none}
-  .env-legend.on{display:block}
-  .env-grad{height:9px;border-radius:5px;border:1px solid rgba(0,0,0,.08)}
-  .env-scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
-  .env-op{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:10.5px;color:var(--muted)}
-  .env-op input{flex:1}
+  .taxon-ctrl label{display:block;font-size:10.5px;font-weight:700;color:var(--muted);letter-spacing:.02em;margin-bottom:4px}
+  .taxon-ctrl select{width:100%;min-width:0;min-height:36px;font-size:12.5px;font-weight:600;padding:5px 6px;
+    border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+  /* 내 위치 — 지도 우하단(저작권 표기 위). 지도 서비스에서 흔한 조준점 아이콘 */
+  .locate-ctrl{position:absolute;right:.6em;bottom:2.4em;z-index:2}
+  .locate-ctrl button{width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+    border:1px solid #cdd5d1;border-radius:8px;background:#fff;color:#3a4a43;cursor:pointer;
+    box-shadow:0 1px 4px rgba(0,0,0,.14);padding:0}
+  .locate-ctrl button:hover{color:var(--accent);border-color:var(--accent)}
+  .locate-ctrl button:disabled{opacity:.55;cursor:default}
+  .locate-ctrl button.on{color:var(--accent);border-color:var(--accent)}
+  .locate-ctrl svg{display:block;flex:none}
   .regchips{display:flex;flex-wrap:wrap;gap:6px}
   .regchips .rc{background:#eef3f1;border:1px solid #d7e3df;border-radius:8px;padding:4px 9px;font-size:12px}
   .regchips .rc b{font-variant-numeric:tabular-nums;color:var(--accent)}
@@ -428,14 +464,25 @@
     /* 섹션 제목이 18px 이라 H1 도 18px 이면 위계가 사라진다. 375px 폭에서 한 줄에 들어가는 상한이 20px 다. */
     header h1{font-size:20px}
     header .back{padding:8px 14px;min-height:44px;display:inline-flex;align-items:center;font-size:13px}
+    /* 계정 묶음은 로고와 같은 줄 오른쪽에 두고, 설명 문장을 그 아래 한 줄로 내린다.
+       설명이 먼저 오면 계정 버튼이 셋째 줄까지 밀려 화면 위쪽을 낭비한다. */
+    header .acct{order:1}
+    header .sub{order:2;flex-basis:100%}
+    header .acct button{min-height:44px}
+    header .acct .bell{width:44px}
+    header .acct .who{max-width:118px;line-height:42px}
 
-    /* 탭: 스크롤 중에도 모드 전환 접근 가능하게 상단 고정 */
-    .tabs{position:sticky;top:0;z-index:100;background:var(--bg);margin:12px 0 12px;padding-top:2px;box-shadow:0 1px 0 var(--line)}
+    /* 도구띠: 좁은 폭에서는 검색칸이 한 줄을 다 쓰고 버튼이 아래로 접힌다.
+       두 줄이 되므로 상단 고정은 풀었다 — 고정하면 지도 볼 자리를 그만큼 잡아먹는다. */
+    .tabs{flex-wrap:wrap;row-gap:6px;margin:12px 0 12px}
+    .tabs .qfield{flex:1 1 100%}
+    .tabs .qfield input{max-width:none;min-height:44px}
     .tabs button{min-height:44px}
 
     /* 컨트롤: 고정폭(min-width:130px) 제거 → 가변폭 분할 + 줄바꿈 */
     .controls{gap:8px 10px}
     .controls .field{flex:1 1 104px;min-width:0}
+    .controls .field.tmf{flex:1 1 100%}     /* 기간 보기 토글은 한 줄을 다 쓴다 — 좁은 칸에선 글자가 줄바꿈된다 */
     select{min-width:0;width:100%;min-height:44px}
     input[type=search]{min-height:44px}
     .seg{width:100%}
@@ -443,10 +490,18 @@
 
     /* 좌우 분할 → 세로 스택(지도 위·목록 아래, .split 1열 전환은 기존 규칙) */
     .split{position:relative;z-index:1}
+    /* 좁은 화면에서 지도·사진 3:1 은 사진이 손톱만 해진다 → 사진을 지도 아래로 내린다 */
+    #modeB .split>div:first-child{grid-template-columns:1fr}
+    #modeB .split>div:first-child>#mapB,#modeB .split>div:first-child>.legend,
+    #modeB .split>div:first-child>.repshot{grid-column:1}
+    #modeB .split>div:first-child>.repshot{grid-row:auto;margin:8px 0 0;min-height:150px;max-height:230px}
 
     /* 지도 오버레이 폭 제한 → 지도 팬/줌 공간 확보 */
-    .env-ctrl{width:auto;max-width:150px;font-size:11px;padding:6px 8px}
-    .env-ctrl select{min-height:44px;padding:5px 6px}
+    /* 좌상단 분류군 필터와 우상단 지역 토글이 같은 띠를 쓴다. 분류군 이름은 줄이면 못 읽으므로
+       ("무척추동물"이 제일 길다) 필터 폭을 먼저 확보하고, 토글 쪽을 두 줄로 접는다. */
+    .taxon-ctrl{width:auto;max-width:146px;font-size:11px;padding:6px 8px}
+    .taxon-ctrl label{margin-bottom:3px}
+    .taxon-ctrl select{min-height:44px;padding:5px 4px;font-size:12px}
     /* 좁은 화면에서는 도움말 말풍선이 240px 이면 오른쪽으로 삐져나가 페이지가 가로로 밀린다.
        버튼이 놓이는 위치를 감안해 폭을 줄인다. */
     .qtip::after{max-width:min(210px,58vw)}
@@ -456,8 +511,7 @@
        데스크톱은 마우스라 기본 크기로 둔다. */
     #map .ol-attribution button,#mapB .ol-attribution button,
     #map .ol-rotate button,#mapB .ol-rotate button{min-width:44px;min-height:44px}
-    .env-ctrl .env-op input{min-height:0}
-    .map-ctrls{z-index:2}
+    .map-ctrls{z-index:2;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 170px)}
     .reg-toggle button{min-height:44px;display:inline-flex;align-items:center}
 
     /* 범례: 줄바꿈 허용 + 컬러바 축소 */
@@ -539,7 +593,6 @@
 
     /* 관심종·CSV 버튼 터치 타깃 */
     .watchbtn{min-height:44px}
-    .nearbybtn{min-height:44px}
     .rdl{min-height:44px;display:inline-flex;align-items:center;padding:5px 14px}
     .panel h2 .dl{min-height:44px;display:inline-flex;align-items:center}
   }
@@ -559,7 +612,6 @@
   .topline{display:flex;align-items:center;gap:10px;margin:22px 0 12px;flex-wrap:wrap}
   .topline .who{font-size:13px;color:var(--muted)}
   .topline .who b{color:var(--ink);font-weight:600}
-  .topline .rem{margin-left:auto;font-size:11.5px;color:var(--faint)}
   .chatbox{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
     padding:16px;min-height:340px;max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
   .intro{color:var(--muted);font-size:13px;line-height:1.6}
@@ -595,37 +647,56 @@
   <header>
     <h1><img src="logo.png" width="177" height="72" alt="Finding gap · 국가 생물종 발견공백"></h1>
     <p class="sub">국가생물종목록(KTSN)을 기준으로, 국내 조사자료에서 <b>아직 발견되지 않은 종</b>을 분류군·지역·시기로 조회합니다.</p>
+    <!-- 계정 · 알림 — 어느 화면에 있든 같은 자리에서 로그인 상태를 보고 오갈 수 있게 상단에 둔다 -->
+    <div class="acct" id="acct" hidden>
+      <button type="button" class="bell" id="notifBtn" hidden aria-label="알림" aria-expanded="false" aria-controls="notifPop">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 8.6c0-3.3-2.7-6-6-6s-6 2.7-6 6c0 6-2.4 7.7-2.4 7.7h16.8S18 14.6 18 8.6Z"/>
+          <path d="M13.7 20.1a2 2 0 0 1-3.4 0"/>
+        </svg>
+        <span class="ndot" id="notifDot" hidden></span>
+      </button>
+      <button type="button" class="who" id="acctBtn">로그인</button>
+      <div class="notifpop" id="notifPop" hidden role="dialog" aria-label="알림"></div>
+    </div>
   </header>
 
   <nav class="axes" id="axes" aria-label="홈 메뉴">
-    <button class="ax on" data-ax="survey">조사정보</button>
-    <button class="ax" data-ax="community">시민과학·마이데이터</button>
+    <button class="ax on" data-ax="survey">지도 서비스</button>
+    <button class="ax" data-ax="community">시민과학</button>
+    <button class="ax" data-ax="my">마이페이지</button>
   </nav>
 
   <section id="view-survey">
-    <section class="tiles" id="tiles" aria-label="관리분류군 선택"></section>
 
   <div class="tabs">
-    <button id="tabA" class="on" onclick="setMode('A')">분류군별 조회</button>
-    <button id="tabB" onclick="setMode('B')">종별 검색</button>
+    <span class="qfield">
+      <input type="search" id="q" placeholder="종 검색 — 국명·학명·초성(예: 수달, Lutra, ㅅㄷ)" autocomplete="off" aria-label="종 검색">
+      <span class="scount" id="sCount"></span>
+    </span>
     <span class="tabsright">
-      <button id="chatToggle" class="sharebtn" type="button" title="발견공백 도우미(대화형)에게 물어보기" onclick="fgChatDrawer.toggle()">💬 대화형 도우미</button>
+      <button id="backA" class="sharebtn" type="button" style="display:none" title="분류군 전체 화면으로 돌아가기" onclick="setMode('A')">← 분류군 전체</button>
       <button id="shareBtn" class="sharebtn" type="button" title="현재 화면을 링크로 공유">🔗 공유</button>
     </span>
   </div>
+
+  <button type="button" class="sfold" id="sFold" style="display:none" aria-expanded="true" aria-controls="sResults">
+    <span class="t">종 목록 접기</span><span class="c" id="sFoldC"></span><span class="ar" aria-hidden="true">▲</span>
+  </button>
+  <div class="sresults" id="sResults" style="display:none"></div>
 
   <!-- ── Mode A: 분류군별 조회 ── -->
   <section id="modeA">
     <div class="controls">
       <div class="field" style="display:none"><label>분류군</label><select id="fTaxon"></select></div>
-      <div class="field"><label>시작 연도</label><select id="fY0"></select></div>
-      <div class="field"><label>종료 연도</label><select id="fY1"></select></div>
+      <div class="field tmf"><label>기간 보기</label>
+        <div class="seg"><button type="button" id="tmDecA" onclick="setTimeMode('A','dec')">10년 단위</button><button type="button" id="tmYrA" class="on" onclick="setTimeMode('A','yr')">연도 지정</button></div>
+      </div>
+      <div class="field" id="fDecF" hidden><label>10년 구간</label><select id="fDec"></select></div>
+      <div class="field" id="fY0F"><label>시작 연도</label><select id="fY0"></select></div>
+      <div class="field" id="fY1F"><label>종료 연도</label><select id="fY1"></select></div>
       <div class="field"><label>발견/미발견</label>
         <div class="seg"><button id="mFound" class="on" onclick="setMetric('found')">발견 종</button><button id="mGap" onclick="setMetric('gap')">미발견 종</button></div>
-      </div>
-      <div class="field"><label>내 위치</label>
-        <button type="button" id="nearbyBtn" class="nearbybtn" title="현재 위치의 시군구 발견공백 보기">📍 내 주변</button>
-        <span class="nearby-msg" id="nearbyMsg"></span>
       </div>
       <div class="field" style="flex:1"><label>선택 지역</label>
         <div class="selchips" id="selChips"><span class="muted">지도에서 시도를 클릭(폴리곤 밖 클릭=전체)</span></div>
@@ -639,7 +710,7 @@
           <span style="margin-left:8px" id="legCap">시도별 발견 종수(짙을수록 많음)</span></div>
       </div>
       <div class="panel">
-        <h2>종 목록 <span class="cnt" id="tblCnt"></span><button class="dl" id="dlCsv">CSV</button></h2>
+        <h2>종 목록 <span class="cnt" id="tblCnt"></span><button class="dl" id="dlCsv" data-gate="login">CSV</button></h2>
         <div class="sortbar">
           <select id="sortSel" aria-label="정렬 기준">
             <option value="n">국명</option>
@@ -661,22 +732,19 @@
   <section id="modeB" style="display:none">
     <div class="controls">
       <div class="field" style="display:none"><label>분류군</label><select id="sTaxon"></select></div>
-      <div class="field"><label>시작 연도</label><select id="sY0"></select></div>
-      <div class="field"><label>종료 연도</label><select id="sY1"></select></div>
-      <div class="field" style="flex:1;min-width:220px"><label>종 검색</label>
-        <input type="search" id="q" placeholder="국명·학명·초성(예: 수달, Lutra, ㅅㄷ)" autocomplete="off">
+      <div class="field tmf"><label>기간 보기</label>
+        <div class="seg"><button type="button" id="tmDecB" onclick="setTimeMode('B','dec')">10년 단위</button><button type="button" id="tmYrB" class="on" onclick="setTimeMode('B','yr')">연도 지정</button></div>
       </div>
-      <div class="field"><label>&nbsp;</label><span class="scount" id="sCount"></span></div>
+      <div class="field" id="sDecF" hidden><label>10년 구간</label><select id="sDec"></select></div>
+      <div class="field" id="sY0F"><label>시작 연도</label><select id="sY0"></select></div>
+      <div class="field" id="sY1F"><label>종료 연도</label><select id="sY1"></select></div>
     </div>
-    <button type="button" class="sfold" id="sFold" style="display:none" aria-expanded="true" aria-controls="sResults">
-      <span class="t">종 목록 접기</span><span class="c" id="sFoldC"></span><span class="ar" aria-hidden="true">▲</span>
-    </button>
-    <div class="sresults" id="sResults" style="display:none"></div>
     <div class="split">
       <div>
         <div id="mapB"><div class="mapmsg" id="mapMsgB">종을 검색·선택하면 발견 지역(시도)이 지도에 표시됩니다.</div></div>
-        <div class="legend"><span>기록</span><span>적음</span><span class="ramp" style="background:linear-gradient(90deg,#d73027,#fee08b,#1a9850)"></span><span>많음</span>
-          <span class="dot" style="background:#cfd3cf;margin-left:10px"></span><span>미발견(공백)</span>
+        <div class="legend"><span>기록</span><span>적음</span><span class="ramp"></span><span>많음</span>
+          <span class="dot dot-pt" style="margin-left:10px"></span><span>발견 지점(1km)</span>
+          <span class="dot dot-none" style="margin-left:10px"></span><span>기록 없음</span>
           <span style="margin-left:8px" id="legCapB" class="muted"></span></div>
         <figure class="repshot" id="repShot" hidden></figure>
       </div>
@@ -715,17 +783,18 @@
     </div>
   </div>
 
-  <div id="view-my">
+  </section>
+
+  <section id="view-my" hidden>
     <div class="vintro">
-      <h2>마이데이터</h2>
-      <p>로그인하면 <b>관심 종</b>을 저장하고, 내가 제보한 관측 이력을 한곳에서 모아 봅니다.</p>
+      <h2>마이페이지</h2>
+      <p>로그인하면 <b>관심 종</b>과 <b>내 활동 지역</b>을 저장하고, 알림과 내 제보 이력을 한곳에서 모아 봅니다.</p>
     </div>
     <div class="soonbox">
       <div class="v">곧 제공</div>
       <div class="l">로그인 · 관심 종 · 내 제보</div>
       <div class="msg">Google 로그인으로 시작하며, 개인 자료는 마이페이지에서만 보입니다. 공개 화면에는 종합된 통계만 표시됩니다.</div>
     </div>
-  </div>
   </section>
 
   <footer id="foot"></footer>
@@ -743,7 +812,22 @@
   </div>
 </div>
 
-<!-- 대화형 도우미 슬라이드 패널 — 조사정보 탭의 #chatToggle로 열림. 지도를 가리지 않고 옆(모바일: 하단)에 뜸 -->
+<!-- 첫 로그인 설정 — 알림은 '어디를 다니며 무엇을 보는 사람인가'를 알아야 만들 수 있다.
+     활동 지역(시군구)과 관심 종을 받기 전에는 닫지 않는다. 나가는 길은 저장 또는 로그아웃뿐이다. -->
+<div class="rpt-overlay" id="obOverlay" hidden>
+  <div class="rpt-modal" role="dialog" aria-modal="true" aria-labelledby="obTitle">
+    <div class="rpt-hd"><h3 id="obTitle">알림 설정</h3></div>
+    <div class="rpt-bd" id="obBody"></div>
+  </div>
+</div>
+
+<!-- 대화형 도우미 — 우하단 고정 버튼으로 열고, 지도를 가리지 않게 옆(모바일: 하단)에 패널이 뜬다 -->
+<button id="chatToggle" class="chatfab" type="button" title="발견공백 도우미에게 물어보기" aria-label="발견공백 도우미 열기" onclick="fgChatDrawer.toggle()">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M20.5 11.4c0 3.9-3.8 7.1-8.5 7.1-1 0-1.9-.13-2.8-.38L4.2 19.8l1.4-3.6c-1.3-1.3-2.1-2.9-2.1-4.8 0-3.9 3.8-7.1 8.5-7.1s8.5 3.2 8.5 7.1Z"/>
+    <path d="M8.6 11.4h.01M12 11.4h.01M15.4 11.4h.01"/>
+  </svg>
+</button>
 <aside id="chatDrawer" aria-hidden="true">
   <div class="chathd"><h3>발견공백 도우미</h3><button class="x" id="chatClose" type="button" aria-label="닫기">&times;</button></div>
   <div class="vintro"><p>지역·분류군·멸종위기 기준으로 <b>아직 기록이 없는 종</b>을 대화로 물어보세요. 답변의 지도 버튼을 누르면 옆의 지도가 바로 갱신됩니다.</p></div>
@@ -823,8 +907,17 @@
   .report-lk{cursor:pointer}
   @media(max-width:880px){ .rpt-overlay{padding:0;align-items:flex-end} .rpt-modal{max-width:none;max-height:94vh;border-radius:14px 14px 0 0} }
 
+  /* 도우미 여는 버튼 — 채팅 서비스에서 통용되는 우하단 고정 자리. 패널이 열리면 그 아래 깔리므로 숨긴다. */
+  .chatfab{position:fixed;right:20px;bottom:20px;z-index:190;width:56px;height:56px;padding:0;border-radius:50%;
+    border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.22)}
+  .chatfab:hover{filter:brightness(1.1)}
+  .chatfab svg{display:block;flex:none}
+  body.chatopen .chatfab,.chatfab[hidden]{display:none}
+  @media(max-width:880px){ .chatfab{right:14px;bottom:14px} }
+
   /* 대화형 도우미 슬라이드 패널 — 지도를 가리지 않고 옆(모바일: 하단)에 뜨는 패널.
-     .tabs(sticky, z-index:100)보다 위, .rpt-overlay(1000)·.toast보다는 아래(제보모달이 패널 위에 뜨도록). */
+     도우미 버튼(190)보다 위, .rpt-overlay(1000)·.toast보다는 아래(제보모달이 패널 위에 뜨도록). */
   #chatDrawer{position:fixed;top:0;right:0;height:100vh;width:min(480px,92vw);background:var(--card);
     border-left:1px solid var(--line);box-shadow:-8px 0 26px rgba(0,0,0,.10);transform:translateX(100%);
     transition:transform .28s ease;z-index:200;display:flex;flex-direction:column}
@@ -853,6 +946,7 @@
 <script src="demo/data/species_interest.js"></script>
 <script src="demo/data/env_meta.js"></script>
 <script src="demo/data/missions.js" onerror="window.__MISSIONS__=window.__MISSIONS__||[]"></script>
+<script src="demo/data/region_gaps.js" onerror="window.__REGGAP__=window.__REGGAP__||null"></script>
 <script>
 /* ── 토큰·상수 ── */
 const RL_FILL={EX:'#000',EW:'#3D2645',RE:'#6B4E71',CR:'#D81E05',EN:'#FC7F3F',VU:'#F2DC00',NT:'#C3D838',LC:'#5CB85C',DD:'#CFCFC4',NENA:'#E6E6DE'};
@@ -869,7 +963,7 @@ const isEndangered=g=>g==='I'||g==='II';
 
 const OBS=window.__OBS__||{};                          // 분류군 메타({years,sidos,…}); obs 배열은 선택 시 지연 로드
 const OMETA=window.__OBSMETA__||{};
-const ENVMETA=window.__ENVMETA__||null;               // 환경변수 메타(5변수·전국기준 분포·지도 레이어)
+const ENVMETA=window.__ENVMETA__||null;               // 환경변수 메타(전국 기준 분포) — 고도 막대·환경적합 후보 판정에만 쓴다
 let ENV=window.__ENV__||null, _envCbs=null;           // 종별 환경 5수치([15]) — 종 카드에서만 쓰므로 지연 로드
 function ensureEnv(cb){
   if(window.__ENV__){ ENV=window.__ENV__; cb&&cb(); return; }
@@ -943,7 +1037,6 @@ const shortSido=s=>SIDO_ABBR[s]||(s||'').replace(/(특별자치도|특별자치�
 /* ═══════ 공유 상태 ═══════ */
 let map=null, sidoLayer=null, SIDO_NAMES=[], mapMode='A';   // sidoLayer = 활성 경계 레이어(토글 시 재지정)
 const DEEPLINK={};                                          // 딥링크 대기값(경계 레이어 로드 후 반영): {sigungu}
-const ENVLAYERS={}; let envActive='', envOpacity=0.7, envCtrlEl=null;   // 지도 환경변수 래스터(폴리곤 아래)
 function fmtVal(x,v){ return v && v.dec ? (+x).toFixed(v.dec) : Math.round(+x).toLocaleString('en-US'); }
 let regLevel='sido', regToggleEl=null;                     // 행정구역 표시 레벨(시도 ⇄ 시군구)
 let polyVisible=true, polyToggleEl=null;                   // 지역 경계 폴리곤 표시/숨김(검색 필터와 무관·시각화만)
@@ -966,7 +1059,9 @@ function rname(code){ if(isUnknownReg(code)) return '좌표미상';
    엔벨로프는 이미 로드된 __ENV__(종 분위수)로 즉석 산출 → 별도 자산 불필요. */
 let GRID=null, GAPMETA=null, GIDX=null, spView='found', GAPRES=null;   // spView: 종카드 우측 표 전환(발견/미발견)
 let gapLayer=null, gapSource=null;                                     // 후보셀 Canvas2D Vector 레이어(모드 B·gap 뷰)
-const GAP_COL={new:'#1a9641', old:'#e08214', recent:'#9fb0a8'};        // 신규후보·재발견후보·최근발견
+let cellLayer=null, cellSource=null, CELLN=0;                          // 발견 1km 격자 중심점(모드 B·발견 뷰·일반종)
+let meLayer=null, meSource=null;                                       // 내 위치 표시점
+const GAP_COL={new:'#FF8F00', old:'#A85A00', recent:'#9fb0a8'};        // 신규후보(주황)·재발견후보(짙은 주황)·최근발견(회색)
 const GAP_OPA={0:0.85, 1:0.8, 2:0.55};                                 // st별 채움 불투명도
 const _hexA=(h,a)=>{ const n=parseInt(h.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; };
 const GAP_MODEL=['bio01','bio06','bio12','dem','ndvi'];                // 전 종 공통(ndwi 는 수생 종만 추가)
@@ -1066,6 +1161,52 @@ function updateGapMap(res){                               // 후보셀 → Vecto
       const f=new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([lo,la]))); f.set('st',st); return f; }));
   }
 }
+/* 일반종의 발견 위치는 시군구를 통째로 칠하는 것보다 1km 격자가 실제에 가깝다 — 후보 추정에 쓰는 단위와도 같다.
+   멸종위기종은 정밀한 위치가 채집으로 이어질 수 있어 지금처럼 지역 단위로만 둔다.
+   격자 좌표(env_grid)와 종별 점유(cells_<T>)는 무거워, 발견 뷰에 들어온 뒤 배경으로 받아 오는 대로 바꿔 그린다. */
+function cellPoints(sp,a,b){
+  const rec=((window.__CELLS__||{})[sp.t]||{})[sp.k];
+  if(!rec||!GRID||!GIDX) return [];
+  const S=GRID.scale||{}, LON=GRID.lon||[], LAT=GRID.lat||[], sx=S.lon||1, sy=S.lat||1;
+  const cs=rec.c||[], ys=rec.y||[], out=[];
+  for(let j=0;j<cs.length;j++){
+    const yr=ys[j];                                       // 셀별 최근 관측 연도
+    if((a!=null&&yr<a)||(b!=null&&yr>b)) continue;
+    const i=GIDX.get(cs[j]); if(i==null) continue;
+    out.push([LON[i]/sx, LAT[i]/sy]);
+  }
+  return out;
+}
+/* 1km 칸은 전국 줌에서 화면상 1px 남짓이라, 점을 찍으면 실제보다 넓은 면적을 발견한 것처럼 보인다.
+   줌 9(칸이 4px 안팎)부터 켜고 그 아래에서는 지역 단계색으로 되돌린다. */
+const CELL_MIN_Z=9;
+let _cellReq=0, _cellArmed=false;
+function cellZoomOK(){ return !map || map.getView().getZoom()>=CELL_MIN_Z; }
+function cellsShown(){ return !!(cellLayer&&cellLayer.getVisible()); }
+function cellsPending(){ return _cellArmed && CELLN>0 && !cellZoomOK(); }   // 칸은 있는데 줌이 모자란 상태
+function applyCellVis(){
+  if(!cellLayer) return;
+  const on=_cellArmed && CELLN>0 && cellZoomOK();
+  if(on!==cellLayer.getVisible()) cellLayer.setVisible(on);
+  refreshSpeciesMap();                                    // 범례 문구 갱신 + 경계 채움을 다시 계산한다
+}
+function syncCellLayer(){
+  if(!cellLayer||!cellSource) return;
+  const sp=selSpecies;
+  _cellArmed = !!(mapMode==='B' && spView==='found' && sp && !isEndangered(sp.g));
+  if(!_cellArmed){ CELLN=0; cellSource.clear(); cellLayer.setVisible(false); return; }
+  const req=++_cellReq;
+  const draw=()=>{
+    if(req!==_cellReq || selSpecies!==sp) return;         // 그 사이 종·뷰가 바뀌었으면 버린다
+    const pts=cellPoints(sp,sy0,sy1);
+    cellSource.clear();
+    cellSource.addFeatures(pts.map(p=>new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat(p)))));
+    CELLN=pts.length;
+    applyCellVis();
+  };
+  if(GRID&&GIDX&&cellsReady(sp.t)) draw();
+  else { CELLN=0; cellLayer.setVisible(false); ensureGap(()=>loadCells(sp.t, draw)); }
+}
 let gapSortDir=-1;                                        // 적합지 비율표 정렬(기본 비율 내림차순)
 function gapTable(res){
   if(res.gated) return `<div id="gapHost"><span class="muted">관측 기록이 ${nf(res.n||0)}건으로 적어 환경적합 후보를 제공하지 않습니다(표본 부족).</span></div>`;
@@ -1106,6 +1247,7 @@ function setSpView(v){                                    // 발견/미발견 �
 }
 function renderSpView(){                                  // 우측 표 + 지도(발견 강조 ⇄ 후보셀) 전환
   const host=document.getElementById('spViewHost'); if(!host||!selSpecies) return;
+  syncCellLayer();
   if(spView==='found'){
     GAPRES=null; host.innerHTML=speciesRegionTable(selSpecies);
     if(gapLayer) gapLayer.setVisible(false); updateGapMap(null); refreshSpeciesMap();
@@ -1122,45 +1264,46 @@ function renderSpView(){                                  // 우측 표 + 지도
 }
 
 /* ═══════ 공유 지도(모드 A·B 재사용, setTarget 전환) ═══════ */
-/* 발견공백 다색 램프: 초록(잘 조사됨)→노랑→빨강(주목). 방향은 metric 따라 반전 —
-   공백(gap) 클수록·발견(found) 적을수록 빨강. 단색 대비 값 구간 시인성↑. */
-const RYG=[[26,152,80],[254,224,139],[215,48,39]];     // green·yellow·red (RdYlGn 계열)
-function ryg(s,a){                                      // s:0 초록 → .5 노랑 → 1 빨강
-  s=s<0?0:s>1?1:s; const i=s<0.5?0:1, u=s<0.5?s/0.5:(s-0.5)/0.5, c=RYG[i], d=RYG[i+1], L=(x,y)=>Math.round(x+(y-x)*u);
+/* 밀도 램프: 옅은 노랑(낮음)→연두(중간)→진초록(높음). 값의 크기를 그대로 읽으므로
+   발견이든 미발견이든 짙을수록 많다 — 지표에 따라 방향이 뒤집히지 않는다.
+   지점·후보는 이 초록 계열과 겹치지 않는 주황을 써서 배경 위에서 바로 구분된다. */
+const DENS=[[255,245,157],[124,179,66],[30,86,49]];    // #FFF59D · #7CB342 · #1E5631
+function dens(s,a){                                     // s:0 낮음 → .5 중간 → 1 높음
+  s=s<0?0:s>1?1:s; const i=s<0.5?0:1, u=s<0.5?s/0.5:(s-0.5)/0.5, c=DENS[i], d=DENS[i+1], L=(x,y)=>Math.round(x+(y-x)*u);
   return `rgba(${L(c[0],d[0])},${L(c[1],d[1])},${L(c[2],d[2])},${a})`;
 }
-function rygScale(v){                                   // 값 v(현 metric)→램프 위치 s(발견은 반전)
-  const t=DOM.max<=DOM.min?0:(v-DOM.min)/(DOM.max-DOM.min);
-  return metric==='found'?1-t:t;
+function densScale(v){                                  // 값 v(현 metric)→램프 위치 s
+  return DOM.max<=DOM.min?0:(v-DOM.min)/(DOM.max-DOM.min);
 }
-function colorFor(v){ return ryg(rygScale(v),0.82); }
-function regLabel(txt){
+function colorFor(v){ return dens(densScale(v),0.82); }
+function regLabel(txt,onDark){                          // 짙은 채움 위에서는 글자를 뒤집어야 읽힌다
   return new ol.style.Text({text:txt,font:'11px system-ui,sans-serif',
-    fill:new ol.style.Fill({color:'#1b201d'}),stroke:new ol.style.Stroke({color:'#ffffff',width:2.4})});
+    fill:new ol.style.Fill({color:onDark?'#ffffff':'#1b201d'}),
+    stroke:new ol.style.Stroke({color:onDark?'rgba(12,42,26,0.92)':'#ffffff',width:2.6})});
 }
+/* 경계선이 채움에 먹히지 않게 두 장으로 나눈다 — 채움은 zIndex 0, 선·라벨은 1.
+   OL은 zIndex 순으로 그리므로 모든 지역의 채움이 먼저 깔린 뒤 선이 위에 얹힌다.
+   선 색은 자기 채움의 밝기에 맞춰 뒤집어, 연노랑에서도 진초록에서도 경계가 보인다. */
 function styleFn(feature){
   const code=feature.get('code');
-  // 시군구는 252개라 전국 줌에선 라벨 생략(혼잡) → 줌인·선택 시에만 표시. 시도는 항상.
-  const showLabel = regLevel==='sido' || (map&&map.getView().getZoom()>=8.5) || selSidos.has(code);
-  const txt = showLabel ? regLabel(rname(code)) : undefined;
-  if(mapMode==='B'){                                    // 선택 종 발견 지역 강조
-    if(spView==='gap'){                                 // 미발견(후보셀) 뷰 = 경계는 채움없이 윤곽만(셀이 가려지지 않게)
-      return new ol.style.Style({
-        fill:new ol.style.Fill({color:'rgba(0,0,0,0)'}),
-        stroke:new ol.style.Stroke({color:'#9aa39c', width:0.6}), text:txt});
+  const sel=selSidos.has(code), selA=sel&&mapMode==='A';   // 선택 강조는 지역 선택이 있는 모드 A에서만
+  let s=-1;                                             // -1 = 값 없음(바탕만 옅게)
+  if(mapMode==='B'){
+    if(spView!=='gap' && !cellsShown()){                 // 점을 그리는 뷰에서는 폴리곤을 바탕으로만 둔다
+      const c=selRegions.get(code)||0;
+      if(c>0) s=selRegMax>0?Math.min(1,c/selRegMax):0;
     }
-    const c=selRegions.get(code)||0, has=c>0;
-    const t=selRegMax>0?Math.min(1,c/selRegMax):0;
-    return new ol.style.Style({
-      fill:new ol.style.Fill({color:has?ryg(1-t,0.82):'rgba(206,211,206,0.30)'}),   // 모드 A와 동일 팔레트: 기록 많음(t=1)=초록·적음=빨강
-      stroke:new ol.style.Stroke({color:has?'#7a837c':'#9aa39c', width:has?1:0.6}),   // 발견 지역만 약간 진한 회색 윤곽(색은 채움이 전달)
-      text:txt});
-  }
-  const v=METRIC.get(code)||0, sel=selSidos.has(code);  // 모드 A choropleth
-  return new ol.style.Style({
-    fill:new ol.style.Fill({color:colorFor(v)}),
-    stroke:new ol.style.Stroke({color:sel?'#015543':'#9aa39c', width:sel?1.4:0.6}),   // 시도·시군구 동일 회색 얇게·선택만 accent
-    text:txt});
+  } else s=densScale(METRIC.get(code)||0);
+  const onDark=s>=0.55;
+  return [
+    new ol.style.Style({zIndex:0,
+      fill:new ol.style.Fill({color:s<0?'rgba(255,252,235,0.35)':dens(s,0.85)})}),
+    new ol.style.Style({zIndex:1,
+      stroke:new ol.style.Stroke({color:selA?'#015543':(onDark?'rgba(255,255,255,0.82)':'#4a5a4e'),
+        width:selA?2.2:1.1}),
+      // 시군구는 252개라 전국 줌에선 라벨 생략(혼잡) → 줌인·선택 시에만 표시. 시도는 항상.
+      text:(regLevel==='sido'||(map&&map.getView().getZoom()>=8.5)||sel)?regLabel(rname(code),onDark):undefined})
+  ];
 }
 function initMap(){
   if(typeof ol==='undefined'){ mapMsg.textContent='지도 라이브러리를 불러오지 못했습니다(네트워크 확인).'; return; }
@@ -1179,7 +1322,6 @@ function initMap(){
       console.warn(`vworld 타일 로드 실패(도메인 ${location.host} 미등록 가능) — OpenStreetMap 배경으로 전환.`); }});
     layers.push(vlayer);
   }
-  initEnvLayers(layers);                                 // 환경변수 래스터(폴리곤 아래·배경 위)
   gapSource=new ol.source.Vector();                      // 발견공백 A 후보셀 — 경계보다 아래(Canvas2D Vector)
   const _gapSty={};                                      // st별 사각형 스타일 캐시(WebGLPoints 는 이 지도서 미합성 → Vector)
   for(const st of [0,1,2]) _gapSty[st]=new ol.style.Style({image:new ol.style.RegularShape({
@@ -1192,13 +1334,30 @@ function initMap(){
   LAYERS.sigungu=new ol.layer.Vector({source:new ol.source.Vector(),style:styleFn,visible:false});
   sidoLayer=LAYERS.sido;
   layers.push(LAYERS.sido, LAYERS.sigungu);
+  cellSource=new ol.source.Vector();                     // 발견 격자 — 경계 채움에 가려지므로 경계보다 위에 얹는다
+  cellLayer=new ol.layer.Vector({source:cellSource, visible:false,
+    style:new ol.style.Style({image:new ol.style.Circle({radius:3.2,
+      fill:new ol.style.Fill({color:'rgba(255,143,0,0.92)'}),
+      stroke:new ol.style.Stroke({color:'rgba(74,40,0,0.85)',width:0.8})})})});
+  layers.push(cellLayer);
+  meSource=new ol.source.Vector();                       // 내 위치 — 무엇에도 가려지지 않게 맨 위
+  meLayer=new ol.layer.Vector({source:meSource, visible:false,
+    style:new ol.style.Style({image:new ol.style.Circle({radius:6.5,
+      fill:new ol.style.Fill({color:'#d6312b'}),
+      stroke:new ol.style.Stroke({color:'#ffffff',width:2.4})})})});
+  layers.push(meLayer);
   map=new ol.Map({target:'map',layers,controls:ol.control.defaults.defaults({attribution:true}),
     interactions:mapInteractions(),
     view:new ol.View({center:ol.proj.fromLonLat([127.8,36.1]),zoom:6.6,minZoom:5,maxZoom:12,
       // 국내 조회 서비스이므로 지도 중심이 한반도 밖으로 나가지 못하게 묶는다.
       // (중심만 제한 — 축소해서 주변 나라까지 보는 것은 그대로 된다)
       extent:KOREA_EXTENT, constrainOnlyCenter:true})});
-  addRegToggle(); addEnvCtrl(); addWheelHint();
+  addTaxonCtrl(); addRegToggle(); addLocateCtrl(); addWheelHint();
+  let _cellZ=cellZoomOK();                               // 줌 경계를 넘을 때만 다시 그린다(줌 애니메이션마다 갱신하면 무겁다)
+  map.getView().on('change:resolution',()=>{
+    const ok=cellZoomOK(); if(ok===_cellZ) return; _cellZ=ok;
+    if(_cellArmed) applyCellVis();
+  });
   Promise.all([
     fetch('demo/data/sido.geojson').then(r=>r.json()),
     fetch('demo/data/sigungu.geojson').then(r=>r.json())
@@ -1262,6 +1421,36 @@ function resetMapView(){                                  // 확대해 들어간
   map.getView().setCenter(ol.proj.fromLonLat([127.8,36.1]));
   map.getView().setZoom(6.6);
 }
+/* 분류군 필터 — 지도 좌상단. 조회 대상(관리분류군)을 지도를 보면서 바꾼다.
+   종별 검색(모드 B)은 분류군과 무관하므로 그때는 숨긴다. */
+let taxonCtrlEl=null, taxonSelEl=null;
+function addTaxonCtrl(){
+  const el=document.createElement('div'); el.className='ol-unselectable taxon-ctrl';
+  el.innerHTML='<label for="mTaxon">분류군</label><select id="mTaxon"></select>';
+  const sel=el.querySelector('select');
+  sel.addEventListener('change',()=>select(sel.value,false));
+  map.addControl(new ol.control.Control({element:el}));
+  taxonCtrlEl=el; taxonSelEl=sel; fillTaxonCtrl();
+}
+function fillTaxonCtrl(){
+  const all=window.__TAXA__||[];              // 수집예정 분류군도 남겨 두되 고를 수는 없게 한다(지도에 그릴 자료가 없다)
+  if(!taxonSelEl || !all.length) return;
+  taxonSelEl.innerHTML=all.map(t=>
+    `<option value="${t.group}"${t.has_data?'':' disabled'}>${t.kor}${t.has_data?'':' · 수집예정'}</option>`).join('');
+  if(curTaxon) taxonSelEl.value=curTaxon;
+}
+/* 내 위치 — 지도 우하단 조준점 버튼. 지도 서비스에서 통용되는 자리·아이콘이라 설명 없이도 찾는다. */
+let locateBtnEl=null;
+function addLocateCtrl(){
+  const el=document.createElement('div'); el.className='ol-unselectable locate-ctrl';
+  el.innerHTML='<button type="button" title="현재 위치의 시군구 발견공백 보기" aria-label="내 위치">'+
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">'+
+    '<circle cx="12" cy="12" r="6.3"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/>'+
+    '<path d="M12 1.7v3.3M12 19v3.3M1.7 12H5M19 12h3.3"/></svg></button>';
+  locateBtnEl=el.querySelector('button');
+  locateBtnEl.addEventListener('click',locateNearby);
+  map.addControl(new ol.control.Control({element:el}));
+}
 function addRegToggle(){                                  // 지도 안 컨트롤: 시도/시군구 레벨 토글 + 지역 경계 표시 토글
   const wrap=document.createElement('div'); wrap.className='ol-unselectable map-ctrls';
   const lvl=document.createElement('div'); lvl.className='reg-toggle';
@@ -1297,15 +1486,22 @@ function setRegLevel(l){
 }
 /* 내 주변: 현재 위치(geolocation) → 포함 시군구 폴리곤 판정 → 해당 시군구 미발견(공백) 표출.
    위치는 클라이언트에서만 사용(전송·저장 없음), 기존 시군구 레벨/선택/확대 기계 재사용. */
-function nearbyMsg(t,ok){ const el=document.getElementById('nearbyMsg'); if(el){ el.textContent=t||''; el.className='nearby-msg'+(ok?' ok':''); } }
+function nearbyMsg(t,ok){ if(t) toast(t); if(locateBtnEl) locateBtnEl.classList.toggle('on',!!ok); }
+function showMeDot(coord){
+  if(!meSource||!meLayer) return;
+  meSource.clear();
+  meSource.addFeature(new ol.Feature(new ol.geom.Point(coord)));
+  meLayer.setVisible(true);
+}
 function locateNearby(){
-  const btn=document.getElementById('nearbyBtn');
+  const btn=locateBtnEl;
   if(!('geolocation' in navigator)){ nearbyMsg('이 브라우저는 위치를 지원하지 않습니다.'); return; }
   if(!LAYERS.sigungu || !LAYERS.sigungu.getSource().getFeatures().length){ nearbyMsg('지도를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'); return; }
   if(btn) btn.disabled=true; nearbyMsg('위치 확인 중…', true);
   navigator.geolocation.getCurrentPosition(pos=>{
     if(btn) btn.disabled=false;
     const coord=ol.proj.fromLonLat([pos.coords.longitude, pos.coords.latitude]);
+    showMeDot(coord);                                       // 경계 밖이어도 위치는 찍어 준다 — 왜 결과가 없는지 보이도록
     const hit=LAYERS.sigungu.getSource().getFeatures().find(f=>{ const g=f.getGeometry(); return g && g.intersectsCoordinate(coord); });
     if(!hit){ nearbyMsg('현재 위치가 국내 시군구 경계 밖입니다.'); return; }
     const code=hit.get('code');
@@ -1345,6 +1541,14 @@ function toast(msg){
   el.textContent=msg; el.classList.add('show');
   clearTimeout(_toastT); _toastT=setTimeout(()=>el.classList.remove('show'), 2200);
 }
+/* 자료를 내려받는 통로는 로그인한 이용자에게만 연다 — 누가 무엇을 받아 갔는지 남아야
+   이후 갱신 안내와 이용 통계가 성립한다. Supabase 미설정 배포에서는 막을 수단이 없으므로 그대로 통과시킨다. */
+function requireLogin(what){
+  if(!window.fgAuthConfigured || window.fgUser) return true;
+  window.fgTrack && fgTrack('login_gate',{what});
+  if(window.fgGoLogin) fgGoLogin(`${what}는 로그인 후 이용할 수 있습니다`);
+  return false;
+}
 async function shareView(){
   const url=buildShareURL();
   window.fgTrack && fgTrack('share_view',{mode:mapMode});
@@ -1352,53 +1556,6 @@ async function shareView(){
   try{ await navigator.clipboard.writeText(url); toast('링크를 복사했습니다'); }
   catch(_){ toast('복사할 수 없어요 — 주소창에서 복사해 주세요'); }
 }
-/* 지도 오버레이로 내보내는 환경변수. ENVMETA.vars 자체는 줄이지 않는다 —
-   __ENV__ 행이 vars 순서의 인덱스로 값을 담고 있어 목록을 줄이면 종 카드·엔벨로프가 어긋난다. */
-const MAP_ENV=['bio01','bio12','dem','ndvi'];
-function initEnvLayers(layers){                           // ImageStatic 오버레이(EPSG:3857) — 변수당 1장, 기본 숨김
-  if(!ENVMETA||!ENVMETA.layers) return;
-  for(const v of ENVMETA.vars){
-    if(!MAP_ENV.includes(v.key)) continue;
-    const L=ENVMETA.layers[v.key]; if(!L) continue;
-    const img=new ol.layer.Image({visible:false, opacity:envOpacity,
-      source:new ol.source.ImageStatic({url:'demo/data/'+L.png, imageExtent:L.extent, projection:'EPSG:3857'})});
-    ENVLAYERS[v.key]=img; layers.push(img);
-  }
-}
-function addEnvCtrl(){                                     // 지도 좌상단: 변수 선택 + 범례 + 투명도
-  if(!ENVMETA||!ENVMETA.vars||!ENVMETA.vars.length) return;
-  const mv=ENVMETA.vars.filter(v=>MAP_ENV.includes(v.key)); if(!mv.length) return;
-  const el=document.createElement('div'); el.className='ol-unselectable env-ctrl';
-  const opts=['<option value="">환경변수 끄기</option>']
-    .concat(mv.map(v=>`<option value="${v.key}">${v.label}</option>`)).join('');
-  const op=Math.round(envOpacity*100);
-  el.innerHTML=`<select id="envSel">${opts}</select>
-    <div class="env-legend" id="envLegend">
-      <div class="env-grad" id="envGrad"></div>
-      <div class="env-scale"><span id="envLo"></span><span id="envUnit"></span><span id="envHi"></span></div>
-      <div class="env-op">투명도<input type="range" id="envOp" min="20" max="100" value="${op}"><span id="envOpV">${op}%</span></div>
-    </div>`;
-  el.addEventListener('change',e=>{ if(e.target.id==='envSel') setEnvLayer(e.target.value); });
-  el.addEventListener('input',e=>{ if(e.target.id==='envOp'){
-    envOpacity=(+e.target.value)/100; document.getElementById('envOpV').textContent=e.target.value+'%';
-    if(envActive&&ENVLAYERS[envActive]) ENVLAYERS[envActive].setOpacity(envOpacity); } });
-  map.addControl(new ol.control.Control({element:el})); envCtrlEl=el;
-}
-function setEnvLayer(key){
-  for(const k in ENVLAYERS) ENVLAYERS[k].setVisible(false);
-  envActive=key||'';
-  const leg=document.getElementById('envLegend');
-  if(!key||!ENVLAYERS[key]){ if(leg)leg.classList.remove('on'); return; }
-  const L=ENVMETA.layers[key], v=ENVMETA.vars.find(x=>x.key===key);
-  ENVLAYERS[key].setOpacity(envOpacity); ENVLAYERS[key].setVisible(true);
-  if(leg){ leg.classList.add('on');
-    document.getElementById('envGrad').style.background='linear-gradient(90deg,'+L.palette.join(',')+')';
-    document.getElementById('envLo').textContent=fmtVal(L.vmin,v);
-    document.getElementById('envHi').textContent=fmtVal(L.vmax,v);
-    document.getElementById('envUnit').textContent=v.unit;
-  }
-}
-
 /* ═══════ Mode A: 분류군별 조회 ═══════ */
 function obsA(){ return (OBS[curTaxon]&&OBS[curTaxon].obs)||[]; }
 function spA(){ return SP_BY_TAX[curTaxon]||[]; }
@@ -1415,6 +1572,55 @@ function fillYearSels(){
   fY1.innerHTML=ys.map(y=>`<option>${y}</option>`).join('');
   if(y0==null||!ys.includes(y0)){y0=ys[0];} if(y1==null||!ys.includes(y1)){y1=ys[ys.length-1];}
   fY0.value=y0; fY1.value=y1;
+  fillDecSel(fDec, ys);
+  if(timeMode.A==='dec') applyDecade('A');
+}
+/* 기간은 두 가지로 본다 — 10년 단위(연대별 흐름을 훑을 때)와 연도 지정(구간을 좁힐 때).
+   연대 목록은 자료에 실제로 있는 연도에서만 만들고, 양 끝은 자료 범위로 잘라
+   "1900–1909" 처럼 관측이 하나도 없는 구간이 생기지 않게 한다. */
+const timeMode={A:'yr', B:'yr'};
+function decBins(ys){                                    // 연대 → 그 연대에 실제로 있는 [첫 해, 끝 해]
+  const m=new Map();
+  ys.forEach(y=>{ const d=Math.floor(y/10)*10, r=m.get(d);
+    if(!r) m.set(d,[y,y]); else { if(y<r[0])r[0]=y; if(y>r[1])r[1]=y; } });
+  return [...m.entries()].sort((a,b)=>a[0]-b[0]);
+}
+function fillDecSel(sel, ys){
+  if(!sel||!ys.length) return;
+  const bins=decBins(ys), keep=sel.value;
+  sel.innerHTML=`<option value="">전체 기간(${ys[0]}–${ys[ys.length-1]})</option>`+
+    bins.map(([d,r])=>`<option value="${d}">${r[0]}–${r[1]}</option>`).join('');
+  if(keep && bins.some(([d])=>d===+keep)) sel.value=keep;
+}
+function decadeRange(which){                             // 선택 칸이 비지 않도록 자료에 있는 연도로 맞춘다
+  const ys=which==='A'?years():searchYears();
+  if(!ys.length) return null;
+  const sel=which==='A'?fDec:sDec, d=sel?sel.value:'';
+  if(d==='') return [ys[0], ys[ys.length-1]];
+  const bin=decBins(ys).find(([k])=>k===+d);
+  return bin?bin[1].slice():[ys[0], ys[ys.length-1]];
+}
+function applyDecade(which){
+  const r=decadeRange(which); if(!r) return;
+  if(which==='A'){
+    y0=r[0]; y1=r[1]; fY0.value=y0; fY1.value=y1;
+    recompute(); if(sidoLayer)sidoLayer.changed(); renderTable();
+  } else {
+    sy0=r[0]; sy1=r[1]; sY0.value=sy0; sY1.value=sy1;
+    if(selSpecies) showSpecies(selSpecies);
+  }
+}
+function setTimeMode(which,m){
+  timeMode[which]=m;
+  const dec=m==='dec', id=x=>document.getElementById(x), A=which==='A';
+  const bd=id(A?'tmDecA':'tmDecB'), by=id(A?'tmYrA':'tmYrB');
+  if(bd) bd.classList.toggle('on',dec); if(by) by.classList.toggle('on',!dec);
+  const wrap=[id(A?'fDecF':'sDecF'), id(A?'fY0F':'sY0F'), id(A?'fY1F':'sY1F')];
+  if(wrap[0]) wrap[0].hidden=!dec;
+  if(wrap[1]) wrap[1].hidden=dec;
+  if(wrap[2]) wrap[2].hidden=dec;
+  if(dec) applyDecade(which);
+  window.fgTrack && fgTrack('time_mode',{mode:m});
 }
 function recompute(){
   const obs=obsA(), total=spA().length;
@@ -1427,11 +1633,9 @@ function recompute(){
   const vals=[...METRIC.values()]; DOM={min:Math.min(0,...vals), max:Math.max(1,...vals)};
   legLo.textContent=nf(DOM.min); legHi.textContent=nf(DOM.max);
   const lvl=regLevel==='sido'?'시도별':'시군구별';
-  const rampEl=document.querySelector('#modeA .ramp');   // 램프 방향도 metric 따라 반전(좌=legLo·우=legHi 값 색과 일치). mode B 램프와 분리
-  if(rampEl) rampEl.style.background = metric==='found'
-    ? `linear-gradient(90deg,${ryg(1,1)},${ryg(.5,1)},${ryg(0,1)})`   // 발견: 적음(빨강)→많음(초록)
-    : `linear-gradient(90deg,${ryg(0,1)},${ryg(.5,1)},${ryg(1,1)})`;  // 공백: 작음(초록)→큼(빨강)
-  legCap.textContent= metric==='found'?`${lvl} 발견 종수 — 초록 많음·빨강 적음`:`${lvl} 미발견(공백) — 빨강 큼·초록 작음`;
+  const rampEl=document.querySelector('#modeA .ramp');   // 램프는 항상 좌=작은 값·우=큰 값(좌 legLo·우 legHi 와 같은 방향)
+  if(rampEl) rampEl.style.background=`linear-gradient(90deg,${dens(0,1)},${dens(.5,1)},${dens(1,1)})`;
+  legCap.textContent= metric==='found'?`${lvl} 발견 종수 — 짙을수록 많음`:`${lvl} 미발견(공백) 종수 — 짙을수록 많음`;
 }
 function renderSelChips(){
   if(!selSidos.size){ selChips.innerHTML=`<span class="muted">지도에서 ${regLevel==='sido'?'시도':'시군구'}를 클릭(폴리곤 밖 클릭=전체)</span>`; return; }
@@ -1518,6 +1722,7 @@ function syncSortBar(){
 }
 
 function downloadCSV(){
+  if(!requireLogin('종 목록 내려받기')) return;
   const all=tableRows();
   const rows= metric==='found' ? all.filter(r=>r.found) : all.filter(r=>!r.found);   // 화면 필터와 동일
   const head=['국명','학명','멸종위기등급','적색목록','관심도','관측수'];
@@ -1532,6 +1737,24 @@ function downloadCSV(){
 /* ═══════ Mode B: 종별 검색(분류군·연도 필터 + 지도) ═══════ */
 const CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
 function toCho(str){ let o=''; for(const ch of str){ const c=ch.charCodeAt(0)-0xAC00; o+=(c>=0&&c<11172)?CHO[Math.floor(c/588)]:ch; } return o; }
+/* 검색창 예시는 지금 보고 있는 분류군의 대표 종으로 바꾼다 — 이 창으로 무엇을 찾을 수 있는지 예시가 알려 준다.
+   이름은 실제 종 목록에 있는지 확인하고 쓰고, 없으면 그 분류군의 첫 종으로 대신한다(예시가 검색되지 않으면 예시가 아니다). */
+const REP_SPECIES={IN:'장수하늘소',IV:'대추귀고둥',VP:'소나무','-P':'쉬리',MS:'물이끼',AV:'저어새',MM:'수달',RP:'남생이',AM:'맹꽁이'};
+function repSpeciesOf(group){
+  const pool=SP_BY_TAX[group]||[];
+  if(!pool.length) return null;
+  const want=REP_SPECIES[group];
+  return (want && pool.find(sp=>sp.n===want)) || pool.find(sp=>sp.n) || pool[0];
+}
+function syncSearchHint(group){
+  const el=document.getElementById('q'); if(!el) return;
+  const sp=repSpeciesOf(group);
+  if(!sp){ el.placeholder='종 검색 — 국명·학명·초성'; return; }
+  const genus=(sp.s||'').split(' ')[0];
+  const ex=[sp.n||sp.s, genus, sp.n?toCho(sp.n):''].filter(Boolean).join(', ');
+  el.placeholder=`종 검색 — 국명·학명·초성(예: ${ex})`;
+}
+window.fgSyncSearchHint=syncSearchHint;
 function fillSearchTaxon(){
   sTaxon.innerHTML='<option value="">전체 분류군</option>'+TAXA.map(t=>`<option value="${t.group}">${t.kor}</option>`).join('');
   sTaxon.value=sTax;
@@ -1545,6 +1768,8 @@ function fillSearchYears(){
   sY1.innerHTML=ys.map(y=>`<option>${y}</option>`).join('');
   if(sy0==null||!ys.includes(sy0))sy0=ys[0]; if(sy1==null||!ys.includes(sy1))sy1=ys[ys.length-1];
   sY0.value=sy0; sY1.value=sy1;
+  fillDecSel(sDec, ys);
+  if(timeMode.B==='dec') applyDecade('B');
 }
 function speciesRegions(sp,a,b){
   const m=new Map(), rows=(OBS[sp.t]&&OBS[sp.t].obs)||[];
@@ -1596,12 +1821,17 @@ function refreshSpeciesMap(){
   if(legCapB){
     if(gapOn && GAPRES && !GAPRES.gated){ const c=GAPRES.counts;
       legCapB.textContent=`${selSpecies.n||selSpecies.s} · 신규후보 ${nf(c.new)} · 재발견후보 ${nf(c.old)} · 최근발견 ${nf(c.recent)} (1km)`; }
+    else if(selSpecies && cellsShown())
+      legCapB.textContent=`${selSpecies.n||selSpecies.s} · ${sy0}–${sy1} 발견 1km 격자 ${nf(CELLN)}칸`;
+    else if(selSpecies && cellsPending())
+      legCapB.textContent=`${selSpecies.n||selSpecies.s} · ${sy0}–${sy1} 발견 1km 격자 ${nf(CELLN)}칸 — 더 확대하면 지점으로 보입니다`;
     else legCapB.textContent=selSpecies?`${selSpecies.n||selSpecies.s} · ${sy0}–${sy1} 발견 ${regLevel==='sido'?'시도':'시군구'} ${hit}곳`:'';
   }
   if(mapMsgB) mapMsgB.style.display=selSpecies?'none':'';
   if(mapMode==='B'&&sidoLayer) sidoLayer.changed();
 }
 function showSpecies(sp){                                // 선택 종의 분류군 obs 를 보장 로드 후 렌더
+  if(mapMode!=='B') setMode('B');                        // 검색은 어느 화면에서든 하므로, 종을 고른 순간 종별 화면으로 넘긴다
   if(window.innerWidth<=880) setFold(true);              // 고른 뒤에는 목록이 길을 막는다 — 접어서 아래를 연다
   if(!taxonReady(sp.t)||!window.__ENV__) sCard.innerHTML='<div class="scard"><span class="muted">관측자료 불러오는 중…</span></div>';
   ensureEnv(()=>loadTaxon(sp.t, ()=>loadSeason(sp.t, ()=>renderSpecies(sp))));
@@ -1641,10 +1871,11 @@ function speciesRegionTable(sp){
       `<th onclick="sortRegBy('c')" class="num" title="발견수로 정렬">발견수${ar('c')}</th></tr></thead>`+
       `<tbody>${body}</tbody></table></div>`+
     `<div class="regtbl-foot"><span class="muted">${nf(rows.length)}개 시군구 · 합계 ${nf(total)}</span>`+
-    `<button class="rdl" onclick="downloadSpeciesRegions()">CSV 다운로드</button></div></div>`;
+    `<button class="rdl" data-gate="login" onclick="downloadSpeciesRegions()">CSV 다운로드</button></div></div>`;
 }
 function downloadSpeciesRegions(){
   if(!selSpecies) return;
+  if(!requireLogin('발견지역 내려받기')) return;
   const rows=regSortRows(speciesSigungu(selSpecies,sy0,sy1));   // 화면에 보이는 정렬 순서대로 내보내기
   const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
   const head=['종명','학명','시도','시군구','발견수'];
@@ -1790,6 +2021,7 @@ function renderRepShot(sp){                               // 지도 아래 빈 �
 }
 function clearSelSpecies(){ selSpecies=null; selRegions=new Map(); GAPRES=null;
   if(gapLayer)gapLayer.setVisible(false); if(gapSource)gapSource.clear();
+  syncCellLayer();
   sCard.innerHTML=''; clearRepShot(); refreshSpeciesMap(); }
 
 /* 분류군별 조회 테이블의 종 클릭 → 종별 검색(Mode B)으로 전환 + 해당 종 카드 표시 */
@@ -1808,9 +2040,11 @@ function openSpecies(k){
 function setMode(m){
   mapMode=m;
   window.fgTrack&&fgTrack('mode_switch',{mode:m});
-  tabA.classList.toggle('on',m==='A'); tabB.classList.toggle('on',m==='B');
   modeA.style.display=m==='A'?'':'none'; modeB.style.display=m==='B'?'':'none';
+  backA.style.display=m==='B'?'':'none';   // 종을 고르면 들어오는 화면이라 돌아갈 길을 같이 낸다
   if(gapLayer) gapLayer.setVisible(m==='B' && spView==='gap' && !!selSpecies);   // 후보셀은 종별 미발견 뷰에서만
+  syncCellLayer();                                                               // 발견 격자도 종별 화면에서만
+  if(taxonCtrlEl) taxonCtrlEl.style.display=m==='A'?'':'none';   // 종별 검색은 분류군과 무관
   if(map){ map.setTarget(m==='A'?'map':'mapB'); setTimeout(()=>{ map.updateSize(); sidoLayer&&sidoLayer.changed(); },30); }
 }
 function setMetric(m){ metric=m; mFound.classList.toggle('on',m==='found'); mGap.classList.toggle('on',m==='gap');
@@ -1836,12 +2070,12 @@ function boot(){
     loadTaxon(curTaxon, ()=>{ recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); }); };
   fY0.onchange=()=>{ y0=+fY0.value; if(y1<y0){y1=y0;fY1.value=y1;} recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); };
   fY1.onchange=()=>{ y1=+fY1.value; if(y1<y0){y0=y1;fY0.value=y0;} recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); };
+  fDec.onchange=()=>applyDecade('A');
   dlCsv.onclick=downloadCSV;
   { const ss=document.getElementById('sortSel'), sd=document.getElementById('sortDirBtn');
     if(ss) ss.onchange=()=>{ if(ss.value===sortKey) return;
       sortKey=ss.value; sortDir=(sortKey==='n'||sortKey==='s')?1:-1; renderTable(); };
     if(sd) sd.onclick=()=>{ sortDir*=-1; renderTable(); }; }
-  { const nb=document.getElementById('nearbyBtn'); if(nb) nb.onclick=locateNearby; }
   { const sb=document.getElementById('shareBtn'); if(sb) sb.onclick=shareView; }
   // 모드 B 컨트롤
   fillSearchTaxon(); fillSearchYears();
@@ -1851,6 +2085,7 @@ function boot(){
     doSearch(); };
   sY0.onchange=()=>{ sy0=+sY0.value; if(sy1<sy0){sy1=sy0;sY1.value=sy1;} if(selSpecies)showSpecies(selSpecies); };
   sY1.onchange=()=>{ sy1=+sY1.value; if(sy1<sy0){sy0=sy1;sY0.value=sy0;} if(selSpecies)showSpecies(selSpecies); };
+  sDec.onchange=()=>applyDecade('B');
   q.addEventListener('input',doSearch);
   // 초기 렌더(관측자료는 선택 분류군만 지연 로드)
   renderSelChips();
@@ -2110,31 +2345,22 @@ function fgShowSpecies(k){
   const t=document.getElementById('modeB'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-/* ── 타일 ── */
+/* ── 분류군 선택 ── */
 let TAXA_ALL=[];
-function renderTiles(){
-  const wrap=document.getElementById('tiles');
-  wrap.innerHTML=TAXA_ALL.map(t=>{
-    return `<button class="tile ${t.has_data?'':'nodata'}" data-g="${t.group}">`+
-      (t.has_data?'':'<span class="soon">수집예정</span>')+
-      chipHTML(t.group,26)+
-      `<span class="nm">${t.kor}</span>`+
-      `<span class="meta">${nf(t.n_species)}종${t.has_data?' · 데이터 있음':''}</span></button>`;
-  }).join('');
-  wrap.querySelectorAll('.tile').forEach(el=>el.onclick=()=>select(el.dataset.g));
-}
+function renderTiles(){ fillTaxonCtrl(); }
 function select(group,scroll){
-  document.querySelectorAll('.tile').forEach(el=>el.classList.toggle('active',el.dataset.g===group));
   const t=TAXA_ALL.find(x=>x.group===group);
   const ready=!!(t&&t.has_data&&window.__SPSTATE__);
   if(ready) renderDash(group); else renderSoon(t);
   syncTaxonToMap(group,ready);
+  if(window.fgSyncSearchHint) window.fgSyncSearchHint(group);   // 검색 예시도 이 분류군의 대표 종으로
+  if(taxonSelEl && taxonSelEl.value!==group) taxonSelEl.value=group;
   if(scroll!==false){ const tgt=document.getElementById('modeA')||document.getElementById('dash');
     if(tgt) tgt.scrollIntoView({behavior:'smooth',block:'start'}); }
 }
 
-/* ── 타일 선택 → 지도(모드 A)의 분류군 선택자로 전달 ──
-   지도는 같은 문서 안에 있고 분류군 선택 UI 는 타일 하나로 통일한다.
+/* ── 분류군 선택 → 지도(모드 A)의 분류군 선택자로 전달 ──
+   지도는 같은 문서 안에 있고 분류군 선택 UI 는 지도 안 필터 하나로 통일한다.
    service 쪽 로직을 건드리지 않도록 select 값을 바꾸고 change 를 발생시킨다.
    종별 검색(모드 B)은 분류군과 무관하게 전 분류군을 대상으로 하므로 sTaxon 은 건드리지 않는다. */
 function syncTaxonToMap(group,ready){
@@ -2157,16 +2383,46 @@ function renderFoot(){
     `gap = 국가생물종목록(마스터) − 관측(동적 complement). 데이터는 정기 수집으로 갱신됩니다.`;
 }
 
-/* ── 홈 3축 전환 ── */
+/* ── 홈 화면 전환 ── */
 function switchAxis(ax){
   document.querySelectorAll('.axes .ax').forEach(b=>b.classList.toggle('on',b.dataset.ax===ax));
-  ['survey','community'].forEach(k=>{
+  ['survey','community','my'].forEach(k=>{
     const v=document.getElementById('view-'+k); if(v) v.hidden = ax!==k;
   });
   if(ax!=='survey' && window.fgChatDrawer) window.fgChatDrawer.close();
+  { const fab=document.getElementById('chatToggle'); if(fab) fab.hidden = ax!=='survey'; }   // 도우미는 지도 화면의 도구다
   // 숨김 상태에서는 지도 크기가 0으로 잡히므로, 조사정보로 돌아올 때 다시 계산한다.
   if(ax==='survey' && window.fgMapResize) window.fgMapResize();
 }
+
+/* ── 마이페이지로 이동 — 알림·관심 종·로그인이 모두 이 화면으로 모인다 ──
+   같은 문서 안이라 주소만 #my 로 바꾸면 다시 읽지 않아 아무 일도 일어나지 않는다.
+   화면 전환을 직접 하고, 로그인이 필요해서 왔다면 입력란까지 초점을 옮긴다. */
+function fgGoMy(){
+  switchAxis('my');
+  const v=document.getElementById('view-my');
+  if(v) v.scrollIntoView({behavior:'smooth',block:'start'});
+  if(window.fgNotif) window.fgNotif.markRead();              // 이 화면에 알림이 그대로 펼쳐지므로 읽은 것으로 본다
+}
+function fgGoLogin(why){
+  fgGoMy();
+  if(why) toast(why);
+  setTimeout(()=>{ const el=document.getElementById('authEmail'); if(el) el.focus({preventScroll:true}); }, 380);
+}
+window.fgGoMy=fgGoMy; window.fgGoLogin=fgGoLogin;
+
+/* ── 알림·마이페이지에서 지도의 지역 화면으로 ── */
+function fgShowRegion(code,taxon,metric){
+  const c=String(code||'');
+  const p=new URLSearchParams();
+  if(taxon) p.set('taxon',taxon);
+  p.set('metric', metric==='found'?'found':'gap');
+  if(/^\d{5}$/.test(c)) p.set('sigungu',c); else if(/^\d{2}$/.test(c)) p.set('sido',c);
+  switchAxis('survey');
+  if(window.fgApplyDeepLink) window.fgApplyDeepLink(p);
+  const t=document.getElementById('modeA'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'});
+}
+window.fgShowRegion=fgShowRegion;
 
 /* ── 대화형 도우미 슬라이드 패널 — 지도를 가리지 않고 옆(모바일: 하단)에 열림/닫힘 ──
    switchAxis 와 같은(비-module) 스크립트에 둔다: 대화형 모듈은 지연 실행되는 module 스크립트라
@@ -2189,8 +2445,7 @@ function bootHome(){
   if(!TAXA_ALL.length){document.getElementById('dash').innerHTML='<div class="soonbox"><div class="l">데이터를 불러오지 못했습니다. <code>demo/data/taxa_summary.js</code> 생성 또는 로컬 서버로 여세요.</div></div>';return;}
   renderTiles();
   document.querySelectorAll('.axes .ax').forEach(b=>b.onclick=()=>switchAxis(b.dataset.ax));
-  if(location.hash==='#my'){ switchAxis('community');   // 관심 종 ☆ → 로그인 유도 진입
-    const vm=document.getElementById('view-my'); if(vm) vm.scrollIntoView({behavior:'smooth',block:'start'}); }
+  if(location.hash==='#my') fgGoMy();                  // 관심 종 ☆ · 알림 → 마이페이지 진입
   if(location.hash==='#chat'){ switchAxis('survey'); window.fgChatDrawer && window.fgChatDrawer.open(); }  // 대화형 직접 진입
   // 지도 쪽이 딥링크(?taxon)로 이미 정한 분류군이 있으면 그것을 따른다.
   // (여기서 첫 분류군을 강제하면 딥링크의 분류군·지역 선택이 지워진다.)
@@ -2205,9 +2460,9 @@ else Promise.all([
 ]).then(bootHome).catch(()=>{document.getElementById('dash').innerHTML='<div class="soonbox"><div class="l">데이터 로딩 실패 — 로컬 서버로 여세요.</div></div>';});
 </script>
 
-<!-- 마이데이터(로그인·관심 종) — Supabase 설정(config.js)이 있을 때만 활성, 없으면 정적 안내 유지 -->
+<!-- 마이페이지(로그인·알림·활동 지역·관심 종·내 제보) — Supabase 설정(config.js)이 있을 때만 활성, 없으면 정적 안내 유지 -->
 <script type="module">
-import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto } from './fg_supabase.js';
+import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile } from './fg_supabase.js';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const view=document.getElementById('view-my');
 const spName=k=>{ const sp=(window.__SPIDX__||[]).find(x=>x.k===k); return sp?{n:sp.n||sp.s,s:sp.s||'',t:sp.t||''}:{n:k,s:'',t:''}; };
@@ -2292,7 +2547,7 @@ async function renderLeaderboard(){
 
 function loginCard(){
   view.innerHTML=`
-  <div class="vintro"><h2>마이데이터</h2><p>로그인하면 <b>관심 종</b>을 저장하고, 내가 제보한 관측 이력을 한곳에서 모아 봅니다.</p></div>
+  <div class="vintro"><h2>마이페이지</h2><p>로그인하면 <b>관심 종</b>과 <b>내 활동 지역</b>을 저장하고, 알림과 내 제보 이력을 한곳에서 모아 봅니다.</p></div>
   <div class="authcard">
     <h3>로그인 · 가입</h3>
     <p>이메일로 로그인 링크를 보내드립니다 — 비밀번호가 필요 없습니다.</p>
@@ -2320,12 +2575,143 @@ function loginCard(){
   email.addEventListener('keydown',ev=>{ if(ev.key==='Enter') btn.click(); });
 }
 
+/* ── 활동 지역·관심 종을 고르는 부품 — 첫 설정 창과 마이페이지 카드가 같은 것을 쓴다 ── */
+function regionPicker(host, cur, onPick){
+  const g=window.__REGGAP__;
+  if(!host) return {value:()=>''};
+  if(!g){ host.innerHTML='<div class="muted2">지역 자료를 불러오지 못했습니다.</div>'; return {value:()=>''}; }
+  const curSido=(cur && g.sg[cur]) ? g.sg[cur][1] : '';
+  const sidos=Object.keys(g.sido).sort();
+  host.innerHTML='<div class="selrow">'+
+    '<select id="pkSido" aria-label="시·도"><option value="">시·도 선택</option>'+
+      sidos.map(c=>`<option value="${esc(c)}"${c===curSido?' selected':''}>${esc(g.sido[c])}</option>`).join('')+'</select>'+
+    '<select id="pkSgg" aria-label="시·군·구"><option value="">시·군·구 선택</option></select></div>';
+  const a=host.querySelector('#pkSido'), b=host.querySelector('#pkSgg');
+  function fill(keep){
+    const list=Object.keys(g.sg).filter(c=>g.sg[c][1]===a.value)
+      .sort((x,y)=>g.sg[x][0].localeCompare(g.sg[y][0],'ko'));
+    b.innerHTML='<option value="">시·군·구 선택</option>'+
+      list.map(c=>`<option value="${esc(c)}"${(keep&&c===cur)?' selected':''}>${esc(g.sg[c][0])}</option>`).join('');
+    b.disabled=!a.value;
+  }
+  fill(true);
+  a.onchange=()=>{ fill(false); if(onPick) onPick(''); };
+  b.onchange=()=>{ if(onPick) onPick(b.value); };
+  return { value:()=>b.value };
+}
+function speciesPicker(host, chosen, onChange){
+  if(!host) return;
+  host.innerHTML='<input type="search" id="pkQ" placeholder="종 이름 또는 학명으로 찾기" autocomplete="off">'+
+    '<div class="rpt-srlist" id="pkHit" hidden></div><div class="wlchips" id="pkChips"></div>';
+  const q=host.querySelector('#pkQ'), hit=host.querySelector('#pkHit'), chips=host.querySelector('#pkChips');
+  function paint(){
+    chips.innerHTML=chosen.map(k=>{ const sp=spName(k);
+      return `<span class="wlchip">${esc(sp.n)}<button type="button" data-k="${esc(k)}" aria-label="${esc(sp.n)} 빼기">✕</button></span>`;
+    }).join('');
+    chips.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{
+      const i=chosen.indexOf(b.dataset.k); if(i>=0) chosen.splice(i,1); paint(); });
+    if(onChange) onChange(chosen);
+  }
+  q.oninput=()=>{
+    const s=(q.value||'').trim().toLowerCase();
+    if(!s){ hit.hidden=true; return; }
+    const rows=(window.__SPIDX__||[]).filter(x=>
+      (x.n&&x.n.toLowerCase().indexOf(s)>=0)||(x.s&&x.s.toLowerCase().indexOf(s)>=0)).slice(0,8);
+    hit.innerHTML=rows.length
+      ? rows.map(x=>`<div class="it" data-k="${esc(x.k)}">${esc(x.n||x.s)}<span class="sci">${esc(x.s||'')}</span></div>`).join('')
+      : '<div class="it" style="cursor:default;color:var(--muted)">찾는 종이 없습니다</div>';
+    hit.hidden=false;
+    hit.querySelectorAll('[data-k]').forEach(d=>d.onclick=()=>{
+      if(chosen.indexOf(d.dataset.k)<0) chosen.push(d.dataset.k);
+      q.value=''; hit.hidden=true; paint(); });
+  };
+  paint();
+}
+// 활동 지역 요약 — 분류군을 누르면 그 지역의 공백 화면으로 간다.
+function regionStat(host, code){
+  const g=window.__REGGAP__; if(!host) return;
+  if(!g||!g.sg[code]){ host.innerHTML=''; return; }
+  const f=g.found[code]||{};
+  const keys=Object.keys(g.tx).sort((x,y)=>g.tx[x][0].localeCompare(g.tx[y][0],'ko'));
+  let tot=0, gap=0;
+  keys.forEach(t=>{ tot+=(f[t]||0); gap+=Math.max(0,g.tx[t][1]-(f[t]||0)); });
+  host.innerHTML=`<div class="muted2" style="margin:13px 0 2px">${esc(g.sg[code][0])} · 최근 ${g.ref-g.cut}년 발견 <b>${tot.toLocaleString()}</b>종 · 아직 기록 없음 <b style="color:#b5482f">${gap.toLocaleString()}</b>종</div>`+
+    '<div class="regstat">'+keys.map(t=>{
+      const n=f[t]||0, d=Math.max(0,g.tx[t][1]-n);
+      return `<button type="button" class="rs" data-t="${esc(t)}">${esc(g.tx[t][0])} ${n.toLocaleString()} / 공백 <b>${d.toLocaleString()}</b></button>`;
+    }).join('')+'</div>';
+  host.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{
+    if(window.fgShowRegion) window.fgShowRegion(code, b.dataset.t, 'gap'); });
+}
+
+// 알림 목록은 머리말 모듈이 만든다 — 마이페이지는 같은 목록을 넓은 폭에서 다시 그릴 뿐이다.
+function paintMyNotif(){
+  const nl=document.getElementById('myNotif'); if(!nl) return;
+  if(window.fgNotif) window.fgNotif.renderInto(nl);
+  else nl.innerHTML='<li class="muted2" style="padding:10px 2px">새로운 알림이 없습니다.</li>';
+}
+document.addEventListener('fg-notif', paintMyNotif);
+
+/* ── 첫 로그인 설정 — 알림은 '어디를 다니며 무엇을 보는 사람인가'를 알아야 만들 수 있다.
+     활동 지역과 관심 종을 받기 전에는 닫지 않는다. 나가는 길은 저장 또는 로그아웃뿐이다. ── */
+let obOpen=false;
+function onboard(user, ks){
+  const ov=document.getElementById('obOverlay'), bd=document.getElementById('obBody');
+  if(!ov||!bd||obOpen) return;
+  obOpen=true;
+  const prof=readProfile(user), chosen=ks.slice();
+  bd.innerHTML=`
+    <p class="muted2" style="margin:0 0 15px">알림을 보내 드리려면 두 가지가 필요합니다. 마이페이지에서 언제든 바꿀 수 있습니다.</p>
+    <div class="rpt-f"><label>내 주요 활동 지역 <span class="req">*</span></label><div id="obReg"></div></div>
+    <div class="rpt-f"><label>관심 종 <span class="req">*</span> <span class="muted2" style="font-weight:400">— 한 종 이상</span></label><div id="obSp"></div></div>
+    <button class="rpt-submit" id="obSave" disabled>저장하고 시작하기</button>
+    <div class="rpt-msg" id="obMsg"></div>
+    <div style="text-align:center;margin-top:12px"><button type="button" id="obOut" class="btn sec sm">로그아웃</button></div>`;
+  const save=bd.querySelector('#obSave'), msg=bd.querySelector('#obMsg');
+  const rp=regionPicker(bd.querySelector('#obReg'), prof.sgg, ()=>sync());
+  speciesPicker(bd.querySelector('#obSp'), chosen, ()=>sync());
+  function sync(){ save.disabled = !(rp.value() && chosen.length); }
+  sync();
+  bd.querySelector('#obOut').onclick=async()=>{ ov.hidden=true; obOpen=false; await signOut(); };
+  save.onclick=async()=>{
+    const code=rp.value(), g=window.__REGGAP__;
+    if(!code||!chosen.length||!g) return;
+    save.disabled=true; save.textContent='저장 중…'; msg.className='rpt-msg';
+    try{
+      for(const k of chosen){ if(ks.indexOf(k)<0){ const {error}=await watchAdd(k); if(error) throw error; } }
+      await saveProfile({sgg:code, sggName:g.sg[code][0], sido:g.sg[code][1]});
+      ov.hidden=true; obOpen=false;                          // 저장이 끝나면 인증 상태가 갱신돼 마이페이지가 다시 그려진다
+    }catch(e){
+      save.disabled=false; save.textContent='저장하고 시작하기';
+      msg.className='rpt-msg err'; msg.textContent='저장 실패: '+(e.message||e);
+    }
+  };
+  ov.hidden=false;
+  setTimeout(()=>{ const s=bd.querySelector('#pkSido'); if(s) s.focus(); },60);
+}
+
 async function myPage(user){
+  const prof=readProfile(user);
   view.innerHTML=`
-  <div class="vintro"><h2>마이데이터</h2><p><b>${user.email}</b> 님 · 관심 종과 내 제보를 모아 봅니다.</p></div>
+  <div class="vintro"><h2>마이페이지</h2><p><b>${esc(user.email)}</b> 님 · 알림과 활동 지역, 관심 종과 내 제보를 모아 봅니다.</p></div>
   <div class="authcard" style="max-width:none">
-    <div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0">관심 종의 발견 현황</h3>
+    <div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0">알림</h3>
       <button class="btn sec" id="logoutBtn" style="margin-left:auto">로그아웃</button></div>
+    <div class="muted2" style="margin:4px 0 6px">관심 종의 새 기록, 내 제보 결과, 활동 지역의 변화를 모아 알려 드립니다. 눌러서 해당 화면으로 이동합니다.</div>
+    <ul class="notiflist" id="myNotif"><li class="muted2" style="padding:10px 2px">불러오는 중…</li></ul>
+  </div>
+  <div class="authcard" id="regCard" style="max-width:none;margin-top:14px">
+    <h3 style="margin:0 0 4px">내 활동 지역</h3>
+    <p class="muted2" style="margin:0 0 12px">이 지역에 새로 생기는 발견공백과 계절 안내를 받습니다.</p>
+    <div id="regPick"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+      <button class="btn sm" id="regSave" disabled>저장</button>
+      <span class="muted2" id="regMsg"></span>
+    </div>
+    <div id="regStat"></div>
+  </div>
+  <div class="authcard" style="max-width:none;margin-top:14px">
+    <h3 style="margin:0">관심 종의 발견 현황</h3>
     <div class="muted2" id="wlSummary" style="margin:4px 0 10px">내가 담은 종이 전국에서 최근 발견됐는지 보여줍니다.</div>
     <ul class="wl" id="wl"><li class="muted2">불러오는 중…</li></ul>
     <div style="display:flex;align-items:center;gap:10px;margin:18px 0 0">
@@ -2340,6 +2726,22 @@ async function myPage(user){
     <ul class="wl feedlist" id="adminList"><li class="muted2">불러오는 중…</li></ul>
   </div>`;
   view.querySelector('#logoutBtn').onclick=async()=>{ await signOut(); };
+  paintMyNotif();
+  {                                                          // 활동 지역 — 시군구까지 고르고 저장한다
+    const rsave=view.querySelector('#regSave'), rmsg=view.querySelector('#regMsg'), rstat=view.querySelector('#regStat');
+    const rp=regionPicker(view.querySelector('#regPick'), prof.sgg, code=>{ rsave.disabled=!code; });
+    rsave.disabled=!prof.sgg;
+    if(prof.sgg) regionStat(rstat, prof.sgg);
+    rsave.onclick=async()=>{
+      const code=rp.value(), g=window.__REGGAP__;
+      if(!code||!g) return;
+      rsave.disabled=true; rmsg.textContent='저장 중…';
+      try{
+        await saveProfile({sgg:code, sggName:g.sg[code][0], sido:g.sg[code][1]});
+        rmsg.textContent='저장했습니다'; regionStat(rstat, code);
+      }catch(e){ rmsg.textContent='저장 실패: '+(e.message||e); rsave.disabled=false; }
+    };
+  }
   (async()=>{                                              // 관리자 검토 큐(role='admin'만 — RLS 로 비관리자는 빈 결과)
     let role=null; try{ role=await myRole(); }catch(_){}
     if(role!=='admin') return;
@@ -2375,27 +2777,280 @@ async function myPage(user){
         mr.appendChild(li); });
     }catch(err){ mr.innerHTML=`<li class="authmsg err">내 제보 로드 실패: ${esc(err.message||String(err))}</li>`; }
   })();
-  const ul=view.querySelector('#wl');
+  const ul=view.querySelector('#wl'), summ=view.querySelector('#wlSummary');
+  let ks=null;
   try{
-    const ks=await watchList();
-    const summ=view.querySelector('#wlSummary');
+    ks=await watchList();
     if(!ks.length){ ul.innerHTML='<li class="muted2">아직 관심 종이 없습니다. 종 정보 페이지에서 ☆를 눌러 추가하세요.</li>';
-      if(summ) summ.textContent='관심 종을 담으면 여기서 발견 현황을 모아 봅니다.'; return; }
-    const c={found:0,dormant:0,undiscovered:0}; ks.forEach(k=>c[discState(k)]++);
-    if(summ) summ.innerHTML=`관심 종 <b>${ks.length}</b> · 발견 ${c.found} · 휴면 ${c.dormant} · <b style="color:#b5482f">미발견 ${c.undiscovered}</b> — 미발견 종이 당신이 주목하는 발견공백입니다.`;
-    ul.innerHTML='';
-    for(const k of ks){ const sp=spName(k); const li=document.createElement('li');
-      li.innerHTML=`<span class="nm">${sp.n}</span> <span class="sci">${sp.s}</span> ${discBadge(k)}`+
-        `<a class="muted2" href="#" onclick="fgShowSpecies('${k}');return false" style="margin-left:8px">지도에서 보기 →</a>`+
-        `<button class="rm" title="관심 해제">✕ 해제</button>`;
-      li.querySelector('.rm').onclick=async()=>{ await watchRemove(k); li.remove(); if(!ul.children.length) ul.innerHTML='<li class="muted2">아직 관심 종이 없습니다.</li>'; };
-      ul.appendChild(li);
+      if(summ) summ.textContent='관심 종을 담으면 여기서 발견 현황을 모아 봅니다.'; }
+    else{
+      const c={found:0,dormant:0,undiscovered:0}; ks.forEach(k=>c[discState(k)]++);
+      if(summ) summ.innerHTML=`관심 종 <b>${ks.length}</b> · 발견 ${c.found} · 휴면 ${c.dormant} · <b style="color:#b5482f">미발견 ${c.undiscovered}</b> — 미발견 종이 당신이 주목하는 발견공백입니다.`;
+      ul.innerHTML='';
+      for(const k of ks){ const sp=spName(k); const li=document.createElement('li');
+        li.innerHTML=`<span class="nm">${sp.n}</span> <span class="sci">${sp.s}</span> ${discBadge(k)}`+
+          `<a class="muted2" href="#" onclick="fgShowSpecies('${k}');return false" style="margin-left:8px">지도에서 보기 →</a>`+
+          `<button class="rm" title="관심 해제">✕ 해제</button>`;
+        li.querySelector('.rm').onclick=async()=>{ await watchRemove(k); li.remove(); if(!ul.children.length) ul.innerHTML='<li class="muted2">아직 관심 종이 없습니다.</li>'; };
+        ul.appendChild(li);
+      }
     }
-  }catch(err){ ul.innerHTML=`<li class="authmsg err">관심 종 로드 실패: ${err.message||err}</li>`; }
+  }catch(err){ ul.innerHTML=`<li class="authmsg err">관심 종 로드 실패: ${esc(err.message||String(err))}</li>`; }
+  // 알림에 필요한 최소 정보가 없으면 첫 설정을 연다. 관심 종을 못 불러온 때(ks===null)는 열지 않는다 —
+  // 이미 담아 둔 종을 못 본 채로 다시 고르라고 하면 안 된다.
+  if(ks && (!prof.onboarded || !prof.sgg || !ks.length)) onboard(user, ks);
 }
 
 renderMissions();                                          // 정적 자산 — Supabase 무관
 if(configured){ onAuth(user=> user ? myPage(user) : loginCard()); renderTrending(); renderFeed(); renderLeaderboard(); }
+</script>
+
+<!-- 머리말 계정·알림 — 로그인 상태를 페이지 전역(비-module 스크립트 포함)에 알리고, 알림을 모아 보여준다.
+     알림용 표를 서버에 따로 두지 않는다. 이미 있는 자료(내 제보·관심 종·공개 피드·시군구 집계)를
+     지난번에 적어 둔 기준과 견줘 그때그때 만든다. 기준과 읽음 표시는 이 브라우저·이 계정에만 남는다.
+     멸종위기종은 지점이 아니라 시군구까지만 말한다 — 정확한 자리를 알리면 남획의 실마리가 된다. -->
+<script type="module">
+import { configured, onAuth, myReports, watchList, communityReports, leaderboard, myDisplayName, readProfile } from './fg_supabase.js';
+window.fgAuthConfigured = configured;
+const bar=document.getElementById('acct');
+if(configured && bar){
+  const btn=document.getElementById('acctBtn'), bell=document.getElementById('notifBtn'),
+        dot=document.getElementById('notifDot'), pop=document.getElementById('notifPop');
+  bar.hidden=false;
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const rd=k=>{ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(_){ return null; } };
+  const wr=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(_){} };
+  const goMy=()=>{ if(window.fgGoMy) window.fgGoMy(); };
+  const ago=t=>{ const m=Math.max(0,Date.now()-t)/6e4;
+    if(m<60) return `${Math.floor(m)||1}분 전`;
+    if(m<1440) return `${Math.floor(m/60)}시간 전`;
+    return `${Math.floor(m/1440)}일 전`; };
+
+  /* ── 알림이 참고하는 정적 자료 ── */
+  const RG=()=>window.__REGGAP__||null;                     // 시군구×분류군 발견/공백 합계(28KB)
+  const SP=k=>(window.__SPIDX__||[]).find(x=>x.k===k)||null;
+  const nameOf=r=>r.korean_name||r.scientific_name||r.ktsn;
+  const endangered=k=>{ const s=SP(k); return !!(s&&(s.g==='I'||s.g==='II')); };
+  // 제보의 시군구 값은 코드로도 이름으로도 올 수 있다 — 어느 쪽이든 코드와 이름을 함께 얻는다.
+  function sgg(v){
+    const g=RG(); if(!v||!g) return null;
+    const s=String(v);
+    if(g.sg[s]) return {code:s, name:g.sg[s][0]};
+    for(const c in g.sg){ if(g.sg[c][0]===s) return {code:c, name:s}; }
+    return {code:'', name:s};
+  }
+  const gapOf=(code,t)=>{ const g=RG(); if(!g||!g.tx[t]) return 0;
+    return Math.max(0, g.tx[t][1] - ((g.found[code]||{})[t]||0)); };
+  const txKor=t=>{ const g=RG(); return (g&&g.tx[t]) ? g.tx[t][0] : t; };
+
+  // 계절 안내 — 달마다 그때 눈에 띄는 분류군 하나를 고른다.
+  const SEASON=[null,
+    ['AV','겨울철새가 머무는 때입니다'], ['AV','겨울철새가 머무는 때입니다'],
+    ['AM','양서류 산란기입니다'], ['AM','양서류 산란기입니다'],
+    ['VP','봄꽃이 피고 지는 때입니다'],
+    ['IN','곤충 활동이 가장 활발한 때입니다'], ['IN','곤충 활동이 가장 활발한 때입니다'], ['IN','곤충 활동이 가장 활발한 때입니다'],
+    ['VP','열매와 씨앗이 익는 때입니다'],
+    ['AV','가을 이동철새가 지나는 때입니다'], ['AV','겨울철새가 도래하는 때입니다'],
+    ['AV','겨울철새가 머무는 때입니다']];
+
+  let items=[], KEY=null;
+  const keysFor=id=>({list:`fg_notif_${id}`, snap:`fg_notif_snap_${id}`,
+                      seen:`fg_notif_seen_${id}`, st:`fg_notif_state_${id}`});
+
+  async function collect(user){
+    const K=keysFor(user.id);
+    const list=(rd(K.list)||[]).filter(n=>n&&n.id);
+    const have=new Set(list.map(n=>n.id));
+    const add=n=>{ if(!have.has(n.id)){ have.add(n.id); list.push(n); } };
+    const st=rd(K.st)||{};
+    const now=Date.now(), D=new Date(now);
+    const reg=sgg(readProfile(user).sgg);
+
+    /* ① 내 제보 — 승인·반려·공백 메움 */
+    let mine=[]; try{ mine=await myReports(); }catch(_){}
+    const prev=rd(K.snap), snap={};
+    mine.forEach(r=>{
+      snap[r.id]={s:r.status, g:!!r.fills_gap};
+      if(!prev) return;                                     // 처음에는 지금 상태만 적어 둔다 — 지난 일은 알림이 아니다
+      const raw=prev[r.id];
+      const p = typeof raw==='string' ? {s:raw, g:!!r.fills_gap} : raw;
+      if(!p) return;                                        // 이번에 새로 올린 제보 — 검토 전이라 알릴 것이 없다
+      const nm=nameOf(r);
+      if(p.s!==r.status && r.status==='approved')
+        add({id:`r:${r.id}:approved`, t:now, go:'my', txt:`내 제보 ‘${nm}’가 승인되었습니다`});
+      if(p.s!==r.status && r.status==='rejected')
+        add({id:`r:${r.id}:rejected`, t:now, go:'my',
+             txt:`‘${nm}’ 제보를 다시 확인해 주세요 — 사진이나 위치를 보완하면 재검토됩니다`});
+      if(!p.g && r.fills_gap){
+        const s=sgg(r.sigungu);
+        add(s && s.code
+          ? {id:`g:${r.id}`, t:now, go:'region', r:s.code, tx:r.taxon_group||'',
+             txt:`제보하신 ‘${nm}’는 ${s.name} 첫 기록입니다`}
+          : {id:`g:${r.id}`, t:now, go:'my', txt:`제보하신 ‘${nm}’가 발견공백을 메웠습니다`});
+      }
+    });
+    wr(K.snap,snap);
+
+    /* ② 관심 종 — 새 제보. 멸종위기종은 시군구까지만 말하고 지점 화면으로 보내지 않는다. */
+    let ks=[]; try{ ks=await watchList(); }catch(_){}
+    const seen=Number(localStorage.getItem(K.seen)||0);
+    if(!seen){ try{ localStorage.setItem(K.seen,String(now)); }catch(_){} }   // 첫 방문은 기준 시각만 잡는다
+    else if(ks.length){
+      const set=new Set(ks); let feed=[]; try{ feed=await communityReports(50); }catch(_){}
+      feed.forEach(r=>{
+        const t=Date.parse(r.created_at)||0;
+        if(!set.has(r.ktsn) || t<=seen) return;
+        const nm=nameOf(r);
+        if(endangered(r.ktsn)){
+          const s=sgg(r.sigungu);
+          add(s && s.code
+            ? {id:`c:${r.id}`, t, go:'region', r:s.code, tx:r.taxon_group||'',
+               txt:`관심 종 ‘${nm}’의 새 기록이 ${s.name}에서 확인되었습니다`}
+            : {id:`c:${r.id}`, t, go:'my', txt:`관심 종 ‘${nm}’의 새 기록이 확인되었습니다`});
+          return;
+        }
+        add({id:`c:${r.id}`, t, go:'species', k:r.ktsn, txt:`관심 종 ‘${nm}’의 새 제보가 올라왔습니다`});
+      });
+    }
+
+    /* ③ 관심 종이 비어 있으면 — 로그인할 때 하루 한 번만 권한다 */
+    const dkey=`${D.getFullYear()}-${D.getMonth()+1}-${D.getDate()}`;
+    if(!ks.length && st.a6!==dkey){
+      st.a6=dkey;
+      add({id:`w0:${dkey}`, t:now, go:'search', txt:'관심 종을 담아 두면 새 기록이 올라올 때 알려 드립니다'});
+    }
+
+    /* ④ 제보 기여 순위가 올랐을 때 */
+    try{
+      const rows=await leaderboard(20);
+      if(rows.length){
+        let me=-1, dn=null;
+        try{ dn=await myDisplayName(); }catch(_){}
+        if(dn) me=rows.findIndex(r=>r.reporter===dn);
+        if(me<0){                                           // 표시 이름이 없으면 내 합계로 자리를 센다
+          const ap=mine.filter(r=>r.status==='approved');
+          const gf=ap.filter(r=>r.fills_gap).length;
+          if(ap.length) me=rows.filter(r=>r.gaps>gf||(r.gaps===gf&&r.reports>ap.length)).length;
+        }
+        if(me>=0){
+          const rank=me+1;
+          if(st.rank && rank<st.rank)
+            add({id:`lb:${rank}:${Math.floor(now/864e5)}`, t:now, go:'community',
+                 txt:`제보 기여 순위가 ${rank}위로 올랐습니다`});
+          st.rank=rank;
+        }
+      }
+    }catch(_){}
+
+    /* ⑤ 내 활동 지역 — 새로 생긴 공백과 계절 안내 */
+    const g=RG();
+    if(g && reg && reg.code){
+      const cur={};
+      for(const t in g.tx) cur[t]=gapOf(reg.code,t);
+      const was=(st.gapCode===reg.code) ? st.gap : null;
+      if(was){
+        let up=0, top='', best=0;
+        for(const t in cur){ const d=cur[t]-(was[t]||0); if(d>0){ up+=d; if(d>best){ best=d; top=t; } } }
+        if(up>0) add({id:`b1:${reg.code}:${g.gen}`, t:now, go:'region', r:reg.code, tx:top,
+                      txt:`${reg.name}에서 아직 기록이 없는 종이 ${up}종 늘었습니다`});
+      }
+      st.gap=cur; st.gapCode=reg.code;
+
+      const mon=D.getMonth()+1, se=SEASON[mon], skey=`${D.getFullYear()}-${mon}`;
+      if(se && st.season!==skey){
+        st.season=skey;
+        const n=gapOf(reg.code,se[0]);
+        if(n>0) add({id:`b2:${reg.code}:${skey}`, t:now, go:'region', r:reg.code, tx:se[0],
+                     txt:`지금은 ${se[1]} — ${reg.name}에서 아직 기록이 없는 ${txKor(se[0])} ${n.toLocaleString()}종`});
+      }
+    }
+
+    /* ⑥ 관측자료가 갱신됐을 때 */
+    const gen=(window.__SPSTATE__||{}).generated||'';
+    if(gen){
+      const my=(window.__SPSTATE__||{}).maxyear||{}, cut=D.getFullYear()-10;
+      let found=0; for(const k in my){ if(my[k]>=cut) found++; }
+      if(st.gen && st.gen!==gen){
+        const d=found-(st.found||0);
+        add({id:`b3:${gen}`, t:now, go:'survey',
+             txt:`관측자료가 ${gen} 기준으로 갱신되었습니다${d?` (전국 발견 종 ${d>0?'+':''}${d.toLocaleString()})`:''}`});
+      }
+      st.gen=gen; st.found=found;
+    }
+
+    wr(K.st,st);
+    list.sort((a,b)=>b.t-a.t);
+    const keep=list.slice(0,20);
+    wr(K.list,keep);
+    return {keep,K};
+  }
+
+  /* 알림을 누르면 그 알림이 가리키는 화면으로 간다 */
+  function route(n){
+    if(!n) return;
+    if(n.go==='species' && n.k && window.fgShowSpecies){ window.fgShowSpecies(n.k); return; }
+    if(n.go==='region' && n.r && window.fgShowRegion){ window.fgShowRegion(n.r, n.tx||'', 'gap'); return; }
+    if(n.go==='search'){
+      if(window.switchAxis) window.switchAxis('survey');
+      const q=document.getElementById('q');
+      if(q){ q.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(()=>q.focus(),320); }
+      return;
+    }
+    if(n.go==='community'){
+      if(window.switchAxis) window.switchAxis('community');
+      const c=document.getElementById('lbCard'); if(c) c.scrollIntoView({behavior:'smooth',block:'start'});
+      return;
+    }
+    if(n.go==='survey'){ if(window.switchAxis) window.switchAxis('survey'); return; }
+    goMy();
+  }
+  const rows=()=>items.map((n,i)=>
+    `<li><button type="button" data-i="${i}">${esc(n.txt)}<span class="when">${esc(ago(n.t))}</span></button></li>`).join('');
+  function wire(host){ host.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>route(items[+b.dataset.i])); }
+
+  function paint(){
+    dot.hidden=!items.length;
+    dot.textContent=items.length>9?'9+':String(items.length);
+    bell.setAttribute('aria-label', items.length?`알림 ${items.length}건`:'알림');
+  }
+  function markRead(){
+    if(KEY){ try{ localStorage.setItem(KEY.seen,String(Date.now())); }catch(_){} wr(KEY.list,[]); }
+    dot.hidden=true;                                        // 목록은 이번 화면에 남기되 읽은 것으로 처리한다
+  }
+  function render(){
+    pop.innerHTML = items.length ? '<ul>'+rows()+'</ul>' : '<div class="empty">새로운 알림이 없습니다.</div>';
+    pop.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{ const n=items[+b.dataset.i]; close(); route(n); });
+  }
+  function close(){ pop.hidden=true; bell.setAttribute('aria-expanded','false'); }
+  function open(){ render(); pop.hidden=false; bell.setAttribute('aria-expanded','true'); markRead(); }
+  bell.onclick=()=>{ pop.hidden?open():close(); };
+  document.addEventListener('click',e=>{ if(!pop.hidden && !bar.contains(e.target)) close(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !pop.hidden){ close(); bell.focus(); } });
+
+  // 마이페이지도 같은 목록을 넓은 폭에서 다시 보여준다 — 만드는 쪽은 여기 하나뿐이다.
+  window.fgNotif={
+    count:()=>items.length,
+    renderInto(host){
+      if(!host) return;
+      host.innerHTML = items.length ? rows() : '<li class="muted2" style="padding:10px 2px">새로운 알림이 없습니다.</li>';
+      wire(host);
+    },
+    markRead
+  };
+
+  onAuth(async u=>{
+    window.fgUser=u||null;
+    document.body.classList.toggle('fg-anon', !u);
+    btn.textContent = u ? String(u.email||'내 계정').split('@')[0] : '로그인';
+    btn.title = u ? `${u.email} · 마이페이지로 이동` : '로그인하면 관심 종과 자료 내려받기를 이용할 수 있습니다';
+    btn.onclick=goMy;
+    bell.hidden=!u; close();
+    if(!u){ items=[]; KEY=null; paint(); document.dispatchEvent(new CustomEvent('fg-notif')); return; }
+    try{ const r=await collect(u); items=r.keep; KEY=r.K; }catch(_){ items=[]; }
+    paint();
+    document.dispatchEvent(new CustomEvent('fg-notif'));
+  });
+}
 </script>
 
 <script type="module">
@@ -2410,7 +3065,9 @@ function decorate(ktsn){
   b.textContent = user ? (on?'★ 관심 종':'☆ 관심 종 추가') : '☆ 관심 종';
   b.classList.toggle('on', on);
   b.onclick=async()=>{
-    if(!user){ location.href='index.html#my'; return; }       // 로그인 필요 → 마이데이터
+    // 로그인 필요 — 같은 문서라 주소만 바꾸면 다시 읽지 않는다. 화면을 직접 마이페이지로 옮긴다.
+    if(!user){ if(window.fgGoLogin) fgGoLogin('관심 종은 로그인 후 담을 수 있습니다');
+      else location.href='index.html#my'; return; }
     b.disabled=true;
     try{ if(W.has(ktsn)){ await watchRemove(ktsn); W.delete(ktsn); } else { await watchAdd(ktsn); W.add(ktsn); } }
     catch(e){ console.warn('관심 종 토글 실패', e); }
@@ -2465,7 +3122,9 @@ function render(){
   if(!configured){ body.innerHTML='<div class="rpt-gate"><p>제보 기능이 아직 활성화되지 않았습니다.</p></div>'; return; }
   if(!user){
     body.innerHTML='<div class="rpt-gate"><p>발견 제보는 로그인 후 이용할 수 있습니다.<br>관심 종 저장·내 제보 이력도 함께 제공됩니다.</p>'+
-      '<a class="go" href="index.html#my">로그인하러 가기</a></div>';
+      '<a class="go" href="#" id="rptGoLogin">로그인하러 가기</a></div>';
+    const go=body.querySelector('#rptGoLogin');
+    if(go) go.onclick=(e)=>{ e.preventDefault(); close(); if(window.fgGoLogin) fgGoLogin(); };
     return;
   }
   const eg = selSp && (selSp.g==='I'||selSp.g==='II');
@@ -2647,7 +3306,7 @@ async function doSubmit(){
       url: url || null, photo_path, lat:latlon.lat, lon:latlon.lon, observed_date:date, note });
     if(error) throw error;
     msg.className='rpt-msg ok';
-    msg.textContent='제보가 등록되었습니다. 검토 후 반영됩니다. 마이데이터에서 내 제보 이력을 볼 수 있어요.';
+    msg.textContent='제보가 등록되었습니다. 검토 후 반영됩니다. 마이페이지에서 내 제보 이력을 볼 수 있어요.';
     su.textContent='닫기'; su.disabled=false; su.onclick=close;
   }catch(e){
     console.warn('제보 등록 실패', e);
@@ -2742,7 +3401,7 @@ function loginCard(){
   view.innerHTML = `
   <div class="authcard">
     <h3>로그인하고 시작하기</h3>
-    <p>대화형 도우미는 로그인한 이용자에게 하루 일정 횟수 제공됩니다.</p>
+    <p>로그인하면 발견공백 자료를 바탕으로 묻고 답할 수 있습니다.</p>
     <button class="btn goog" id="cAuthGoogle"><svg viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>Google로 계속하기</button>
     <div class="divider">또는 이메일</div>
     <label for="cAuthEmail" style="display:block;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em;margin-bottom:4px">이메일</label>
@@ -2772,7 +3431,6 @@ function chatView(user){
   <div class="topline">
     <span class="who"><b>${esc(user.email || '이용자')}</b> 님</span>
     <button class="btn sec" id="logout" style="padding:6px 12px;font-size:12px">로그아웃</button>
-    <span class="rem" id="rem"></span>
   </div>
   <div class="chatbox" id="box">
     <div class="intro">안녕하세요. 지역·분류군·멸종위기 기준으로 <b>아직 발견되지 않은 종(발견공백)</b>을 찾아 드립니다. 아래 예시를 눌러 보거나 직접 질문해 보세요. 지역·종 질문에는 답변 옆에 <b>지도</b>가 바로 열려 대화를 이어가며 볼 수 있습니다.</div>
@@ -2785,7 +3443,7 @@ function chatView(user){
   <p class="note">답변은 공개 집계 데이터를 바탕으로 하며 부정확할 수 있습니다. 정확한 위치·개인정보는 제공하지 않습니다.</p>`;
 
   const box = view.querySelector('#box'), q = view.querySelector('#chatQ');
-  const send = view.querySelector('#send'), rem = view.querySelector('#rem');
+  const send = view.querySelector('#send');
   const msgs = [];              // 서버로 보내는 대화 이력(role/content)
   let busy = false;
 
@@ -2818,7 +3476,6 @@ function chatView(user){
       wait.remove();
       if (!res.ok) {
         bubble('err', esc(out.error || '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.'));
-        if (res.status === 429 && rem) rem.textContent = '오늘 사용 한도 소진';
       } else {
         const tools = (out.used_tools && out.used_tools.length) ? `<span class="tools">조회: ${esc([...new Set(out.used_tools)].join(', '))}</span>` : '';
         const href = mapHref(out.map);
@@ -2831,7 +3488,6 @@ function chatView(user){
         const node = bubble('bot', esc(out.reply || '') + tools + actions);
         node && node.querySelectorAll('.maplink').forEach(b => b.onclick = () => openMap(b.dataset.href, b));
         msgs.push({ role: 'assistant', content: out.reply || '' });
-        if (typeof out.remaining === 'number' && rem) rem.textContent = `오늘 남은 질문 ${out.remaining}회`;
       }
     } catch (_e) {
       wait.remove();
