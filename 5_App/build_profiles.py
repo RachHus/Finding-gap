@@ -168,11 +168,11 @@ def page_html(sido, sido_name, taxon, taxon_kor, total, found_n, gap_n, undiscov
 <meta property="og:title" content="{esc(title)}">
 <meta property="og:description" content="{esc(desc)}">
 <meta property="og:url" content="{esc(url)}">
-<meta property="og:image" content="{BASE_URL}/og.png">
+<meta property="og:image" content="{BASE_URL}/og.png?v=2">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{esc(title)}">
 <meta name="twitter:description" content="{esc(desc)}">
-<meta name="twitter:image" content="{BASE_URL}/og.png">
+<meta name="twitter:image" content="{BASE_URL}/og.png?v=2">
 <style>{CSS}</style>
 </head>
 <body>
@@ -240,7 +240,7 @@ def hub_html(sidos, taxa):
 <meta property="og:title" content="{esc(title)}">
 <meta property="og:description" content="{esc(desc)}">
 <meta property="og:url" content="{BASE_URL}/regions/">
-<meta property="og:image" content="{BASE_URL}/og.png">
+<meta property="og:image" content="{BASE_URL}/og.png?v=2">
 <meta name="twitter:card" content="summary_large_image">
 <style>{CSS}{extra}</style>
 </head>
