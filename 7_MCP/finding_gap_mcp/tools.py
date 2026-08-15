@@ -12,6 +12,9 @@ DISCOVERY_WINDOW = 10
 # 관심종 집계 공개 하한 — 이 수 미만으로 담긴 종은 트렌딩에 내보내지 않는다.
 # 담은 사람이 한둘이면 '종별 익명 집계' 라도 그 사람이 무엇을 담았는지가 드러난다.
 MIN_PUBLIC_WATCH = 3
+# 시민 제보 집계 공개 하한 — 같은 이유. 종×시군구 조합에 제보가 한둘이면 익명 집계라도
+# 그 지역에서 그 종을 제보한 사람이 누구인지로 좁혀진다.
+MIN_PUBLIC_REPORT = 3
 _SP_COLS = ("ktsn,korean_name,scientific_name,taxon_group,taxon_group_kor,"
             "endangered_grade,national_redlist_category,has_media,interest")
 
@@ -480,13 +483,14 @@ def trending_species(taxon_group=None, redlist_category=None, limit=20):
 
 def community_discoveries(region=None, taxon_group=None, limit=50):
     """관리자 승인된 시민 제보(시민 재발견·신규)의 익명 집계 — 종×시군구 제보수. 미승인·미검증 제보,
-    정확 좌표·URL·개인정보는 미노출(시군구 단위 집계만). 승인 제보 없으면 빈 목록.
+    정확 좌표·URL·개인정보는 미노출(시군구 단위 집계만). 제보가 MIN_PUBLIC_REPORT 건 미만인 조합은
+    개인이 드러날 수 있어 내보내지 않는다. 승인 제보 없으면 빈 목록.
     region(시도 2자리/시군구 5자리)·taxon_group 로 한정."""
     limit = max(1, min(int(limit), 200))
     if not db.one("SELECT name FROM sqlite_master WHERE type='table' AND name='community'"):
         return {"level": "community", "count": 0, "records": [],
                 "note": "커뮤니티 제보 테이블 없음(데이터 재빌드 전) — 빈 목록."}
-    where, params = "1=1", []
+    where, params = "count>=?", [MIN_PUBLIC_REPORT]
     if region:
         code = str(region).strip()
         where += " AND sido=?" if len(code) == 2 else " AND region=?"
@@ -500,9 +504,12 @@ def community_discoveries(region=None, taxon_group=None, limit=50):
         f"FROM community WHERE {where} ORDER BY count DESC, last_year DESC, korean_name LIMIT ?", params + [limit])
     agg = db.one(f"SELECT COUNT(*) n, COALESCE(SUM(count),0) s FROM community WHERE {where}", params)
     return {"level": "community", "region": region, "taxon_group": taxon_group,
+            "min_report_count": MIN_PUBLIC_REPORT,
             "discoveries": agg["n"], "total_reports": agg["s"], "count": len(rows),
-            "note": ("관리자 승인된 시민 제보 익명 집계(시군구 단위·개인정보 미포함)." if rows
-                     else "승인된 시민 제보 없음 — 빈 목록. 제보·관리자 검토 축적 후 활성."),
+            "note": ("관리자 승인된 시민 제보 익명 집계(시군구 단위·개인정보 미포함). "
+                     f"제보 {MIN_PUBLIC_REPORT}건 이상인 종×시군구만." if rows
+                     else f"제보 {MIN_PUBLIC_REPORT}건 이상 쌓인 종×시군구 없음 — 빈 목록. "
+                          "적은 표본은 개인을 드러낼 수 있어 공개하지 않는다."),
             "records": rows}
 
 

@@ -249,6 +249,7 @@ def test_community_discoveries_structure():
     assert "note" in r
     vals = [x["count"] for x in r["records"]]
     assert vals == sorted(vals, reverse=True)              # count 내림차순(있으면)
+    assert all(v >= tools.MIN_PUBLIC_REPORT for v in vals)  # 공개 하한 — 한둘뿐인 조합은 개인이 드러난다
     for x in r["records"]:                                  # 좌표·개인정보 미노출 불변식
         assert not any(f in x for f in ("lat", "lon", "url", "user_id"))
 

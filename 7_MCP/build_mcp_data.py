@@ -21,7 +21,9 @@ import json
 import sqlite3
 import sys
 import gzip
+import os
 import shutil
+import datetime
 from pathlib import Path
 
 import numpy as np
@@ -34,7 +36,10 @@ OUT = Path(__file__).resolve().parent / "data"
 DB = OUT / "fg_mcp.sqlite"
 
 MEDIA_CAP = 12                                          # 종당 미디어 상한(메타 크기 억제)
-GEN_DATE = "2026-07-18"                                 # 스크립트는 Date 미사용 — 갱신 시 여기 수정
+# 생성일 — 빌드한 날로 자동 기록한다. 손으로 고치던 값이라 실제 빌드보다 24일 뒤처진 채
+# 배포된 적이 있다(meta.generated 가 자료 신선도의 유일한 표시라 어긋나면 알 길이 없다).
+# 재현 빌드로 같은 산출물을 다시 만들어야 할 때만 FG_MCP_GEN_DATE 로 고정한다.
+GEN_DATE = os.environ.get("FG_MCP_GEN_DATE") or datetime.date.today().isoformat()
 
 
 def truthy(s):

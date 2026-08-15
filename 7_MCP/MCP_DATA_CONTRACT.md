@@ -31,6 +31,7 @@
 `ktsn` · `korean_name` · `scientific_name` · `taxon_group` · `region`(시군구5) · `sido` · `region_name` · `count` · `last_year`
 - 관리자 **승인(status='approved')** 된 시민 제보를 (종 × 시군구) 로 집계. `build_community_snapshot.py`(approved_discoveries RPC) → `community_reports.json` → 이 테이블.
 - **미승인·미검증 제보, 정확 좌표·URL·user_id 는 미포함**(시군구 단위 집계·개인식별 불가). 승인 제보 0이면 빈 테이블(honest). `community_discoveries` 툴의 원천.
+- **공개 하한 `MIN_PUBLIC_REPORT = 3`** — 제보가 3건 미만인 (종 × 시군구) 조합은 툴이 내보내지 않는다. 관심종 집계(`MIN_PUBLIC_WATCH`)와 같은 이유로, 한둘뿐인 조합은 익명 집계라도 그 지역에서 그 종을 제보한 사람으로 좁혀진다. 반환값의 `discoveries`·`total_reports` 도 하한을 넘긴 조합만 센다.
 
 ### `region` (269) · `taxa` (9) · `meta`
 - `region`: `code·name·level`(sido/sigungu)·`sido_cd`

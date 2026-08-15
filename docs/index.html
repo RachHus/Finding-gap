@@ -1088,7 +1088,7 @@ function rname(code){ if(isUnknownReg(code)) return '좌표미상';
    자산: env_grid.js(__GRID__ 1km 셀·dem/ndvi/bio01) · env_model.js(__ENVM__ bio03/bio14/bio18·wmask)
         · model_<T>.js(__MODEL__[t] 종별 계수) · cells_<T>.js(__CELLS__[t] 종별 점유) · gap_meta.js. */
 let GRID=null, GAPMETA=null, GIDX=null, gapOn=false, GAPRES=null;      // gapOn: 서식지 후보 레이어 토글(지도 안 컨트롤)
-let ENVM=null, WMASK=null;                                             // 모형 전용 환경변수(__GRID__ 와 행 순서 동일) + 수계 셀 비트맵
+let ENVM=null, WMASK=null, AQSET=null;                                 // 모형 전용 환경변수(__GRID__ 와 행 순서 동일) + 수계 셀 비트맵 + 물에서 사는 종
 let gapLayer=null, gapSource=null, gapBtnEl=null;                      // 후보셀 Canvas2D Vector 레이어(모드 B)
 let cellLayer=null, cellSource=null, CELLN=0;                          // 발견 1km 격자 중심점(모드 B·일반종)
 let meLayer=null, meSource=null;                                       // 내 위치 표시점
@@ -1121,6 +1121,7 @@ function ensureGap(cb){                                   // gap_meta + env_grid
     if(ENVM.n!==c.length||ENVM.cid0!==c[0]||ENVM.cid1!==c[c.length-1]){
       console.warn('환경격자 정렬 불일치 — 서식지 후보를 끕니다'); ENVM=null; }
     WMASK=ENVM&&ENVM.wmask?_bits(ENVM.wmask,c.length):null;            // 셀당 1비트(행 순서) → 바이트 배열
+    AQSET=new Set(GAPMETA.ndwi||[]);                                   // 물에서 사는 종 — 모형이 없을 때 이유를 달리 알린다
     const cbs=_gapCbs; _gapCbs=null; cbs.forEach(f=>f&&f()); };
   _loadScript('demo/data/gap_meta.js', done);
   _loadScript('demo/data/env_grid.js', done);
@@ -1196,14 +1197,18 @@ function modelCols(vars){
    연도 구분은 기간 보기가 맡으므로, 이 레이어는 "적합하고 아직 기록이 없는 칸"만 남긴다. */
 function computeCandidate(sp){                            // 적합·미발견 셀 + 시군구 적합지 비율
   const n=(GAPMETA.n&&GAPMETA.n[sp.k])||0;
+  const oc=((window.__CELLS__||{})[sp.t]||{})[sp.k];      // 점유 1km 격자
+  // 모형이 성립하느냐를 가르는 것은 기록 건수가 아니라 서로 다른 발견 지점의 수인데, 둘은 크게
+  // 어긋난다(기록이 점유 셀보다 중앙값 27 많다). 후보를 못 내는 이유는 실제로 문턱이 된 쪽으로 알린다.
+  const nc=oc?oc.c.length:0, aq=!!(AQSET&&AQSET.has(sp.k));
   const m=ENVM?modelOf(sp):null;
-  if(!m) return {gated:true, n};                          // 모형 없음 — 표본이 얇거나 적합이 성립하지 않은 종
+  if(!m) return {gated:true, n, nc, aq};                  // 모형 없음 — 지점이 얇거나 적합이 성립하지 않은 종
   const terms=modelTerms(m), cols=modelCols(m.v), nv=m.v.length;
-  if(!terms.length||cols.some(c=>!c[0])) return {gated:true, n};
+  if(!terms.length||cols.some(c=>!c[0])) return {gated:true, n, nc, aq};
   const vmin=m.vmin, vmax=m.vmax, base=m.e+m.a, thr=m.thr;
   const wet=m.w?WMASK:null;                               // 물에서만 사는 종 — 하천 지나는 칸만 남긴다
   const S=GRID.scale, cid=GRID.cid, lon=GRID.lon, lat=GRID.lat, sg=GRID.sg;
-  const CT=window.__CELLS__||{}, occ=new Set(), oc=(CT[sp.t]||{})[sp.k];
+  const occ=new Set();
   if(oc){ for(let j=0;j<oc.c.length;j++) occ.add(oc.c[j]); }
   const x=new Array(nv), cells=[], numBySg=new Map();
   let fit=0;
@@ -1310,9 +1315,11 @@ function toggleGap(){
 }
 let gapSortDir=-1;                                        // 적합지 비율표 정렬(기본 비율 내림차순)
 function gapTable(res){
-  if(res.gated) return `<div id="gapHost"><span class="muted">${res.n<10
-    ? `관측 기록이 ${nf(res.n||0)}건으로 적어 서식지 후보를 제공하지 않습니다(표본 부족).`
-    : '이 종은 아직 적합 모형이 만들어지지 않아 서식지 후보를 제공하지 않습니다.'}</span></div>`;
+  if(res.gated) return `<div id="gapHost"><span class="muted">${res.nc<10
+    ? `발견된 지점이 ${nf(res.nc||0)}곳(1km 격자)뿐이라 서식지 후보를 만들지 않았습니다. 환경 조건을 학습하려면 서로 다른 지점이 10곳 이상 필요합니다.`
+    : res.aq
+      ? '발견 지점은 충분하지만 환경 조건으로 서식지를 가려내는 모형이 성립하지 않았습니다. 물에서 사는 종은 지금 쓰는 기후·지형·식생 자료만으로 물길의 환경을 담아내기 어렵습니다.'
+      : '발견 지점은 충분하지만 환경 조건으로 서식지를 가려내는 모형이 성립하지 않아 서식지 후보를 제공하지 않습니다.'}</span></div>`;
   if(!res.ratios.length) return `<div id="gapHost"><span class="muted">현재 조사자료 기준 새로운 서식지 후보 지역이 없습니다.</span></div>`;
   const rows=res.ratios.map(r=>({...r,
     sido:shortSido(RNAME.sido[String(r.code).slice(0,2)]||''),
