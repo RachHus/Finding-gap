@@ -2,10 +2,11 @@
 # env_layers.R — 종 페이지 "기후·지형 지위" + 지도 환경변수 레이어용 데이터 산출
 # 입력 : observations.sqlite(obs_points)  ·  bioclim bio01/05/06/12(EPSG:5186,30m)  ·  한반도90m DEM(GRS80 TM)
 # 산출 :
-#   1) species_dem.csv         — 종별 해발고도 5수치(bio='dem', species_bioclim 와 동일 스키마)
+#   1) species_env_stats.csv   — 종별 환경 지위 long(ktsn,var,n,min,q1,median,q3,max,mean,sd)
 #   2) env_national.csv        — 변수별 전국(1km 격자) 분포 분위수 — 비교막대 회색트랙·빨간원 기준
 #   3) 5_App/demo/data/env/<var>.png — 저해상 컬러 오버레이(EPSG:3857, NA 투명)
 #   4) env_layers_meta.csv     — 변수·png·extent(3857 xmin,ymin,xmax,ymax)·color vmin/vmax
+#   5) env_grid.csv            — 전국 1km 격자(cid·좌표·dem/ndvi/bio01) — 서식지 후보 판정의 좌표계 기준
 # 방법 : 점추출은 원본 풀해상도, 지도 레이어는 1km로 집계 후 3857 투영(저해상). 고유좌표 1회 추출.
 # 실행 : Rscript 3_ETL/R/env_layers.R   (공백경로면 -e "source('3_ETL/R/env_layers.R')")
 

@@ -1,7 +1,7 @@
 # Finding gap — 데이터 파이프라인 구조
 
 > 원자료(raw) → 정제자료(processed) → 서비스 테이블(5_App/demo/data) 3계층.
-> 마지막 갱신: 2026-06-28 (GBIF 9분류군 적재·3원 관측 union·서비스 obs 분류군별 분할·ETL 공통모듈 obs_common·**좌표 보존 점 DB observations.sqlite + 종별 bioclim** 반영).
+> 마지막 갱신: 2026-08-16 (환경·모형 자산 체인을 `run_pipeline.py` 12단계로 정리 — 종별 MaxEnt 적합·수계 격자 마스크·계절 점수 반영. 관측 ETL 체인은 2026-06-28 기준 그대로).
 > 관측 행 수는 GBIF·EcoBank 전량 적재 후 재빌드 시 갱신(아래 일부는 직전 빌드 기준).
 
 ```
@@ -144,7 +144,11 @@
 
 ## 3. 실행 순서 (전체 재빌드)
 
-> **주의: geopandas가 필요한 단계(etl_observation·etl_national_park·etl_gbif·improve_species_list)는
+재빌드는 **두 체인**이다. A(관측 ETL)는 원자료가 갱신될 때, B(환경·모형 자산)는 A 이후 또는 환경 레이어·모형 규칙이 바뀔 때 돈다. 두 체인은 `observations.sqlite`(점 DB)에서 만난다 — A가 그것을 만들고, B가 그것을 읽는다.
+
+### 3-A. 관측 ETL — 원자료 → 정제자료 → 종·관측 서비스 테이블
+
+> **주의: geopandas가 필요한 단계(etl_observation·etl_national_park·etl_gbif·build_sigungu_agg·improve_species_list)는
 > anaconda python으로 실행** — `C:\Users\yssfr\anaconda3\python.exe` (PATH의 Windows Store python엔 geopandas 없음).
 > GBIF 다운로드(R)는 비대화형이면 `$env:R_ENVIRON_USER='…\.Renviron'` 선설정.
 
@@ -159,15 +163,67 @@ python etl_national_park.py                 # → observation_nps.csv (+unmatche
 python etl_gbif.py                          # → observation_gbif.csv (학명매칭·매칭ktsn 분류군 기준)
 python build_points_db.py                   # → observations.sqlite (obs_points; 점 DB + 시도집계 동일 파생 검증)
 python build_sigungu_agg.py                 # → observation_sigungu.csv (점DB→시군구 집계; region=SIGUNGU_CD, obs_count 보존)
-Rscript --vanilla -e "source('../R/bioclim_points.R')"  # → species_bioclim.csv (종별 bio01~19 분포; 공백경로라 source 사용)
-Rscript --vanilla -e "source('../R/env_layers.R')"      # → species_dem.csv·env_national.csv·env_layers_meta.csv·demo/data/env/*.png
-python ../5_App/build_env_data.py           # → species_env.js·env_meta.js (종 카드 막대 + 지도 환경변수 레이어)
 python reconcile_unmatched.py               # → observation_nps_unmatched_candidates.csv (검토용)
 python improve_species_list.py              # → species_service_flags.csv
 python build_demo_data.py 2026-06-29        # → 5_App/demo/data/*.js (시군구 우선; +sido/sigungu.geojson 별도 mapshaper)
-cd ../../5_App && python build_dist.py --osm-only --out docs   # → docs/ (GitHub Pages; --out 은 BASE 기준이라 'docs')
 ```
 
-의존: master(+aliases) → 관측 ETL 3종(EcoBank/국립공원/GBIF, override+alias 흡수) → points_db → **sigungu_agg** → reconcile → flags → demo_data → dist.
+의존: master(+aliases) → 관측 ETL 3종(EcoBank/국립공원/GBIF, override+alias 흡수) → points_db → **sigungu_agg** → reconcile → flags → demo_data.
 GBIF는 `gbif_<group>.csv`만 있으면 etl_gbif가 매칭ktsn 분류군 기준으로 정확 귀속(다운로드 파일 라벨에 비의존).
 보정 워크플로: reconcile 후보 검토 → `4_References/ktsn_name_overrides.csv` 승격 → 관측 ETL 재실행.
+
+`species_bioclim.csv`(1-H)는 이 체인의 필수 단계가 아니라 분석용 부산물이다. 필요할 때만:
+`Rscript --vanilla -e "source('../R/bioclim_points.R')"` (공백 경로라 스크립트 직접 실행 대신 `source`).
+
+### 3-B. 환경·모형 자산 — `run_pipeline.py`
+
+12단계를 순서대로 도는 **단일 진입점**이다. 각 단계는 산출물 존재를 검증하고(`need`), 실패하면 그 자리에서 멈춘다. 손으로 하나씩 부르지 말 것 — 순서가 의존관계다.
+
+```bash
+python 3_ETL/run_pipeline.py --list          # 단계 목록 확인
+python 3_ETL/run_pipeline.py                 # 기본 12단계 전체
+python 3_ETL/run_pipeline.py --from model    # 특정 단계부터 끝까지
+python 3_ETL/run_pipeline.py --only cell_water env_data gap_data
+```
+
+| # | 단계 | 스크립트 | 산출물 |
+|---|---|---|---|
+| 1 | `sentinel` | (내장) | NDVI/NDWI 평문 `.tif` 로컬 캐시(zip→캐시, `.ovr` 제외) |
+| 2 | `env_layers` | `R/env_layers.R` | `species_env_stats.csv` · `env_national.csv` · `env_layers_meta.csv` · `env_grid.csv` · `demo/data/env/*.png` |
+| 3 | `species_cells` | `R/species_cells.R` | `species_cells.csv` (종별 1km 점유 + 최종연도, `cid`=env_grid 일치) |
+| 4 | `cell_sigungu` | `python/build_cell_sigungu.py` | `cell_sigungu.csv` (셀→시군구; 적합지 비율표의 분모) |
+| 5 | `ndwi_sp` | `python/build_ndwi_species.py` | `ndwi_species.csv` (어류 + 저서성 무척추 — 물에서 사는 종 목록) |
+| 6 | `cell_water` | `python/build_cell_water.py` | `cell_water.csv` (하천망 shp × 1km 셀 = 수계 격자 마스크) |
+| 7 | `env_data` | `5_App/build_env_data.py` | `species_env.js` · `env_meta.js` |
+| 8 | `gap_data` | `5_App/build_gap_data.py` | `env_grid.js` · `cells_<T>.js` · `gap_meta.js` |
+| 9 | `env_grid_model` | `R/env_grid_model.R` | `env_grid_model.csv` (모형용 격자 + bio03·bio14·bio18) |
+| 10 | `season` | `python/build_season.py` | `species_season.csv` (조사노력 보정 12개월 점수) |
+| 11 | `model` | `R/model_species.R` | `model_store/` (종별 maxnet 증분 적합 + 4겹 CV) |
+| 12 | `model_data` | `5_App/build_model_data.py` | `env_model.js` · `model_<T>.js` · `season_<T>.js` · `model_meta.js` |
+
+- `model`(11)은 **증분**이다. 점유 셀 지문이 같은 종은 건너뛰므로 갱신분만 다시 돈다. 다만 변수·특징·배경수·겹수·구간 규칙이나 환경 격자가 바뀌면 `model_cfg` 해시가 달라져 **전량 재적합**한다(약 8,900종 × 5회 적합 ≈ 10시간).
+- `season`(10)은 `observations.sqlite` 의 월별 집계만 쓰므로 앞 단계와 독립이다 — 관측 ETL 이후면 언제 돌려도 된다.
+- `cell_water`(6)는 `env_grid` 를 건드리지 않는다. 수계는 최종 적합지 **판정 뒤** 마스킹으로 적용되므로, 하천망이 바뀌어도 모형을 다시 적합할 필요가 없다.
+- `dist` 단계는 기본 목록에 없다(명시 요청 시만): `python 3_ETL/run_pipeline.py --only dist`.
+
+### 3-C. 배포본
+
+```bash
+cd 5_App && python build_dist.py --osm-only --out docs   # → docs/ (GitHub Pages; --out 은 BASE 기준이라 'docs')
+```
+
+`--osm-only` 는 vworld 키를 주입하지 않는다(공개 저장소). `docs/` 는 이 스크립트의 산출물이므로 **직접 편집하지 않는다** — 다음 빌드에서 덮어써진다.
+
+---
+
+## 4. 갱신 주기
+
+| 대상 | 주기 | 실행 | 판단 근거 |
+|---|---|---|---|
+| 관측 원자료(EcoBank·GBIF·국립공원) | **6개월** | 3-A 전체 | 출처들의 공개 갱신이 그보다 잦지 않고, 발견공백 판정 창이 10년이라 반년 단위로 충분 |
+| 환경·모형 자산 | 관측 갱신 직후 1회 | 3-B 전체 | 점유 셀이 바뀐 종만 증분 재적합 |
+| 위키 조회수(관심도) | **월 1회** | `7_MCP/build_wiki_interest.py` | 조회수는 가볍고 변동이 빠르다 |
+| 관심종 익명 집계 | 수시(사용자 증가 시) | `7_MCP/build_watch_snapshot.py` | 서비스 이용자 수에 연동 |
+| MCP 데이터셋 | 위 셋 중 하나가 바뀔 때 | `7_MCP/build_mcp_data.py` → `fg_mcp.sqlite.gz` 커밋 | `meta.generated` 는 빌드일로 자동 기록(`FG_MCP_GEN_DATE` 로 고정 가능) |
+| 시민 제보 스냅샷 | 승인 건이 쌓일 때 | `build_community_snapshot.py` | 공개 하한 `MIN_PUBLIC_REPORT=3` 미만 조합은 애초에 나가지 않는다 |
+| 배포본 | 앞의 무엇이든 바뀌면 | 3-C | — |

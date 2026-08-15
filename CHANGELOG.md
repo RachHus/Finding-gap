@@ -28,15 +28,18 @@ Finding gap의 릴리스 단위 변경 이력입니다.
 - 종별 검색(조사정보 탭)에서 검색이 전혀 동작하지 않던 문제 — `service.html`·`chat.html`이 `index.html`로 통합되면서 종 검색창과 대화형 입력창이 둘 다 `id="q"`를 쓰게 됨. 문서에 같은 id가 두 개 있으면 `window.q`가 그 엘리먼트 하나가 아니라 HTMLCollection이 되어, 검색창에 이벤트 리스너를 붙이는 코드(`q.addEventListener(...)`)가 페이지 로드 시 조용히 에러를 내고 죽어있었음. 대화형 입력창 id를 `chatQ`로 분리해 해결.
 - 발견 제보 사진 입력에서 `capture="environment"` 제거 — 모바일에서 무조건 카메라만 뜨고 앨범(저장된 사진)을 고를 수 없던 문제. 속성을 빼면 브라우저가 카메라 촬영·앨범 선택을 모두 제공.
 - 카카오톡·네이버 블로그 공유 미리보기가 새 로고 OG 카드로 안 바뀌고 예전 이미지를 계속 보여주던 문제 — 원인은 공유 대상 페이지 URL이 아니라 **`og.png` 이미지 URL 자체**가 카카오/네이버 쪽에 캐시돼 있던 것(이미지 URL이 안 바뀌니 파일 내용이 바뀌어도 캐시가 안 갱신됨). 모든 페이지(index/quiz/153개 지역 SEO 페이지+허브)의 `og:image`·`twitter:image`를 `og.png?v=2`로 캐시버스팅.
+- **서식지 후보를 못 내는 사유를 실제로 문턱이 된 값으로 안내.** 화면은 관측 기록 수를 10과 비교했지만, 모형이 성립하느냐를 가르는 것은 서로 다른 발견 지점(1km 점유 셀)의 수다. 둘은 크게 어긋난다 — 모형이 있는 8,929종 기준 기록 수가 점유 셀보다 중앙값 27 많고, 최대 60,014 차이가 난다. 그래서 기록 99건·지점 9곳인 종이 "발견 지점은 충분한데 모형이 성립하지 않았다"는 틀린 이유를 보고 있었다(기록≥10인데 모형이 없는 962종 중 605종이 실제로는 지점 부족). 이제 지점 수로 판정해 "발견된 지점이 9곳뿐"이라 말한다. 물에서 사는 종은 지점이 충분한데 적합이 안 된 경우 자료의 한계(기후·지형·식생만으로 물길 환경을 담기 어려움)를 따로 밝힌다 — 이미 만들어 배포하던 `gap_meta.ndwi` 목록을 화면이 쓰지 않고 있었다.
+- **시민 제보 집계(MCP `community_discoveries`)에 공개 하한 누락** — 공개 읽기 도구 중 유일하게 K-익명 하한이 없었다. (종 × 시군구) 조합에 제보가 한둘이면 익명 집계라도 그 지역에서 그 종을 제보한 사람으로 좁혀진다. 관심종 집계(`MIN_PUBLIC_WATCH`)와 같은 이유로 `MIN_PUBLIC_REPORT = 3` 을 도입해 행 조회·요약 집계 양쪽에 적용하고, 반환값의 `discoveries`·`total_reports` 도 하한을 넘긴 조합만 세도록 했다. 회귀 시험 추가(하한 준수 + 좌표·개인정보 미노출 불변식).
+- MCP 데이터셋 생성일(`meta.generated`)이 손으로 고치는 상수라 실제 빌드보다 24일 뒤처진 채 배포된 적이 있다. 자료 신선도를 알리는 유일한 표시인데 어긋나면 이용자가 알 길이 없다. 빌드일 자동 기록으로 바꾸고, 재현 빌드가 필요할 때만 `FG_MCP_GEN_DATE` 로 고정하도록 했다.
 
 ### 수정
 - 발견공백 도우미(chat v9) **정확성·성능 개선** — (1) `list_species_by_taxon` 의 발견상태(state) 필터를 `LIMIT` **뒤 후처리**에서 **SQL 내 판정·필터**로 이동. 종전엔 국명순 상위 N개만 뽑은 뒤 걸러 "미발견 몇 종?"에 잘린 수를 답하고 뒤쪽 종이 누락됐다(예: 고치벌과 미발견 1,295종인데 ≤30만 보고). 이제 `count`=실제 전체 수, `species`=국명순 상위 표본, `state_totals`=발견/휴면/미발견 내역을 함께 반환. (2) 전국(지역 미지정) 집계를 종별 사전집계 MV(`fg_species_national`, ≈20k행)로 전환해 `fg_species_region`(590k) 전량 GROUP BY 제거(`taxa_summary`·`list_species_by_taxon`·`taxon_gap_ranking`). (3) 지역 한정 경로에 커버링 인덱스(`region/sido, ktsn, maxyear`) 추가 → index-only. (4) 분류군명 해석의 한글 정확·근사 조회를 단일 쿼리로 병합(왕복 3→2, 우선순위 정확>라틴>근사 보존). (5) `taxon_gap_ranking` 의 불필요한 `count(distinct)` 제거.
 - 발견공백 도우미(chat v10): **하루 사용 횟수 제한 폐지.** 종전엔 1인 하루 20회를 넘기면 "오늘 사용 한도를 모두 사용했습니다"로 막았으나, 조사 계획을 세우는 실사용에서 20회는 쉽게 닿는 수치라 정상 이용까지 차단했다. 이제 평상시 사용은 제한하지 않고, 자동화된 대량 호출로 무료 사용량이 한 번에 소진되는 것만 막는 안전판(`CHAT_ABUSE_CAP`, 기본 300)을 둔다. 응답에서 잔여 횟수(`remaining`) 필드도 제거(화면에 표시하지 않던 값).
 - `load_reference.py`: `--only <table[,table]>` 선택 적재 옵션 추가(소규모 갱신 시 590k행 재적재 생략), `fg_species_region` 재적재 시 전국 롤업 MV 자동 `REFRESH`.
 
-### 배포 전 확인
-- `5_App/supabase/reports_photo.sql`을 Supabase SQL Editor에서 적용해야 사진 업로드가 동작함(`reports.sql` 적용 후).
-- `5_App/supabase/conversational_service_taxon.sql`·`conversational_service_taxon_ranks.sql`·`conversational_service_perf.sql`(MV·커버링 인덱스) 적용 + `load_reference.py` 재실행 + `supabase functions deploy chat` 해야 강·목·과·속 질의·발견공백 순위·v9 개선이 동작함.
+### 문서
+- `3_ETL/DATA_PIPELINE.md` 실행 순서를 실제 코드와 맞춤. 재빌드는 **두 체인**(관측 ETL · 환경·모형 자산)인데 한 덩어리로 적혀 있었고, `run_pipeline.py` 의 12단계 중 `species_cells`·`cell_sigungu`·`ndwi_sp`·`cell_water`·`gap_data`·`env_grid_model`·`season`·`model`·`model_data` 아홉 단계가 아예 빠져 있었다(수계 마스크 단계는 문서 어디에도 없었다). 단계별 산출물 표와 **갱신 주기** 표를 추가하고, `env_layers.R` 산출을 실제 파일명(`species_env_stats.csv`·`env_grid.csv` 등)으로 고침 — 문서와 R 헤더 주석 모두 만들어지지 않는 `species_dem.csv` 를 가리키고 있었다.
+- `3_ETL/README.md` 전면 개정. 만들어진 적 없는 구조(parquet 중간산출·Supabase 서빙·GitHub Actions cron)를 6단계 표로 설명하고 있었다. 실제 진입점(두 체인 + `run_pipeline.py`)과 서빙 구조(정적 자산이 곧 서비스, Supabase는 시민과학 전용)로 교체.
 
 ## [0.9.0] - 2026-07-02
 
