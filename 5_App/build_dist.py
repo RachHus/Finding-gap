@@ -29,12 +29,12 @@ DATA_FILES = ["taxa_summary.js", "demo_mm.js",
               "species_index.js", "species_state.js", "species_interest.js", "sido.geojson", "sigungu.geojson",
               "env_meta.js", "species_env.js",
               "env_grid.js", "gap_meta.js",        # 발견공백 A: 전국 1km 격자 + 메타(지연 로드)
+              "env_model.js", "model_meta.js",     # 서식지 후보: 모형 전용 환경변수 + 생성 메타(지연 로드)
               "taxon_ko.js",                       # 퀴즈 범위: 과·속 라틴→한글 룩업
               "missions.js",                       # 시민과학 B: 유망 공백 미션보드(정적)
               "region_gaps.js"]                    # 시군구×분류군 발견/공백 합계 — 활동지역 선택·알림용(build_region_gaps.py)
-# 분류군별 관측·점유·미디어·계절은 분할 산출 — obs_/cells_/media_/season_<T>.js + media_meta.js 전부 복사(지연 로드)
-# model_*.js·env_model.js(공간 추천도)는 화면에서 아직 안 읽으므로 배포본에서 뺀다 — 붙일 때 여기에 추가할 것.
-DATA_GLOBS = ["obs_*.js", "cells_*.js", "media_*.js", "season_*.js", "rep_*.js"]
+# 분류군별 관측·점유·미디어·계절·모형은 분할 산출 — obs_/cells_/media_/season_/rep_/model_<T>.js 전부 복사(지연 로드)
+DATA_GLOBS = ["obs_*.js", "cells_*.js", "media_*.js", "season_*.js", "rep_*.js", "model_*.js"]
 # 환경변수 래스터 오버레이(서브디렉터리 보존)
 DATA_DIRS = ["env"]
 

@@ -17,8 +17,16 @@
   f   = clamp(f, fmin, fmax)                        특징별 범위로 자르기
   s   = 1 - exp(-exp(e + sum(f*b) + a))             cloglog
 
-공간 점수는 모든 종에 내보내지 않는다. 4겹 교차검증 TSS 가 기준선(model_config.R 의 TSS_GATE)에
-못 미치는 종은 근거가 얇아, 값을 주면 모른다는 것을 안다고 말하는 셈이 된다. 그런 종은 계절 축만 쓴다.
+적합 여부의 경계는 종마다 다르다. 예전에는 교차검증 TSS 가 0.4 에 못 미치는 종을 통째로 뺐는데,
+그러면 8,935종 중 4,086종이 사라진다. 미달의 원인을 보면 표본이 얇아서가 아니라 분포가 넓어서다
+(점유 셀 1,000칸 이상 구간은 83.0% 가 미달, 10~29칸 구간은 20.4% 만 미달). 전국에 고루 사는 종은
+환경으로 갈라낼 것이 애초에 적어 TSS 가 낮게 나오는 것이고, 그렇다고 그 종의 적합지 판정이
+불가능한 것은 아니다.
+
+그래서 고정 기준선을 버리고 종마다 자기 임계값을 쓴다. thr_cv 는 교차검증에서 TSS 가 최대가 되는
+지점의 점수(Youden J)이므로, 그 종에 대해 실제로 가장 잘 갈라내는 경계다. 대신 tss_cv 를 함께
+실어 이 경계가 얼마나 믿을 만한지 화면에서 밝힌다 — 값을 감추는 대신 근거의 세기를 드러낸다.
+임계값이 없는 종(교차검증이 성립하지 않은 6종)만 공간 축에서 뺀다.
 
 env_grid.js 는 건드리지 않는다 — 이미 배포된 발견공백 자산이 거기서 파생되므로 컬럼을 늘리면
 전 종 자산이 함께 흔들린다. 새 변수는 옆에 따로 실어 이 기능을 쓸 때만 받게 한다.
@@ -40,7 +48,7 @@ GEN = sys.argv[1] if len(sys.argv) > 1 else ""
 
 ADD_VARS = ["bio03", "bio14", "bio18"]
 ADD_SCALE = {"bio03": 10, "bio14": 1, "bio18": 1}    # env_grid_model.R 의 SCALE 과 같아야 한다
-TSS_GATE = 0.4                                        # model_config.R 의 TSS_GATE 와 같아야 한다
+GRADES = [(0.8, "A"), (0.6, "B"), (0.4, "C"), (0.2, "D")]   # 교차검증 TSS → 신뢰 등급(미만은 E)
 
 
 def _txfile(t):
@@ -95,8 +103,9 @@ def main():
     print(f"env_model.js: {len(order):,}셀 × {len(ADD_VARS)}변수 · 결측 {nmiss:,} "
           f"· {p.stat().st_size/1e6:.2f} MB")
 
-    # ── model_<T>.js : 게이트 통과 종의 계수 묶음 ──────────────────────
-    kept = dropped = failed = 0
+    # ── model_<T>.js : 종별 계수 + 자기 임계값 ─────────────────────────
+    kept = nothr = failed = 0
+    gcnt = defaultdict(int)
     for f in sorted(STORE.glob("*.json")):
         t = f.stem
         js = json.loads(f.read_text(encoding="utf-8"))
@@ -105,9 +114,9 @@ def main():
             if x.get("failed"):
                 failed += 1
                 continue
-            tss = _num(x.get("tss_cv"))
-            if tss is None or tss < TSS_GATE:
-                dropped += 1
+            tss, thr = _num(x.get("tss_cv")), _num(x.get("thr_cv"))
+            if tss is None or thr is None:      # 교차검증이 성립하지 않은 종 — 경계를 정할 수 없다
+                nothr += 1
                 continue
             # 계수는 반올림하지 않는다. 제곱항의 특징값이 10^5~10^6 규모(bio18^2 등)라
             # 절대값 6자리로 자르면 계수 오차 5e-7 이 link 에서 0.2 이상으로 증폭된다.
@@ -116,14 +125,16 @@ def main():
                            "a": x["alpha"], "e": x["entropy"],
                            "vmin": _lst(x["varmin"]), "vmax": _lst(x["varmax"]),
                            "fmin": _lst(x["fmin"]), "fmax": _lst(x["fmax"]),
-                           "tss": round(tss, 3), "n": x["n"]}
+                           "thr": round(thr, 6), "tss": round(tss, 3), "n": x["n"]}
             kept += 1
+            gcnt[next((g for lo, g in GRADES if tss >= lo), "E")] += 1
         p = OUT / f"model_{_txfile(t)}.js"
         p.write_text(f'(window.__MODEL__=window.__MODEL__||{{}})["{t}"]='
                      + json.dumps(out, separators=(",", ":")) + ";", encoding="utf-8")
         print(f"  model_{_txfile(t)}.js: {len(out):,}종 · {p.stat().st_size/1e6:.2f} MB")
-    print(f"공간 축: 통과 {kept:,} · 게이트 미달 {dropped:,} · 적합 실패 {failed:,} "
-          f"(기준 TSS >= {TSS_GATE})")
+    print(f"공간 축: {kept:,}종 · 임계값 없음 {nothr:,} · 적합 실패 {failed:,}")
+    print("  신뢰 등급(교차검증 TSS): "
+          + " · ".join(f"{g} {gcnt[g]:,}" for g in ("A", "B", "C", "D", "E")))
 
     # ── season_<T>.js : 종별 12개월 점수 ──────────────────────────────
     ssn = defaultdict(dict)
@@ -138,7 +149,7 @@ def main():
         print(f"  season_{_txfile(t)}.js: {len(d):,}종 · {p.stat().st_size/1e6:.2f} MB")
     print(f"계절 축: {nrec:,}종")
 
-    meta = {"generated": GEN, "gate_tss": TSS_GATE,
+    meta = {"generated": GEN, "grades": {g: gcnt[g] for g in ("A", "B", "C", "D", "E")},
             "vars_grid": ["dem", "ndvi", "bio01"], "vars_model": ADD_VARS,
             "n_spatial": kept, "n_season": nrec}
     (OUT / "model_meta.js").write_text(
