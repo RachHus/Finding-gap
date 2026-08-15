@@ -48,6 +48,7 @@ id_rsa*
 *.dbf
 *.cpg
 *.prj
+*.mshp
 *.zip
 
 # ---- R / Python ----

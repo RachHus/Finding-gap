@@ -3,12 +3,12 @@
 관찰 추천도 클라이언트 자산 빌드 — 공간 축(maxnet 계수) + 계절 축(월별 점수).
 
 입력 : 1_Data/processed/{model_store/<T>.json, species_season.csv, env_grid_model.csv,
-        env_grid.csv, ktsn_master.csv}
+        env_grid.csv, ktsn_master.csv, ndwi_species.csv, cell_water.csv}
 출력 : 5_App/demo/data/
-  env_model.js    window.__ENVM__       — bio03·bio14·bio18 (dem·ndvi·bio01 은 __GRID__ 에 이미 있음)
-  model_<T>.js    window.__MODEL__[T]   — 종별 maxnet 계수 묶음(게이트 통과 종만)
+  env_model.js    window.__ENVM__       — bio03·bio14·bio18 + wmask(수계 셀 비트맵)
+  model_<T>.js    window.__MODEL__[T]   — 종별 maxnet 계수 묶음(w=1 이면 수계 마스크 적용 종)
   season_<T>.js   window.__SEASON__[T]  — 종별 12개월 점수 0~100
-  model_meta.js   window.__MODELMETA__  — 생성일·변수·게이트·분류군별 종수
+  model_meta.js   window.__MODELMETA__  — 생성일·변수·신뢰등급 분포·분류군별 종수
 
 브라우저가 점수를 직접 계산한다. maxnet 의 predict 는 특징을 정규화하지 않고 범위로 자르기만 하므로
 아래 값만 있으면 예측이 정확히 재현된다(R 대조 검증: 최대오차 0.00e+00).
@@ -28,6 +28,10 @@
 실어 이 경계가 얼마나 믿을 만한지 화면에서 밝힌다 — 값을 감추는 대신 근거의 세기를 드러낸다.
 임계값이 없는 종(교차검증이 성립하지 않은 6종)만 공간 축에서 뺀다.
 
+어류·저서무척추(ndwi_species.csv)는 계수만으로는 물가와 산비탈을 가르지 못한다 — 모형 변수에
+물이 있는지가 없기 때문이다. 그래서 판정이 끝난 격자에 수계 마스크(cell_water.csv)를 덧씌운다.
+마스크를 환경격자의 변수로 넣지 않는 이유는 모형 설정 해시가 달라져 전 종을 다시 적합해야 해서다.
+
 env_grid.js 는 건드리지 않는다 — 이미 배포된 발견공백 자산이 거기서 파생되므로 컬럼을 늘리면
 전 종 자산이 함께 흔들린다. 새 변수는 옆에 따로 실어 이 기능을 쓸 때만 받게 한다.
 env_model.js 의 배열은 env_grid.csv 행 순서(=__GRID__ 구성 순서)와 같고, 클라이언트가 확인할 수
@@ -35,7 +39,7 @@ env_model.js 의 배열은 env_grid.csv 행 순서(=__GRID__ 구성 순서)와 �
 
 사용 : python build_model_data.py [YYYY-MM-DD]   (model_species.py·build_season.py 이후)
 """
-import sys, re, csv, json
+import sys, re, csv, json, base64
 from pathlib import Path
 from collections import defaultdict
 
@@ -54,6 +58,14 @@ GRADES = [(0.8, "A"), (0.6, "B"), (0.4, "C"), (0.2, "D")]   # 교차검증 TSS �
 def _txfile(t):
     """분류군 코드 → 파일명 토큰('-P'→'_P'). build_gap_data/service.html 규칙과 일치."""
     return re.sub(r"[^A-Za-z0-9]", "_", t)
+
+
+def _taxon_codes():
+    """파일명 토큰 → 실제 분류군 코드. model_store 의 파일명은 이미 토큰으로 씻겨 있어
+    (어류 '-P' → '_P.json') 파일명을 그대로 쓰면 클라이언트가 찾는 키와 어긋난다."""
+    codes = {r.get("taxon_group") for r in
+             csv.DictReader(open(PROC / "ktsn_master.csv", encoding="utf-8-sig"))}
+    return {_txfile(t): t for t in codes if t}
 
 
 def _q(x, s):
@@ -83,6 +95,23 @@ def _num(x):
     return None if f != f else f
 
 
+def _water_mask(order):
+    """수계 셀 여부를 격자 행 순서 그대로 담은 비트맵(base64). cid 목록으로 실으면 1MB 가까이 되는데
+    셀당 1비트면 13KB 다 — 클라이언트가 셀을 행 번호로 훑으므로 비트 위치도 그대로 쓰인다."""
+    f = PROC / "cell_water.csv"
+    if not f.exists():
+        print(f"(경고) {f.name} 없음 — 수계 마스크 미수록(어류·저서무척추 후보가 뭍까지 잡힌다)")
+        return "", 0
+    wet = {r["cid"] for r in csv.DictReader(open(f, encoding="utf-8-sig"))}
+    bits = bytearray((len(order) + 7) // 8)
+    n = 0
+    for i, c in enumerate(order):
+        if c in wet:
+            bits[i >> 3] |= 1 << (i & 7)
+            n += 1
+    return base64.b64encode(bytes(bits)).decode(), n
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     csv.field_size_limit(10 ** 7)
@@ -96,18 +125,22 @@ def main():
     cols = {v: [_q(em[c].get(v), ADD_SCALE[v]) for c in order] for v in ADD_VARS}
     payload = {**cols, "scale": ADD_SCALE, "n": len(order),
                "cid0": int(order[0]), "cid1": int(order[-1])}
+    payload["wmask"], nwat = _water_mask(order)
     p = OUT / "env_model.js"
     p.write_text("window.__ENVM__=" + json.dumps(payload, separators=(",", ":")) + ";",
                  encoding="utf-8")
     nmiss = sum(1 for v in ADD_VARS for x in cols[v] if x is None)
     print(f"env_model.js: {len(order):,}셀 × {len(ADD_VARS)}변수 · 결측 {nmiss:,} "
-          f"· {p.stat().st_size/1e6:.2f} MB")
+          f"· 수계셀 {nwat:,}({nwat/len(order)*100:.1f}%) · {p.stat().st_size/1e6:.2f} MB")
 
     # ── model_<T>.js : 종별 계수 + 자기 임계값 ─────────────────────────
-    kept = nothr = failed = 0
+    kept = nothr = failed = nwsp = 0
     gcnt = defaultdict(int)
+    tcode = _taxon_codes()
+    # 물에서만 사는 종(어류·저서무척추) 표식. 이 종만 최종 판정에 수계 마스크를 덧씌운다.
+    wet = {r["ktsn"] for r in csv.DictReader(open(PROC / "ndwi_species.csv", encoding="utf-8-sig"))}
     for f in sorted(STORE.glob("*.json")):
-        t = f.stem
+        t = tcode.get(f.stem, f.stem)
         js = json.loads(f.read_text(encoding="utf-8"))
         out = {}
         for x in js["sp"]:
@@ -126,13 +159,16 @@ def main():
                            "vmin": _lst(x["varmin"]), "vmax": _lst(x["varmax"]),
                            "fmin": _lst(x["fmin"]), "fmax": _lst(x["fmax"]),
                            "thr": round(thr, 6), "tss": round(tss, 3), "n": x["n"]}
+            if x["k"] in wet:
+                out[x["k"]]["w"] = 1
+                nwsp += 1
             kept += 1
             gcnt[next((g for lo, g in GRADES if tss >= lo), "E")] += 1
         p = OUT / f"model_{_txfile(t)}.js"
         p.write_text(f'(window.__MODEL__=window.__MODEL__||{{}})["{t}"]='
                      + json.dumps(out, separators=(",", ":")) + ";", encoding="utf-8")
         print(f"  model_{_txfile(t)}.js: {len(out):,}종 · {p.stat().st_size/1e6:.2f} MB")
-    print(f"공간 축: {kept:,}종 · 임계값 없음 {nothr:,} · 적합 실패 {failed:,}")
+    print(f"공간 축: {kept:,}종 · 임계값 없음 {nothr:,} · 적합 실패 {failed:,} · 수계 마스크 적용 {nwsp:,}종")
     print("  신뢰 등급(교차검증 TSS): "
           + " · ".join(f"{g} {gcnt[g]:,}" for g in ("A", "B", "C", "D", "E")))
 
@@ -151,7 +187,7 @@ def main():
 
     meta = {"generated": GEN, "grades": {g: gcnt[g] for g in ("A", "B", "C", "D", "E")},
             "vars_grid": ["dem", "ndvi", "bio01"], "vars_model": ADD_VARS,
-            "n_spatial": kept, "n_season": nrec}
+            "n_spatial": kept, "n_season": nrec, "n_water": nwsp}
     (OUT / "model_meta.js").write_text(
         "window.__MODELMETA__=" + json.dumps(meta, separators=(",", ":")) + ";", encoding="utf-8")
     print(f"model_meta.js: 공간 {kept:,}종 · 계절 {nrec:,}종 → {OUT}")

@@ -104,6 +104,13 @@ def step_ndwi_sp():
     need(PROC / "ndwi_species.csv", "ndwi_species.csv")
 
 
+def step_cell_water():
+    """수계 격자 — 4_References/<시도>/Channel Network shp 통합 × 1km 셀 교차.
+    어류·저서무척추의 최종 적합지 판정을 물길 지나는 셀로 자르는 마스크(env_grid 는 건드리지 않는다)."""
+    sh([sys.executable, PYDIR / "build_cell_water.py"])
+    need(PROC / "cell_water.csv", "cell_water.csv")
+
+
 def step_env_data():
     sh([sys.executable, APP / "build_env_data.py"])
     need(APP / "demo" / "data" / "species_env.js", "species_env.js")
@@ -160,6 +167,7 @@ STEPS = [  # 순서 = 의존관계
     ("species_cells", "species_cells.R (종별 1km 점유+최종연도, cid=env_grid)", step_species_cells),
     ("cell_sigungu", "build_cell_sigungu.py (셀→시군구 매핑, 비율표 분모)", step_cell_sigungu),
     ("ndwi_sp", "build_ndwi_species.py (어류+저서무척추)", step_ndwi_sp),
+    ("cell_water", "build_cell_water.py (수계 격자 마스크, 하천망×1km 셀)", step_cell_water),
     ("env_data", "build_env_data.py (species_env.js·env_meta.js)", step_env_data),
     ("gap_data", "build_gap_data.py (env_grid.js·cells_<T>.js·gap_meta.js)", step_gap_data),
     ("env_grid_model", "env_grid_model.R (모델 격자 + bio03·bio14·bio18)", step_env_grid_model),
@@ -171,8 +179,8 @@ STEPS = [  # 순서 = 의존관계
 # dist 는 명시 요청 시만. 나머지가 발견공백 A + 관찰 추천도 데이터 재빌드 체인.
 # season 은 observations.sqlite 의 obs_month 만 쓰므로 앞 단계와 독립이다(관측 ETL 이후면 언제든).
 # model 은 species_cells·env_grid_model 이후여야 한다.
-DEFAULT = ["sentinel", "env_layers", "species_cells", "cell_sigungu", "ndwi_sp", "env_data", "gap_data",
-           "env_grid_model", "season", "model", "model_data"]
+DEFAULT = ["sentinel", "env_layers", "species_cells", "cell_sigungu", "ndwi_sp", "cell_water",
+           "env_data", "gap_data", "env_grid_model", "season", "model", "model_data"]
 
 
 def main():

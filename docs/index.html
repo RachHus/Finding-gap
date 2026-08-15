@@ -1081,10 +1081,14 @@ function rname(code){ if(isUnknownReg(code)) return '좌표미상';
    지점(thr)을 쓴다 — 전국에 고루 사는 종과 좁게 사는 종에 같은 잣대를 대면 한쪽은 전국이 후보가 되고
    다른 쪽은 후보가 사라진다. 대신 교차검증 TSS 를 신뢰 등급으로 함께 보여 근거의 세기를 밝힌다.
 
-   자산: env_grid.js(__GRID__ 1km 셀·dem/ndvi/bio01) · env_model.js(__ENVM__ bio03/bio14/bio18)
+   어류·저서무척추는 계수만으로 물가와 산비탈을 가르지 못한다 — 모형 변수에 물이 들어 있지 않다.
+   그 종들(model 의 w=1)에는 판정이 끝난 격자에 수계 마스크(ENVM.wmask)를 한 겹 더 씌워
+   하천이 지나지 않는 칸을 뺀다. 마스크는 하천망 실측이라 모형을 다시 적합할 일이 없다.
+
+   자산: env_grid.js(__GRID__ 1km 셀·dem/ndvi/bio01) · env_model.js(__ENVM__ bio03/bio14/bio18·wmask)
         · model_<T>.js(__MODEL__[t] 종별 계수) · cells_<T>.js(__CELLS__[t] 종별 점유) · gap_meta.js. */
 let GRID=null, GAPMETA=null, GIDX=null, gapOn=false, GAPRES=null;      // gapOn: 서식지 후보 레이어 토글(지도 안 컨트롤)
-let ENVM=null;                                                         // 모형 전용 환경변수(__GRID__ 와 행 순서 동일)
+let ENVM=null, WMASK=null;                                             // 모형 전용 환경변수(__GRID__ 와 행 순서 동일) + 수계 셀 비트맵
 let gapLayer=null, gapSource=null, gapBtnEl=null;                      // 후보셀 Canvas2D Vector 레이어(모드 B)
 let cellLayer=null, cellSource=null, CELLN=0;                          // 발견 1km 격자 중심점(모드 B·일반종)
 let meLayer=null, meSource=null;                                       // 내 위치 표시점
@@ -1095,6 +1099,13 @@ const _hexA=(h,a)=>{ const n=parseInt(h.slice(1),16); return `rgba(${n>>16&255},
    촘촘한 근거처럼 읽힌다. 경계값은 통상 기준(0.4 fair · 0.6 good)을 위아래로 늘린 것이다. */
 const GAP_GRADE=[[0.8,'A','매우 높음'],[0.6,'B','높음'],[0.4,'C','보통'],[0.2,'D','낮음'],[-1,'E','매우 낮음']];
 function gradeOf(tss){ return GAP_GRADE.find(g=>tss>=g[0])||GAP_GRADE[GAP_GRADE.length-1]; }
+/* 수계 셀 목록을 cid 배열로 실으면 8만 개라 1MB 가까이 된다. 셀당 1비트면 13KB 이고,
+   후보 계산이 셀을 행 번호로 훑으므로 비트 자리를 그대로 쓸 수 있다. */
+function _bits(b64, n){
+  try{ const s=atob(b64); if(s.length<(n+7)>>3) return null;
+    const a=new Uint8Array(s.length); for(let i=0;i<s.length;i++) a[i]=s.charCodeAt(i); return a;
+  }catch(e){ console.warn('수계 마스크를 읽지 못했습니다'); return null; }
+}
 function _loadScript(src, cb){ const s=document.createElement('script'); s.src=src;
   s.onload=cb; s.onerror=()=>{ console.warn('로드 실패',src); cb(); }; document.head.appendChild(s); }
 let _gapCbs=null;
@@ -1109,6 +1120,7 @@ function ensureGap(cb){                                   // gap_meta + env_grid
     // 점수가 나오는데 화면에는 그럴듯하게 찍히므로, 길이와 양끝 cid 로 어긋남을 여기서 잡는다.
     if(ENVM.n!==c.length||ENVM.cid0!==c[0]||ENVM.cid1!==c[c.length-1]){
       console.warn('환경격자 정렬 불일치 — 서식지 후보를 끕니다'); ENVM=null; }
+    WMASK=ENVM&&ENVM.wmask?_bits(ENVM.wmask,c.length):null;            // 셀당 1비트(행 순서) → 바이트 배열
     const cbs=_gapCbs; _gapCbs=null; cbs.forEach(f=>f&&f()); };
   _loadScript('demo/data/gap_meta.js', done);
   _loadScript('demo/data/env_grid.js', done);
@@ -1189,6 +1201,7 @@ function computeCandidate(sp){                            // 적합·미발견 �
   const terms=modelTerms(m), cols=modelCols(m.v), nv=m.v.length;
   if(!terms.length||cols.some(c=>!c[0])) return {gated:true, n};
   const vmin=m.vmin, vmax=m.vmax, base=m.e+m.a, thr=m.thr;
+  const wet=m.w?WMASK:null;                               // 물에서만 사는 종 — 하천 지나는 칸만 남긴다
   const S=GRID.scale, cid=GRID.cid, lon=GRID.lon, lat=GRID.lat, sg=GRID.sg;
   const CT=window.__CELLS__||{}, occ=new Set(), oc=(CT[sp.t]||{})[sp.k];
   if(oc){ for(let j=0;j<oc.c.length;j++) occ.add(oc.c[j]); }
@@ -1209,6 +1222,7 @@ function computeCandidate(sp){                            // 적합·미발견 �
       if(f<tm.lo) f=tm.lo; else if(f>tm.hi) f=tm.hi;
       link+=f*tm.b; }
     if(1-Math.exp(-Math.exp(link))<thr) continue;         // cloglog 점수가 이 종의 임계값에 못 미침
+    if(wet&&!(wet[i>>3]>>(i&7)&1)) continue;              // 물길이 없는 칸 — 수생종은 여기서 뺀다
     fit++;
     if(occ.has(cid[i])) continue;                         // 이미 기록이 있는 칸 — 발견 격자가 그린다
     numBySg.set(sg[i], (numBySg.get(sg[i])||0)+1);
@@ -1217,7 +1231,7 @@ function computeCandidate(sp){                            // 적합·미발견 �
   const ratios=[];
   numBySg.forEach((num,sgi)=>{ const denom=GRID.sgn[sgi]||0, code=GRID.sgcodes[sgi];
     ratios.push({code, num, denom, ratio:denom?num/denom:0}); });
-  return {gated:false, n, cells, ratios, count:cells.length, fit, tss:m.tss, mn:m.n};
+  return {gated:false, n, cells, ratios, count:cells.length, fit, tss:m.tss, mn:m.n, wet:!!wet};
 }
 function updateGapMap(res){                               // 후보셀 → Vector 소스
   if(!gapSource) return;
@@ -1317,6 +1331,7 @@ function gapTable(res){
     `</tr></thead><tbody>${body}</tbody></table></div>`+
     `<div class="regtbl-foot"><span class="muted">${nf(rows.length)}개 시군구 · 행 클릭=해당 시군구로 이동</span></div>`+
     `<div class="envnote">이 종의 발견지점과 전국 환경(기후·고도·식생)을 대조해 학습한 적합 모형이 적합하다고 본 곳 중, 아직 발견기록이 없는 1km 지역입니다. `+
+      (res.wet?`물에서 사는 종이라 하천이 지나는 칸만 남겼습니다. `:'')+
       `근거의 세기는 교차검증으로 잰 값이며 지금은 <b>${g[2]}(${g[1]})</b> 입니다 — 낮을수록 후보 범위가 넓게 잡히니 참고 자료로만 보십시오. 실제 서식을 보장하지 않습니다.</div>`+
   `</div>`;
 }
