@@ -27,12 +27,18 @@
   // 한 페이지 안에서 화면만 바뀌는 구조라 실제 이동이 없다 → 가상 페이지뷰로 알린다.
   // path 는 현재 주소 기준 상대경로("?sp=120000053303" 등)로 받아 URL 로 해석한다. 배포본이
   // 하위 경로(/Finding-gap/)에 놓이므로 origin 에 직접 이어붙이면 어긋난다.
+  //
+  // last 를 처음 주소로 채워 두는 것이 중요하다. 종 상세의 가상 경로는 공유 링크(?sp=<ktsn>)와
+  // 같은 형태라, 공유 링크로 들어온 방문은 gtag 가 자동으로 보내는 page_view 와 화면이 그려질 때의
+  // fgPage 가 같은 주소로 두 번 잡힌다. 직전과 같은 주소면 보내지 않아 공유로 유입된 종만
+  // 두 배로 세는 것을 막는다(다른 종을 보고 되돌아오면 주소가 달라지므로 정상 집계된다).
+  var last = location.href;
   window.fgPage = function (path, title) {
     try {
-      gtag('event', 'page_view', {
-        page_location: new URL(path || (location.pathname + location.search), location.href).href,
-        page_title: title || document.title,
-      });
+      var href = new URL(path || (location.pathname + location.search), location.href).href;
+      if (href === last) return;
+      last = href;
+      gtag('event', 'page_view', { page_location: href, page_title: title || document.title });
     } catch (e) {}
   };
 })();
