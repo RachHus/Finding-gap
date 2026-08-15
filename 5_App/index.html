@@ -1853,6 +1853,7 @@ function downloadCSV(){
   const reg=selSidos.size?[...selSidos].map(rname).join('+'):'전국';
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download=`${TAXON_KOR[curTaxon]}_${reg}_${y0}-${y1}_${metric==='found'?'발견':'미발견'}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  fgTrack('download',{what:'species_list', taxon:curTaxon, metric, rows:rows.length});
 }
 
 /* ═══════ Mode B: 종별 검색(분류군·연도 필터 + 지도) ═══════ */
@@ -2006,6 +2007,7 @@ function downloadSpeciesRegions(){
   const csv='﻿'+[head.join(','),...body].join('\r\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download=`${selSpecies.n||selSpecies.s}_발견지역(시군구)_${sy0}-${sy1}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  fgTrack('download',{what:'species_regions', ktsn:selSpecies.k, taxon:selSpecies.t, rows:rows.length});
 }
 function envBars(sp){                                     // 발견지점 고도 + 발견 계절
   if(!ENVMETA||!window.__ENV__) return null;              // 메타·데이터 준비 안 됨 → 섹션 생략
@@ -2070,6 +2072,9 @@ function envBars(sp){                                     // 발견지점 고도
 function renderSpecies(sp){
   selSpecies=sp;
   window.fgTrack&&fgTrack('species_open',{ktsn:sp.k,taxon:sp.t});
+  // 종별 조회 순위의 원천. 사용자 지정 매개변수는 맞춤 측정기준 등록 전까지 보고서에 뜨지 않고
+  // 소급되지도 않으므로, 순위로 쓸 신호는 표준 측정기준인 페이지 경로로도 함께 남긴다.
+  window.fgPage&&fgPage(`?sp=${encodeURIComponent(sp.k)}`, `${sp.n||sp.s} — Finding gap`);
   selRegions=speciesRegions(sp,sy0,sy1);                  // 지도 강조용(활성 레벨)
   const eg=isEndangered(sp.g);
   const envInfo=envBars(sp);                              // 고도·발견계절 막대(데이터 있을 때만)
