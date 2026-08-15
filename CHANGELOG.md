@@ -26,6 +26,7 @@ Finding gap의 릴리스 단위 변경 이력입니다.
 
 ### 수정
 - 발견공백 도우미(chat v9) **정확성·성능 개선** — (1) `list_species_by_taxon` 의 발견상태(state) 필터를 `LIMIT` **뒤 후처리**에서 **SQL 내 판정·필터**로 이동. 종전엔 국명순 상위 N개만 뽑은 뒤 걸러 "미발견 몇 종?"에 잘린 수를 답하고 뒤쪽 종이 누락됐다(예: 고치벌과 미발견 1,295종인데 ≤30만 보고). 이제 `count`=실제 전체 수, `species`=국명순 상위 표본, `state_totals`=발견/휴면/미발견 내역을 함께 반환. (2) 전국(지역 미지정) 집계를 종별 사전집계 MV(`fg_species_national`, ≈20k행)로 전환해 `fg_species_region`(590k) 전량 GROUP BY 제거(`taxa_summary`·`list_species_by_taxon`·`taxon_gap_ranking`). (3) 지역 한정 경로에 커버링 인덱스(`region/sido, ktsn, maxyear`) 추가 → index-only. (4) 분류군명 해석의 한글 정확·근사 조회를 단일 쿼리로 병합(왕복 3→2, 우선순위 정확>라틴>근사 보존). (5) `taxon_gap_ranking` 의 불필요한 `count(distinct)` 제거.
+- 발견공백 도우미(chat v10): **하루 사용 횟수 제한 폐지.** 종전엔 1인 하루 20회를 넘기면 "오늘 사용 한도를 모두 사용했습니다"로 막았으나, 조사 계획을 세우는 실사용에서 20회는 쉽게 닿는 수치라 정상 이용까지 차단했다. 이제 평상시 사용은 제한하지 않고, 자동화된 대량 호출로 무료 사용량이 한 번에 소진되는 것만 막는 안전판(`CHAT_ABUSE_CAP`, 기본 300)을 둔다. 응답에서 잔여 횟수(`remaining`) 필드도 제거(화면에 표시하지 않던 값).
 - `load_reference.py`: `--only <table[,table]>` 선택 적재 옵션 추가(소규모 갱신 시 590k행 재적재 생략), `fg_species_region` 재적재 시 전국 롤업 MV 자동 `REFRESH`.
 
 ### 배포 전 확인
