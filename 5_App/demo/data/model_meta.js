@@ -1,1 +1,1 @@
-window.__MODELMETA__={"generated":"2026-08-15","grades":{"A":633,"B":1417,"C":2799,"D":3575,"E":505},"vars_grid":["dem","ndvi","bio01"],"vars_model":["bio03","bio14","bio18"],"n_spatial":8929,"n_season":20228,"n_water":684};
+window.__MODELMETA__={"generated":"","grades":{"A":916,"B":1395,"C":2413,"D":3163,"E":1043},"vars_grid":["dem","ndvi","bio01"],"vars_model":["bio03","bio14","bio18","sord"],"n_spatial":8930,"n_season":20228,"n_water":633};

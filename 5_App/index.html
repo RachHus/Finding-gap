@@ -452,7 +452,12 @@
   /* 간격 14px 은 여백이 아니라 타격영역 계산이다. 물음표의 44px 손가락 영역(.qtip::before)이
      16px 아이콘 밖으로 좌우 14px 씩 뻗으므로, 그보다 좁게 붙이면 버튼 오른쪽 끝을 눌렀을 때
      레이어가 아니라 설명이 열린다(실측: 4px 일 때 버튼 오른쪽 10px 를 물음표가 가져갔다). */
-  .gap-ctrl{position:absolute;left:8px;bottom:8px;z-index:2;display:flex;align-items:center;gap:14px}
+  /* 좌하단 바닥은 확대·축소 스택이 이미 쓴다(위 #map .ol-zoom — 아래에서 9.6px, 높이 91px).
+     bottom:8px 로 두면 축소 버튼을 통째로 덮어 버튼 중심이 이 토글로 히트테스트된다(실측:
+     916×600 지도에서 축소 버튼 y 545~590 vs 토글 y 557~591 — 축소가 눌리지 않았다).
+     오른쪽으로 비키는 방법은 좁은 화면에서 막힌다 — 375px 에서 물음표 말풍선(210px)이 지도
+     오른쪽 끝까지 15px 밖에 안 남아, 조금만 밀어도 잘린다. 그래서 확대·축소 위로 올린다. */
+  .gap-ctrl{position:absolute;left:8px;bottom:110px;z-index:2;display:flex;align-items:center;gap:14px}
   .gap-ctrl .gapbtn{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:6px 11px;
     border:1px solid #cdd5d1;border-radius:8px;background:#fff;color:#5a665f;cursor:pointer;
     font:600 12px system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.14)}
