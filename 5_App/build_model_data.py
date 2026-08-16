@@ -167,6 +167,18 @@ def main():
     csv.field_size_limit(10 ** 7)
     OUT.mkdir(parents=True, exist_ok=True)
 
+    # 저장소가 한 가지 전제로 적합됐는지 먼저 확인한다. cfg 는 변수 목록·정밀도·배경 수·격자
+    # 내용을 묶은 지문이라, 값이 갈리면 서로 다른 환경에서 배운 계수가 한 자산에 섞인다는 뜻이다.
+    # 전 종 재적합은 10시간이 걸려 중간에 끊길 수 있고, 그때 섞인 자산이 조용히 배포되면
+    # 화면의 차이가 어디서 왔는지 사후에 가려낼 수 없다 — 그래서 아무것도 쓰기 전에 세운다.
+    cfgs = defaultdict(list)
+    for f in sorted(STORE.glob("*.json")):
+        cfgs[json.loads(f.read_text(encoding="utf-8")).get("cfg")].append(f.stem)
+    if len(cfgs) > 1:
+        sys.exit("[중단] 모형 저장소의 cfg 가 갈립니다 — 재적합이 끝나지 않았습니다.\n"
+                 + "\n".join(f"  {c} : {', '.join(v)}" for c, v in sorted(cfgs.items()))
+                 + "\n재적합을 마친 뒤 다시 실행하십시오.")
+
     # ── env_model.js : __GRID__ 와 같은 행 순서로 3개 변수 ──────────────
     order = [r["cid"] for r in csv.DictReader(open(PROC / "env_grid.csv", encoding="utf-8-sig"))]
     em = {r["cid"]: r for r in csv.DictReader(open(PROC / "env_grid_model.csv", encoding="utf-8-sig"))}
