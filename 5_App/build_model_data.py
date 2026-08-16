@@ -24,9 +24,17 @@
 불가능한 것은 아니다.
 
 그래서 고정 기준선을 버리고 종마다 자기 임계값을 쓴다. thr_cv 는 교차검증에서 TSS 가 최대가 되는
-지점의 점수(Youden J)이므로, 그 종에 대해 실제로 가장 잘 갈라내는 경계다. 대신 tss_cv 를 함께
-실어 이 경계가 얼마나 믿을 만한지 화면에서 밝힌다 — 값을 감추는 대신 근거의 세기를 드러낸다.
+지점의 점수(Youden J)이므로, 그 종에 대해 실제로 가장 잘 갈라내는 경계다. 대신 근거의 세기를 함께
+실어 이 경계를 얼마나 믿을지 화면에서 밝힌다 — 값을 감추는 대신 신뢰도를 드러낸다.
 임계값이 없는 종(교차검증이 성립하지 않은 6종)만 공간 축에서 뺀다.
+
+신뢰 등급은 tss_cv 가 아니라 auc_cv 로 매긴다. 등급을 TSS 로 매기면 위에서 기준선을 걷어낸 것과
+같은 편향이 화면에 그대로 남는다 — TSS 는 분포 넓이에 딸려 움직여(로그 점유칸과 ρ=-0.492) 전국에
+고루 사는 종이 모형과 무관하게 낮은 등급을 받는다. AUC 는 같은 상관이 -0.099 다. 900종을 0.5°
+공간 블록으로 다시 나눠 가 본 적 없는 지역을 맞히는 실력을 재 보면, 화면에 실제로 뜨는 것(상위
+10% 후보의 정밀도)을 AUC 가 더 잘 예고한다(ρ +0.742 vs +0.687). 점유칸 구간을 고정해도 우위가
+유지되고(+0.680/+0.648, +0.793/+0.761) 점유칸 수만으로는 정밀도가 예측되지 않으므로(ρ -0.018),
+"분포가 좁아 AUC 가 거저 올랐다"는 설명은 성립하지 않는다. 경계는 AUC 관례값을 쓴다.
 
 어류·저서무척추(ndwi_species.csv)는 두 겹으로 다룬다. 모형에는 하천 차수(sord)를 변수로 하나 더
 주어 실개천과 큰 강을 구분하게 하고, 판정이 끝난 격자에는 수계 마스크(cell_water.csv)를 덧씌워
@@ -59,7 +67,7 @@ GEN = sys.argv[1] if len(sys.argv) > 1 else ""
 # 격자 열은 종과 무관하게 한 벌이므로 전 셀분을 함께 내린다(정수 0~7 이라 압축이 잘 먹는다).
 ADD_VARS = ["bio03", "bio14", "bio18", "sord"]
 ADD_SCALE = {"bio03": 10, "bio14": 1, "bio18": 1, "sord": 1}   # env_grid_model.R 의 SCALE 과 같아야 한다
-GRADES = [(0.8, "A"), (0.6, "B"), (0.4, "C"), (0.2, "D")]   # 교차검증 TSS → 신뢰 등급(미만은 E)
+GRADES = [(0.9, "A"), (0.8, "B"), (0.7, "C"), (0.6, "D")]   # 교차검증 AUC → 신뢰 등급(미만은 E)
 
 
 def _txfile(t):
@@ -194,8 +202,8 @@ def main():
             if x.get("failed"):
                 failed += 1
                 continue
-            tss, thr = _num(x.get("tss_cv")), _num(x.get("thr_cv"))
-            if tss is None or thr is None:      # 교차검증이 성립하지 않은 종 — 경계를 정할 수 없다
+            auc, thr = _num(x.get("auc_cv")), _num(x.get("thr_cv"))
+            if auc is None or thr is None:      # 교차검증이 성립하지 않은 종 — 경계를 정할 수 없다
                 nothr += 1
                 continue
             # 계수는 반올림하지 않는다. 제곱항의 특징값이 10^5~10^6 규모(bio18^2 등)라
@@ -205,7 +213,7 @@ def main():
                            "a": x["alpha"], "e": x["entropy"],
                            "vmin": _lst(x["varmin"]), "vmax": _lst(x["varmax"]),
                            "fmin": _lst(x["fmin"]), "fmax": _lst(x["fmax"]),
-                           "thr": round(thr, 6), "tss": round(tss, 3), "n": x["n"]}
+                           "thr": round(thr, 6), "auc": round(auc, 3), "n": x["n"]}
             if x["k"] in sea:
                 out[x["k"]]["w"] = 2
                 nsea += 1
@@ -213,14 +221,14 @@ def main():
                 out[x["k"]]["w"] = 1
                 nwsp += 1
             kept += 1
-            gcnt[next((g for lo, g in GRADES if tss >= lo), "E")] += 1
+            gcnt[next((g for lo, g in GRADES if auc >= lo), "E")] += 1
         p = OUT / f"model_{_txfile(t)}.js"
         p.write_text(f'(window.__MODEL__=window.__MODEL__||{{}})["{t}"]='
                      + json.dumps(out, separators=(",", ":")) + ";", encoding="utf-8")
         print(f"  model_{_txfile(t)}.js: {len(out):,}종 · {p.stat().st_size/1e6:.2f} MB")
     print(f"공간 축: {kept:,}종 · 임계값 없음 {nothr:,} · 적합 실패 {failed:,} "
           f"· 수계 마스크 적용 {nwsp:,}종 · 해산종 {nsea:,}종")
-    print("  신뢰 등급(교차검증 TSS): "
+    print("  신뢰 등급(교차검증 AUC): "
           + " · ".join(f"{g} {gcnt[g]:,}" for g in ("A", "B", "C", "D", "E")))
 
     # ── season_<T>.js : 종별 12개월 점수 ──────────────────────────────

@@ -148,7 +148,8 @@ def step_model():
 
 def step_model_data():
     """관찰 추천도 클라 자산 — env_model.js·model_<T>.js·season_<T>.js·model_meta.js.
-    공간 축은 교차검증 TSS 가 기준선 이상인 종만 싣는다(나머지는 계절 축만)."""
+    공간 축은 종별 임계값(thr_cv)이 정해진 종을 모두 싣고, 교차검증 AUC 로 매긴
+    신뢰 등급을 함께 내보낸다. 임계값이 없는 종만 계절 축으로 남는다."""
     import datetime
     sh([sys.executable, APP / "build_model_data.py", datetime.date.today().isoformat()])
     need(APP / "demo" / "data" / "model_meta.js", "model_meta.js")
