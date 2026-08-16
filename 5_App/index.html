@@ -836,6 +836,15 @@
   </div>
 </div>
 
+<!-- 근거의 세기(신뢰 등급) 설명 — 등급 글자를 눌러서 연다. 서식지 후보를 얼마나 믿을지 판단하려면
+     "어떻게 쟀는지"와 "그 방법이 무엇을 못 보는지"를 같이 알아야 한다. -->
+<div class="rpt-overlay" id="gradeOverlay" hidden>
+  <div class="rpt-modal grade-modal" role="dialog" aria-modal="true" aria-labelledby="gradeTitle">
+    <div class="rpt-hd"><h3 id="gradeTitle">근거의 세기는 어떻게 쟀나요</h3><button class="x" id="gradeClose" type="button" aria-label="닫기">&times;</button></div>
+    <div class="rpt-bd" id="gradeBody"></div>
+  </div>
+</div>
+
 <!-- 대화형 도우미 — 우하단 고정 버튼으로 열고, 지도를 가리지 않게 옆(모바일: 하단)에 패널이 뜬다 -->
 <button id="chatToggle" class="chatfab" type="button" title="발견공백 도우미에게 물어보기" aria-label="발견공백 도우미 열기" onclick="fgChatDrawer.toggle()">
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -921,6 +930,40 @@
   .rpt-url-toggle{display:inline-block;margin-top:6px;font-size:12px;color:var(--faint);cursor:pointer;text-decoration:underline}
   .report-lk{cursor:pointer}
   @media(max-width:880px){ .rpt-overlay{padding:0;align-items:flex-end} .rpt-modal{max-width:none;max-height:94vh;border-radius:14px 14px 0 0} }
+
+  /* 근거의 세기 설명 — 읽는 글이라 본문보다 넓게 두고 줄간을 늘린다 */
+  .grade-modal{max-width:560px}
+  #gradeBody{font-size:13.5px;line-height:1.75;color:#3d4340}
+  #gradeBody h4{margin:18px 0 6px;font-size:13.5px;color:#1E5631}
+  #gradeBody h4:first-child{margin-top:0}
+  #gradeBody p{margin:0 0 8px}
+  #gradeBody .faint{color:var(--muted);font-size:12.5px}
+  #gradeBody .gnow{background:#f1f6f3;border-radius:8px;padding:9px 12px;margin:0 0 4px;font-size:13.5px}
+  #gradeBody ol.gsteps{margin:0 0 8px;padding-left:20px}
+  #gradeBody ol.gsteps li{margin-bottom:3px}
+  #gradeBody ul.gvars{margin:0 0 8px;padding-left:18px}
+  #gradeBody ul.gvars li{margin-bottom:2px}
+  #gradeBody ul.gvars .faint{font-size:11.5px}
+  /* 좁은 폭에서 표만 옆으로 밀리게 둔다. 감싸지 않으면 본문 전체가 가로로 흘러 글줄이 잘린다 */
+  .gtbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:4px 0 8px}
+  .gtbl{width:100%;min-width:340px;border-collapse:collapse;font-size:12.5px}
+  .gtbl th{text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);padding:5px 6px}
+  .gtbl td{padding:5px 6px;border-bottom:1px solid #f1f1ee}
+  .gtbl .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .gtbl th.num{text-align:right}
+  .gtbl .gl{font-weight:700;color:#1E5631}
+  .gtbl tr.on{background:#fff7e6}
+  .gtbl tr.on .gl{color:#9a6b00}
+  /* 근거 등급 배지 — 눌러서 설명을 여는 버튼. 손가락으로 누르는 폭에서는 44px 로 키운다 */
+  .gradebtn{appearance:none;border:1px solid #e0e6e2;background:#f7faf8;border-radius:999px;
+    padding:4px 10px;font:inherit;font-size:12px;font-weight:600;color:#4f6f61;cursor:pointer;
+    display:inline-flex;align-items:center;gap:4px;min-height:28px;white-space:nowrap}
+  .gradebtn:hover{border-color:#9ec3b2;background:#eef4f0}
+  .gradebtn span{font-size:11px;color:#7d8b84}
+  .lnkbtn{appearance:none;border:0;background:none;padding:0;font:inherit;color:#1E5631;
+    text-decoration:underline;cursor:pointer}
+  .lnkbtn:hover{color:#0f3a1e}
+  @media(max-width:880px){ .gradebtn{min-height:44px;padding:4px 12px} }
 
   /* 도우미 여는 버튼 — 채팅 서비스에서 통용되는 우하단 고정 자리. 패널이 열리면 그 아래 깔리므로 숨긴다. */
   .chatfab{position:fixed;right:20px;bottom:20px;z-index:190;width:56px;height:56px;padding:0;border-radius:50%;
@@ -1081,11 +1124,13 @@ function rname(code){ if(isUnknownReg(code)) return '좌표미상';
    지점(thr)을 쓴다 — 전국에 고루 사는 종과 좁게 사는 종에 같은 잣대를 대면 한쪽은 전국이 후보가 되고
    다른 쪽은 후보가 사라진다. 대신 교차검증 TSS 를 신뢰 등급으로 함께 보여 근거의 세기를 밝힌다.
 
-   어류·저서무척추는 계수만으로 물가와 산비탈을 가르지 못한다 — 모형 변수에 물이 들어 있지 않다.
-   그 종들(model 의 w=1)에는 판정이 끝난 격자에 수계 마스크(ENVM.wmask)를 한 겹 더 씌워
-   하천이 지나지 않는 칸을 뺀다. 마스크는 하천망 실측이라 모형을 다시 적합할 일이 없다.
+   어류·저서무척추(model 의 w=1)는 두 겹으로 다룬다. 하나는 하천 차수(sord)를 모형 변수로 하나 더
+   받는 것 — 실개천과 큰 강을 구분하게 되어 후보가 그 종이 실제로 사는 물길 규모에 붙는다.
+   다른 하나는 판정이 끝난 격자에 수계 마스크(ENVM.wmask)를 씌워 하천이 없는 칸을 빼는 것이다.
+   마스크는 하천망 실측이라 모형을 다시 적합할 일이 없다. 변수는 종마다 다르므로 항상 model 의
+   v 목록으로 열을 찾는다 — 순서를 가정하면 안 된다.
 
-   자산: env_grid.js(__GRID__ 1km 셀·dem/ndvi/bio01) · env_model.js(__ENVM__ bio03/bio14/bio18·wmask)
+   자산: env_grid.js(__GRID__ 1km 셀·dem/ndvi/bio01) · env_model.js(__ENVM__ bio03/bio14/bio18/sord·wmask)
         · model_<T>.js(__MODEL__[t] 종별 계수) · cells_<T>.js(__CELLS__[t] 종별 점유) · gap_meta.js. */
 let GRID=null, GAPMETA=null, GIDX=null, gapOn=false, GAPRES=null;      // gapOn: 서식지 후보 레이어 토글(지도 안 컨트롤)
 let ENVM=null, WMASK=null, AQSET=null;                                 // 모형 전용 환경변수(__GRID__ 와 행 순서 동일) + 수계 셀 비트맵 + 물에서 사는 종
@@ -1099,6 +1144,11 @@ const _hexA=(h,a)=>{ const n=parseInt(h.slice(1),16); return `rgba(${n>>16&255},
    촘촘한 근거처럼 읽힌다. 경계값은 통상 기준(0.4 fair · 0.6 good)을 위아래로 늘린 것이다. */
 const GAP_GRADE=[[0.8,'A','매우 높음'],[0.6,'B','높음'],[0.4,'C','보통'],[0.2,'D','낮음'],[-1,'E','매우 낮음']];
 function gradeOf(tss){ return GAP_GRADE.find(g=>tss>=g[0])||GAP_GRADE[GAP_GRADE.length-1]; }
+/* 변수 이름을 화면에 그대로 내면(bio18) 아무 뜻도 전달되지 않는다. 학술 용어를 풀어 쓰되
+   괄호에 원래 이름을 남긴다 — 자료를 내려받아 대조하는 사람이 이어 볼 수 있어야 한다. */
+const VAR_LABEL={dem:['고도','땅의 높이'], ndvi:['식생','잎이 얼마나 우거지는가'],
+  bio01:['연평균 기온',''], bio18:['가장 습한 철의 강수량',''], bio03:['기온의 하루 변동 폭',''],
+  bio14:['가장 건조한 달의 강수량',''], sord:['하천 차수','실개천인가 큰 강인가']};
 /* 수계 셀 목록을 cid 배열로 실으면 8만 개라 1MB 가까이 된다. 셀당 1비트면 13KB 이고,
    후보 계산이 셀을 행 번호로 훑으므로 비트 자리를 그대로 쓸 수 있다. */
 function _bits(b64, n){
@@ -1186,7 +1236,7 @@ function modelTerms(m){
   return out;
 }
 /* 변수는 두 자산에 나뉘어 있다 — dem·ndvi·bio01 은 이미 배포된 env_grid, 모형에만 쓰는
-   bio03·bio14·bio18 은 env_model. 어느 쪽에서 왔든 저장은 정수 배율이라 값으로 되돌린다. */
+   bio03·bio14·bio18·sord 는 env_model. 어느 쪽에서 왔든 저장은 정수 배율이라 값으로 되돌린다. */
 function modelCols(vars){
   const GS=GRID.scale||{}, ES=(ENVM&&ENVM.scale)||{};
   return vars.map(v=> Array.isArray(GRID[v]) ? [GRID[v], GS[v]||1] : [(ENVM||{})[v], ES[v]||1]);
@@ -1203,6 +1253,7 @@ function computeCandidate(sp){                            // 적합·미발견 �
   const nc=oc?oc.c.length:0, aq=!!(AQSET&&AQSET.has(sp.k));
   const m=ENVM?modelOf(sp):null;
   if(!m) return {gated:true, n, nc, aq};                  // 모형 없음 — 지점이 얇거나 적합이 성립하지 않은 종
+  if(m.w===2) return {gated:true, n, nc, aq, sea:true};   // 바다에 사는 종 — 육지 격자에 서식지가 없다
   const terms=modelTerms(m), cols=modelCols(m.v), nv=m.v.length;
   if(!terms.length||cols.some(c=>!c[0])) return {gated:true, n, nc, aq};
   const vmin=m.vmin, vmax=m.vmax, base=m.e+m.a, thr=m.thr;
@@ -1236,7 +1287,7 @@ function computeCandidate(sp){                            // 적합·미발견 �
   const ratios=[];
   numBySg.forEach((num,sgi)=>{ const denom=GRID.sgn[sgi]||0, code=GRID.sgcodes[sgi];
     ratios.push({code, num, denom, ratio:denom?num/denom:0}); });
-  return {gated:false, n, cells, ratios, count:cells.length, fit, tss:m.tss, mn:m.n, wet:!!wet};
+  return {gated:false, n, cells, ratios, count:cells.length, fit, tss:m.tss, mn:m.n, wet:!!wet, vars:m.v};
 }
 function updateGapMap(res){                               // 후보셀 → Vector 소스
   if(!gapSource) return;
@@ -1315,10 +1366,12 @@ function toggleGap(){
 }
 let gapSortDir=-1;                                        // 적합지 비율표 정렬(기본 비율 내림차순)
 function gapTable(res){
-  if(res.gated) return `<div id="gapHost"><span class="muted">${res.nc<10
+  if(res.gated) return `<div id="gapHost"><span class="muted">${res.sea
+    ? '바다에 사는 종이라 서식지 후보를 만들지 않았습니다. 이 서비스의 격자는 육지만 덮고 있어서, 바다에 사는 종의 서식지를 나타낼 수 있는 칸이 없습니다.'
+    : res.nc<10
     ? `발견된 지점이 ${nf(res.nc||0)}곳(1km 격자)뿐이라 서식지 후보를 만들지 않았습니다. 환경 조건을 학습하려면 서로 다른 지점이 10곳 이상 필요합니다.`
     : res.aq
-      ? '발견 지점은 충분하지만 환경 조건으로 서식지를 가려내는 모형이 성립하지 않았습니다. 물에서 사는 종은 지금 쓰는 기후·지형·식생 자료만으로 물길의 환경을 담아내기 어렵습니다.'
+      ? '발견 지점은 충분하지만 환경 조건으로 서식지를 가려내는 모형이 성립하지 않았습니다. 물에서 사는 종은 기후·지형·식생과 하천의 크기만으로는 수질·유속처럼 실제로 자리를 가르는 조건을 담아내기 어렵습니다.'
       : '발견 지점은 충분하지만 환경 조건으로 서식지를 가려내는 모형이 성립하지 않아 서식지 후보를 제공하지 않습니다.'}</span></div>`;
   if(!res.ratios.length) return `<div id="gapHost"><span class="muted">현재 조사자료 기준 새로운 서식지 후보 지역이 없습니다.</span></div>`;
   const rows=res.ratios.map(r=>({...r,
@@ -1331,17 +1384,77 @@ function gapTable(res){
   return `<div id="gapHost">`+
     `<div class="gaplegend">`+
       `<span class="lgi"><i class="starmk" style="background:${GAP_COL}"></i>서식지 후보 ${nf(res.count)}칸</span>`+
-      `<span class="muted">· 1km 격자 · 근거 ${g[2]}(${g[1]})</span></div>`+
+      `<span class="muted">· 1km 격자 ·</span>`+
+      `<button type="button" class="gradebtn" onclick="openGradeHelp()" `+
+        `title="근거의 세기를 어떻게 쟀는지 보기">근거 ${g[2]}(${g[1]})<span aria-hidden="true">ⓘ</span></button></div>`+
     `<div class="regtbl-wrap"><table class="regtbl gaptbl"><thead><tr>`+
       `<th>시도</th><th>시군구</th>`+
       `<th onclick="gapSortDir*=-1;rerenderGap()" class="num" title="적합지 비율로 정렬">적합지 비율${gapSortDir<0?' ▼':' ▲'}</th>`+
     `</tr></thead><tbody>${body}</tbody></table></div>`+
     `<div class="regtbl-foot"><span class="muted">${nf(rows.length)}개 시군구 · 행 클릭=해당 시군구로 이동</span></div>`+
     `<div class="envnote">이 종의 발견지점과 전국 환경(기후·고도·식생)을 대조해 학습한 적합 모형이 적합하다고 본 곳 중, 아직 발견기록이 없는 1km 지역입니다. `+
-      (res.wet?`물에서 사는 종이라 하천이 지나는 칸만 남겼습니다. `:'')+
-      `근거의 세기는 교차검증으로 잰 값이며 지금은 <b>${g[2]}(${g[1]})</b> 입니다 — 낮을수록 후보 범위가 넓게 잡히니 참고 자료로만 보십시오. 실제 서식을 보장하지 않습니다.</div>`+
+      (res.wet?`물에서 사는 종이라 하천의 크기(차수)까지 함께 학습했고, 하천이 지나는 칸만 남겼습니다. `:'')+
+      `근거의 세기는 <b>${g[2]}(${g[1]})</b> 입니다 — 낮을수록 후보 범위가 넓게 잡히니 참고 자료로만 보십시오. `+
+      `<button type="button" class="lnkbtn" onclick="openGradeHelp()">근거는 어떻게 쟀나요?</button> 실제 서식을 보장하지 않습니다.</div>`+
   `</div>`;
 }
+/* 근거의 세기(신뢰 등급) 설명. 등급 글자만 보이면 "A 는 맞고 D 는 틀렸다"로 읽힌다 —
+   실제로는 후보가 좁게 잡혔느냐 넓게 잡혔느냐에 가깝다. 재는 방법과 그 방법의 한계를
+   같은 자리에서 밝힌다. 한계를 숨기면 낯선 지역의 후보를 실제보다 믿게 된다. */
+const GRADE_MEAN={A:'후보가 좁고 뚜렷합니다', B:'대체로 잘 맞습니다', C:'방향은 맞지만 후보가 넉넉합니다',
+  D:'대략적인 경향만 보여 줍니다', E:'환경만으로는 자리를 가려내기 어렵습니다'};
+function openGradeHelp(){
+  const ov=document.getElementById('gradeOverlay'), bd=document.getElementById('gradeBody');
+  if(!ov||!bd) return;
+  const r=GAPRES&&!GAPRES.gated?GAPRES:null;
+  const g=r?gradeOf(r.tss):null;
+  const rows=GAP_GRADE.map((x,i)=>{
+    const lo=x[0]<0?0:x[0], hi=i?GAP_GRADE[i-1][0]:1;      // 아래 등급의 상한 = 위 등급의 하한
+    return `<tr class="${g&&g[1]===x[1]?'on':''}"><td class="gl">${x[1]}</td><td>${x[2]}</td>`+
+      `<td class="num">${lo.toFixed(1)}~${hi.toFixed(1)}</td><td>${GRADE_MEAN[x[1]]}</td></tr>`;
+  }).join('');
+  const vlist=r&&r.vars?r.vars.map(v=>{ const L=VAR_LABEL[v]||[v,'']
+      ; return `<li><b>${L[0]}</b>${L[1]?` — ${L[1]}`:''} <span class="faint">(${v})</span></li>`; }).join(''):'';
+  bd.innerHTML=
+    (r?`<p class="gnow">지금 보고 있는 종의 근거는 <b>${g[2]}(${g[1]})</b> · 점수 ${r.tss.toFixed(2)} 입니다.</p>`:'')+
+    `<h4>한 줄로</h4>`+
+    `<p>서식지 후보를 뽑은 모형이 <b>얼마나 잘 맞히는지</b>를 A부터 E까지 다섯 단계로 나타낸 값입니다.</p>`+
+    `<h4>어떻게 쟀나요</h4>`+
+    `<ol class="gsteps">`+
+      `<li>이 종이 발견된 지점을 네 묶음으로 나눕니다.</li>`+
+      `<li>세 묶음만 보여 주고 모형을 학습시킵니다. 남은 한 묶음은 감춥니다.</li>`+
+      `<li>학습이 끝난 모형에게 전국을 채점하게 한 뒤, <b>감춰 둔 지점을 골라내는지</b> 봅니다.</li>`+
+      `<li>감추는 묶음을 바꿔 가며 네 번 반복하고 평균을 냅니다.</li>`+
+    `</ol>`+
+    `<p>시험 문제를 미리 보여 주지 않은 셈입니다. 점수가 높다는 것은 모형이 발견 지점을 외운 게 아니라 <b>환경 조건을 배웠다</b>는 뜻입니다.</p>`+
+    `<h4>등급 읽는 법</h4>`+
+    `<div class="gtbl-wrap"><table class="gtbl"><thead><tr><th>등급</th><th>근거</th><th class="num">점수</th><th>뜻</th></tr></thead>`+
+      `<tbody>${rows}</tbody></table></div>`+
+    `<p class="faint">점수는 <b>맞힌 비율 − 헛짚은 비율</b>입니다. 발견 지점을 빠짐없이 골라내면서 엉뚱한 곳은 짚지 않아야 1에 가까워집니다. 아무렇게나 찍으면 0이 됩니다.</p>`+
+    `<h4>등급이 낮으면 틀린 건가요?</h4>`+
+    `<p>아닙니다. 낮은 등급은 대개 <b>후보가 넓게 잡혔다</b>는 뜻입니다. 전국 어디에나 사는 종, 발견 기록이 몇 곳 안 되는 종은 환경 조건만으로 자리를 좁히기 어렵습니다. `+
+      `등급이 낮다고 후보를 감추지는 않습니다 — 감추면 정보가 가장 부족한 종부터 화면에서 사라지고, 그런 종이야말로 조사가 필요한 종이기 때문입니다.</p>`+
+    `<h4>이 점수의 한계</h4>`+
+    `<p>지점을 네 묶음으로 나눌 때 <b>무작위로</b> 나눕니다. 그래서 같은 계곡에서 몇백 미터 떨어진 두 지점이 각각 '학습'과 '시험'으로 갈릴 수 있습니다. `+
+      `시험이 그만큼 쉬워지는 셈이라, 이 점수는 <b>한 번도 조사되지 않은 낯선 지역</b>을 맞히는 실력보다 후하게 나옵니다. `+
+      `기존 조사지에서 멀리 떨어진 곳을 볼 때는 등급을 한 칸 낮춰 보시는 편이 안전합니다.</p>`+
+    (vlist?`<h4>이 종의 모형이 쓴 환경 조건</h4><ul class="gvars">${vlist}</ul>`+
+      `<p class="faint">발견 지점이 많을수록 더 많은 조건을 씁니다(10곳 3개 · 30곳 4개 · 60곳 5개 · 100곳 이상 6개). `+
+      `지점이 적은데 조건을 많이 주면 모형이 그 몇 곳의 우연한 특징까지 외워 버립니다.`+
+      (r&&r.wet?` 물에서 사는 종은 여기에 하천 차수를 하나 더 받고, 판정이 끝난 뒤 하천이 지나지 않는 칸을 뺍니다.`:'')+`</p>`:'')+
+    `<h4>후보를 어디까지 믿어야 하나요</h4>`+
+    `<p>서식지 후보는 <b>실제 서식을 보장하지 않습니다.</b> 환경 조건이 비슷하다는 것뿐이고, 먹이·경쟁·이동 경로·사람의 활동은 들어 있지 않습니다. `+
+      `찾아볼 만한 곳을 좁히는 용도로 보시고, 등급이 높은 종부터 확인하시는 편이 효율적입니다.</p>`;
+  ov.hidden=false;
+  const x=document.getElementById('gradeClose'); if(x) x.focus();
+}
+function closeGradeHelp(){ const ov=document.getElementById('gradeOverlay'); if(ov) ov.hidden=true; }
+(function(){                                              // 닫기: 버튼·배경·ESC — 제보 모달과 같은 규칙
+  const ov=document.getElementById('gradeOverlay'); if(!ov) return;
+  const x=document.getElementById('gradeClose'); if(x) x.onclick=closeGradeHelp;
+  ov.addEventListener('click',e=>{ if(e.target===ov) closeGradeHelp(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!ov.hidden) closeGradeHelp(); });
+})();
 function rerenderGap(){ const h=document.getElementById('gapHost'); if(h&&GAPRES) h.outerHTML=gapTable(GAPRES); }
 function zoomSigungu(code){                               // 표 행 클릭 → 해당 시군구로 지도 이동
   if(!map||!LAYERS.sigungu) return;

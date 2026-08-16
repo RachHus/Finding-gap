@@ -6,7 +6,7 @@
         env_grid.csv, ktsn_master.csv, ndwi_species.csv, cell_water.csv}
 출력 : 5_App/demo/data/
   env_model.js    window.__ENVM__       — bio03·bio14·bio18 + wmask(수계 셀 비트맵)
-  model_<T>.js    window.__MODEL__[T]   — 종별 maxnet 계수 묶음(w=1 이면 수계 마스크 적용 종)
+  model_<T>.js    window.__MODEL__[T]   — 종별 maxnet 계수 묶음(w=1 수계 마스크 · w=2 해산종)
   season_<T>.js   window.__SEASON__[T]  — 종별 12개월 점수 0~100
   model_meta.js   window.__MODELMETA__  — 생성일·변수·신뢰등급 분포·분류군별 종수
 
@@ -28,9 +28,14 @@
 실어 이 경계가 얼마나 믿을 만한지 화면에서 밝힌다 — 값을 감추는 대신 근거의 세기를 드러낸다.
 임계값이 없는 종(교차검증이 성립하지 않은 6종)만 공간 축에서 뺀다.
 
-어류·저서무척추(ndwi_species.csv)는 계수만으로는 물가와 산비탈을 가르지 못한다 — 모형 변수에
-물이 있는지가 없기 때문이다. 그래서 판정이 끝난 격자에 수계 마스크(cell_water.csv)를 덧씌운다.
-마스크를 환경격자의 변수로 넣지 않는 이유는 모형 설정 해시가 달라져 전 종을 다시 적합해야 해서다.
+어류·저서무척추(ndwi_species.csv)는 두 겹으로 다룬다. 모형에는 하천 차수(sord)를 변수로 하나 더
+주어 실개천과 큰 강을 구분하게 하고, 판정이 끝난 격자에는 수계 마스크(cell_water.csv)를 덧씌워
+하천이 없는 칸을 뺀다. 마스크를 변수가 아니라 사후 처리로 두는 이유는 하천망이 실측이라
+모형을 다시 적합할 일이 없어서다.
+
+다만 그 목록의 '어류'는 종 마스터의 분류군이 '-P' 인 종 전부라 해산어까지 들어 있다. 참돔에게
+하천 마스크를 씌우면 후보가 바다에서 내륙 하천으로 옮겨 붙는다. 그래서 기록이 하천 밖에 몰린
+종(_sea_species)은 w=2 로 갈라 후보를 만들지 않고, 화면에서 그 이유를 밝힌다.
 
 env_grid.js 는 건드리지 않는다 — 이미 배포된 발견공백 자산이 거기서 파생되므로 컬럼을 늘리면
 전 종 자산이 함께 흔들린다. 새 변수는 옆에 따로 실어 이 기능을 쓸 때만 받게 한다.
@@ -50,8 +55,10 @@ STORE = PROC / "model_store"
 OUT = APP / "demo" / "data"
 GEN = sys.argv[1] if len(sys.argv) > 1 else ""
 
-ADD_VARS = ["bio03", "bio14", "bio18"]
-ADD_SCALE = {"bio03": 10, "bio14": 1, "bio18": 1}    # env_grid_model.R 의 SCALE 과 같아야 한다
+# env_grid.js 에 없어서 여기서 따로 싣는 변수들. sord(하천 차수)는 수생종 모델만 쓰지만,
+# 격자 열은 종과 무관하게 한 벌이므로 전 셀분을 함께 내린다(정수 0~7 이라 압축이 잘 먹는다).
+ADD_VARS = ["bio03", "bio14", "bio18", "sord"]
+ADD_SCALE = {"bio03": 10, "bio14": 1, "bio18": 1, "sord": 1}   # env_grid_model.R 의 SCALE 과 같아야 한다
 GRADES = [(0.8, "A"), (0.6, "B"), (0.4, "C"), (0.2, "D")]   # 교차검증 TSS → 신뢰 등급(미만은 E)
 
 
@@ -95,14 +102,19 @@ def _num(x):
     return None if f != f else f
 
 
-def _water_mask(order):
-    """수계 셀 여부를 격자 행 순서 그대로 담은 비트맵(base64). cid 목록으로 실으면 1MB 가까이 되는데
-    셀당 1비트면 13KB 다 — 클라이언트가 셀을 행 번호로 훑으므로 비트 위치도 그대로 쓰인다."""
+def _wet_cells():
     f = PROC / "cell_water.csv"
     if not f.exists():
         print(f"(경고) {f.name} 없음 — 수계 마스크 미수록(어류·저서무척추 후보가 뭍까지 잡힌다)")
+        return set()
+    return {r["cid"] for r in csv.DictReader(open(f, encoding="utf-8-sig"))}
+
+
+def _water_mask(order, wet):
+    """수계 셀 여부를 격자 행 순서 그대로 담은 비트맵(base64). cid 목록으로 실으면 1MB 가까이 되는데
+    셀당 1비트면 13KB 다 — 클라이언트가 셀을 행 번호로 훑으므로 비트 위치도 그대로 쓰인다."""
+    if not wet:
         return "", 0
-    wet = {r["cid"] for r in csv.DictReader(open(f, encoding="utf-8-sig"))}
     bits = bytearray((len(order) + 7) // 8)
     n = 0
     for i, c in enumerate(order):
@@ -110,6 +122,36 @@ def _water_mask(order):
             bits[i >> 3] |= 1 << (i & 7)
             n += 1
     return base64.b64encode(bytes(bits)).decode(), n
+
+
+SEA_SHARE = 0.5
+
+
+def _sea_species(wet_sp, wet_cells):
+    """수생종 가운데 자기 발견 기록이 대부분 하천 밖에 있는 종을 가려낸다 — 바다에 사는 종이다.
+
+    ndwi_species.csv 의 '어류'는 종 마스터의 분류군이 '-P' 인 종 전부라 참돔·고등어·홍어 같은
+    해산어가 함께 들어 있다. 이들에게 하천 마스크를 씌우면 후보가 바다에서 내륙 하천으로
+    옮겨 붙는다 — 있지도 않은 곳을 가리키는 셈이다. 육지 1km 격자에는 바다가 없으므로
+    이 종들은 후보를 만들지 않고 그 이유를 밝히는 편이 맞다.
+
+    별도 명단을 두지 않고 관측으로 판정한다. 명단은 종이 늘 때마다 손봐야 하지만
+    "제 기록이 하천 밖에 있다"는 사실은 자료가 늘어도 스스로 맞는다. 경계 0.5 는 실측으로
+    잡았다 — 0.5 위는 전부 해산 어종이고, 그 아래 0.4~0.5 구간부터 물잠자리·물땡땡이처럼
+    하천망에 안 잡히는 웅덩이에 사는 담수종이 섞이기 시작한다."""
+    f = PROC / "species_cells.csv"
+    if not f.exists():
+        print(f"(경고) {f.name} 없음 — 해산 어종 판정 생략(후보가 내륙 하천으로 잡힌다)")
+        return set()
+    tot, dry = defaultdict(int), defaultdict(int)
+    for r in csv.DictReader(open(f, encoding="utf-8-sig")):
+        k = r["ktsn"]
+        if k not in wet_sp:
+            continue
+        tot[k] += 1
+        if r["cid"] not in wet_cells:
+            dry[k] += 1
+    return {k for k, n in tot.items() if n and dry[k] / n >= SEA_SHARE}
 
 
 def main():
@@ -125,7 +167,8 @@ def main():
     cols = {v: [_q(em[c].get(v), ADD_SCALE[v]) for c in order] for v in ADD_VARS}
     payload = {**cols, "scale": ADD_SCALE, "n": len(order),
                "cid0": int(order[0]), "cid1": int(order[-1])}
-    payload["wmask"], nwat = _water_mask(order)
+    wcells = _wet_cells()
+    payload["wmask"], nwat = _water_mask(order, wcells)
     p = OUT / "env_model.js"
     p.write_text("window.__ENVM__=" + json.dumps(payload, separators=(",", ":")) + ";",
                  encoding="utf-8")
@@ -134,11 +177,15 @@ def main():
           f"· 수계셀 {nwat:,}({nwat/len(order)*100:.1f}%) · {p.stat().st_size/1e6:.2f} MB")
 
     # ── model_<T>.js : 종별 계수 + 자기 임계값 ─────────────────────────
-    kept = nothr = failed = nwsp = 0
+    kept = nothr = failed = nwsp = nsea = 0
     gcnt = defaultdict(int)
     tcode = _taxon_codes()
-    # 물에서만 사는 종(어류·저서무척추) 표식. 이 종만 최종 판정에 수계 마스크를 덧씌운다.
+    # 물에서만 사는 종(어류·저서무척추) 표식. w=1 인 종만 최종 판정에 수계 마스크를 덧씌우고,
+    # 그중 기록이 하천 밖에 몰린 해산 어종은 w=2 로 갈라 후보를 아예 만들지 않는다.
     wet = {r["ktsn"] for r in csv.DictReader(open(PROC / "ndwi_species.csv", encoding="utf-8-sig"))}
+    sea = _sea_species(wet, wcells)
+    print(f"수생종 {len(wet):,}종 중 기록이 하천 밖 {SEA_SHARE:.0%} 이상 = 해산종 {len(sea):,}종 "
+          f"— 후보 미제공(육지 격자에 서식지가 없다)")
     for f in sorted(STORE.glob("*.json")):
         t = tcode.get(f.stem, f.stem)
         js = json.loads(f.read_text(encoding="utf-8"))
@@ -159,7 +206,10 @@ def main():
                            "vmin": _lst(x["varmin"]), "vmax": _lst(x["varmax"]),
                            "fmin": _lst(x["fmin"]), "fmax": _lst(x["fmax"]),
                            "thr": round(thr, 6), "tss": round(tss, 3), "n": x["n"]}
-            if x["k"] in wet:
+            if x["k"] in sea:
+                out[x["k"]]["w"] = 2
+                nsea += 1
+            elif x["k"] in wet:
                 out[x["k"]]["w"] = 1
                 nwsp += 1
             kept += 1
@@ -168,7 +218,8 @@ def main():
         p.write_text(f'(window.__MODEL__=window.__MODEL__||{{}})["{t}"]='
                      + json.dumps(out, separators=(",", ":")) + ";", encoding="utf-8")
         print(f"  model_{_txfile(t)}.js: {len(out):,}종 · {p.stat().st_size/1e6:.2f} MB")
-    print(f"공간 축: {kept:,}종 · 임계값 없음 {nothr:,} · 적합 실패 {failed:,} · 수계 마스크 적용 {nwsp:,}종")
+    print(f"공간 축: {kept:,}종 · 임계값 없음 {nothr:,} · 적합 실패 {failed:,} "
+          f"· 수계 마스크 적용 {nwsp:,}종 · 해산종 {nsea:,}종")
     print("  신뢰 등급(교차검증 TSS): "
           + " · ".join(f"{g} {gcnt[g]:,}" for g in ("A", "B", "C", "D", "E")))
 
