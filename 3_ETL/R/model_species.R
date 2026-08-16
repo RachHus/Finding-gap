@@ -13,6 +13,8 @@
 #   변수  : A안 6개 — dem·ndvi·bio01·bio18·bio03·bio14 (전국 표본 VIF 최대 4.63)
 #   구간  : 점유 셀 수에 따라 앞에서부터 자른다. 10~29→3 · 30~59→4 · 60~99→5 · 100+→6
 #           A안은 중첩 구조라 변수를 줄여도 남는 변수가 바뀌지 않아 구간 간 비교가 된다.
+#   수생종: ndwi_species.csv 에 오른 종은 여기에 하천 차수(sord) 하나를 더 받는다. 물속에 사는
+#           종에게만 뜻이 있는 변수라 전 종에 주지 않는다 — 근거는 model_config.R 의 WVAR 주석.
 #   특징  : linear + quadratic 만(classes="lq"). hinge 를 빼면 계수가 닫힌 형태로 남아
 #           브라우저에서 그대로 계산되고, 표본이 얇은 구간의 과적합도 덜하다.
 #   배경  : 격자 무작위 10,000 셀. 존재 셀을 배제하지 않는다 — MaxEnt 의 배경은 pseudo-absence 가
@@ -51,7 +53,9 @@ g  <- g0[complete.cases(g0[, ..V])]
 # 조회표는 결측 제거 '전' 최대 cid 로 잡는다. 제거 후 크기로 잡으면 그보다 큰 cid 조회가
 # 범위 밖 NA 가 되고, NA > 0 은 NA 라서 아래 필터를 통과해 버린다(→ ENV[NA,] 로 적합 실패).
 row_of <- integer(max(g0$cid) + 1L); row_of[g$cid + 1L] <- seq_len(nrow(g))
-ENV <- as.data.frame(g[, ..V])
+# 완전관측 판정은 V 로만 한다. WVAR 은 물길이 없으면 0 이라 결측이 아니고, 이걸 판정에 넣으면
+# 육상 칸이 통째로 빠져 8,900종 전부의 배경이 달라진다.
+ENV <- as.data.frame(g[, c(V, WVAR), with = FALSE])
 rm(g0)
 
 cfg <- model_cfg(ENV, g$cid)
@@ -65,10 +69,16 @@ sc[, ktsn := as.character(ktsn)]
 sc <- merge(sc, mst, by = "ktsn", all.x = TRUE)
 sc[is.na(tx) | tx == "", tx := "NA"]
 
+# 수생종 명단(어류 + 저서성 무척추). 서식지 후보를 수계로 자를 때 쓰는 것과 같은 파일이라
+# "마스크를 받는 종"과 "차수를 배우는 종"이 어긋나지 않는다.
+WET <- as.character(fread(file.path(PROC, "ndwi_species.csv"))$ktsn)
+cat(sprintf("수생종 %s종 — %s 추가 배정\n", format(length(WET), big.mark = ","), WVAR))
+
 # ── 적합 ───────────────────────────────────────────────────────────────
 fit_one <- function(it) {
   k <- it$k; rows <- it$rows; n <- length(rows)
-  nv <- nvar_for(n); vv <- V[1:nv]
+  vv <- c(V[1:nvar_for(n)], if (k %in% WET) WVAR)
+  nv <- length(vv)
   tryCatch({
     # 무작위 추출은 적합 전에 한 번에 끝낸다 — 적합이 난수를 소비해도 결과가 흔들리지 않게.
     set.seed(as.integer(substr(k, nchar(k) - 8, nchar(k))) %% .Machine$integer.max)
@@ -142,7 +152,7 @@ for (TX in TXS) {                          # 루프 변수는 컬럼명(tx)과 �
   if (length(todo)) {
     t0 <- Sys.time()
     cl <- makeCluster(NCORE)
-    clusterExport(cl, c("ENV", "V", "N_BG", "KFOLD", "CLASSES", "TIERS",
+    clusterExport(cl, c("ENV", "V", "WVAR", "WET", "N_BG", "KFOLD", "CLASSES", "TIERS",
                         "nvar_for", "roc_stats"), envir = environment())
     invisible(clusterEvalQ(cl, suppressMessages(library(maxnet))))
     res <- Filter(Negate(is.null), parLapply(cl, items[todo], fit_one))

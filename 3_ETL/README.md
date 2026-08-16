@@ -25,7 +25,7 @@ python 3_ETL/run_pipeline.py --from model   # 특정 단계부터
 
 ## 실행 환경
 
-- R: `"C:/Program Files/R/R-4.5.1/bin/Rscript.exe"`. 경로에 공백이 있어 스크립트 직접 실행이 실패하므로(exit 127) `Rscript --vanilla -e "source('…')"` 형태로 부른다. `run_pipeline.py` 는 이미 그렇게 호출한다.
+- R: `"C:/Program Files/R/R-4.5.0/bin/Rscript.exe"`. 경로에 공백이 있어 스크립트 직접 실행이 실패하므로(exit 127) `Rscript --vanilla -e "source('…')"` 형태로 부른다. `run_pipeline.py` 는 이미 그렇게 호출한다.
 - Python: geopandas가 필요한 단계(`etl_observation`·`etl_national_park`·`etl_gbif`·`build_sigungu_agg`·`build_cell_sigungu`·`build_cell_water`·`improve_species_list`)는 **anaconda python**(`C:\Users\yssfr\anaconda3\python.exe`)으로 실행한다. PATH의 Windows Store python에는 geopandas가 없다.
 - 스케줄러는 없다. 갱신은 수동 실행이며 주기는 DATA_PIPELINE.md §4 표를 따른다.
 

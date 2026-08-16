@@ -196,14 +196,16 @@ python 3_ETL/run_pipeline.py --only cell_water env_data gap_data
 | 6 | `cell_water` | `python/build_cell_water.py` | `cell_water.csv` (하천망 shp × 1km 셀 = 수계 격자 마스크) |
 | 7 | `env_data` | `5_App/build_env_data.py` | `species_env.js` · `env_meta.js` |
 | 8 | `gap_data` | `5_App/build_gap_data.py` | `env_grid.js` · `cells_<T>.js` · `gap_meta.js` |
-| 9 | `env_grid_model` | `R/env_grid_model.R` | `env_grid_model.csv` (모형용 격자 + bio03·bio14·bio18) |
+| 9 | `env_grid_model` | `R/env_grid_model.R` | `env_grid_model.csv` (모형용 격자 + bio03·bio14·bio18 + `sord` 하천 차수) |
 | 10 | `season` | `python/build_season.py` | `species_season.csv` (조사노력 보정 12개월 점수) |
 | 11 | `model` | `R/model_species.R` | `model_store/` (종별 maxnet 증분 적합 + 4겹 CV) |
 | 12 | `model_data` | `5_App/build_model_data.py` | `env_model.js` · `model_<T>.js` · `season_<T>.js` · `model_meta.js` |
 
 - `model`(11)은 **증분**이다. 점유 셀 지문이 같은 종은 건너뛰므로 갱신분만 다시 돈다. 다만 변수·특징·배경수·겹수·구간 규칙이나 환경 격자가 바뀌면 `model_cfg` 해시가 달라져 **전량 재적합**한다(약 8,900종 × 5회 적합 ≈ 10시간).
 - `season`(10)은 `observations.sqlite` 의 월별 집계만 쓰므로 앞 단계와 독립이다 — 관측 ETL 이후면 언제 돌려도 된다.
-- `cell_water`(6)는 `env_grid` 를 건드리지 않는다. 수계는 최종 적합지 **판정 뒤** 마스킹으로 적용되므로, 하천망이 바뀌어도 모형을 다시 적합할 필요가 없다.
+- `cell_water`(6)는 두 곳으로 간다. 하나는 최종 적합지 **판정 뒤** 씌우는 수계 마스크(`build_model_data.py`)로, 이쪽은 하천망이 바뀌어도 모형을 다시 적합할 필요가 없다. 다른 하나는 `env_grid_model`(9)이 싣는 **하천 차수 `sord`** 로, 이쪽은 모형 변수라 값이 바뀌면 `model_cfg` 해시가 달라져 전량 재적합한다. 즉 **`cell_water` 를 다시 만들면 9 → 11 → 12 를 이어서 돌려야 한다.**
+- `sord` 는 `ndwi_species.csv`(5)에 오른 수생종에게만 변수로 배정된다(`model_config.R` 의 `WVAR`). 육상종의 변수 구성은 그대로다.
+- `model_data`(12)는 그 수생종 중 **기록이 하천 밖에 몰린 종을 해산종으로 갈라** 후보를 만들지 않는다(`_sea_species`, 경계 50%). `ndwi_species.csv` 의 '어류'가 분류군 `-P` 전체라 해산어까지 들어 있기 때문이다.
 - `dist` 단계는 기본 목록에 없다(명시 요청 시만): `python 3_ETL/run_pipeline.py --only dist`.
 
 ### 3-C. 배포본
