@@ -373,7 +373,15 @@
   .scard .sci{font-style:italic;color:var(--muted);font-size:13px}
   .scard .row{margin-top:14px}
   .scard .row .k{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px}
-  .map-ctrls{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2}
+  /* 지도 위 컨트롤 띠 — 분류군·지역 검색·서식지 후보·지역 경계 토글이 한 줄에 나란히 선다.
+     하나씩 따로 절대배치하면 폭이 줄어들 때 서로의 타격영역을 먹는다(실측 881px: 가운데 남는 폭 136px).
+     한 줄에 다 담기지 않으면 줄만 바뀌고, 왼쪽 시작선과 오른쪽 끝선은 그대로 유지된다. */
+  .maptop{position:absolute;top:8px;left:8px;right:8px;z-index:3;
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  /* 띠의 빈 자리는 지도가 받아야 그 위에서 끌어 옮길 수 있다(none 은 OpenLayers 가 인라인으로
+     박는 auto 를 이길 수 없어 스크립트에서 되돌린다 — addMapTop 참조). */
+  .maptop>*{pointer-events:auto}
+  .map-ctrls{display:flex;gap:6px;margin-left:auto}          /* 지역 경계 토글은 띠의 오른쪽 끝 */
   .reg-toggle{display:flex;background:#fff;border:1px solid #cdd5d1;border-radius:7px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.14)}
   /* 이 단추들은 지도 위에 겹쳐 뜨므로 키워도 본문이 밀리지 않는다. 24px 는 손으로 누르기에
      빠듯해 32px 로 올린다(좁은 화면은 아래 규칙이 44px 로 다시 올린다). */
@@ -453,21 +461,41 @@
   .monthlbl{display:flex;gap:2px;padding:3px 6px 0;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
   .monthlbl span{flex:1;text-align:center}
   .season-table{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border-width:0}
-  /* 지도 — 분류군 필터(좌상단) */
-  .taxon-ctrl{position:absolute;top:8px;left:8px;z-index:2;background:#fff;border:1px solid #cdd5d1;border-radius:8px;
-    box-shadow:0 1px 4px rgba(0,0,0,.14);padding:7px 9px;width:188px;font:12px 'Pretendard Variable',system-ui,sans-serif}
-  .taxon-ctrl label{display:block;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.02em;margin-bottom:4px}
-  .taxon-ctrl select{width:100%;min-width:0;min-height:36px;font-size:12px;font-weight:600;padding:5px 6px;
-    border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
-  /* 좁은 화면에서는 이 자리를 아이콘 단추 하나로 접는다(아래 반응형). 목록은 어차피 눌러야 뜨는
-     팝업이라, 지도 위에는 "여기가 분류군을 고르는 자리"라는 표시만 있으면 된다. */
-  .taxon-ctrl .tx-pick{position:relative;display:block}
-  .taxon-ctrl .tx-ico,.taxon-ctrl .tx-car{display:none}
+  /* 지도 — 분류군 선택(띠의 맨 왼쪽). 아이콘과 이름을 한 단추에 함께 싣는다 — 지금 무엇을
+     보고 있는지가 지도 위에서 바로 읽혀야 하고, 이름만으로는 목록의 항목과 이어지지 않는다. */
+  .taxon-ctrl{position:relative;z-index:2;font:12px 'Pretendard Variable',system-ui,sans-serif}
+  .taxon-ctrl .tx-pick{display:flex;align-items:center;gap:7px;min-height:44px;max-width:min(212px,44vw);
+    padding:5px 10px 5px 5px;border:1px solid #cdd5d1;border-radius:10px;background:#fff;color:var(--ink);
+    cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.14);font:700 12px 'Pretendard Variable',system-ui,sans-serif}
+  .taxon-ctrl .tx-pick:hover{border-color:var(--accent)}
+  .taxon-ctrl .tx-pick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .taxon-ctrl .tx-ico{flex:none;display:flex}
+  .taxon-ctrl .tx-ico .chip{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;
+    justify-content:center;color:#fff}
+  .taxon-ctrl .tx-lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .taxon-ctrl .tx-car{flex:none;font-size:10px;line-height:1;color:var(--muted)}
+  /* 목록은 지도 상자가 아니라 본문에 얹는다 — 지도 안에 두면 아래쪽이 잘려 뒤쪽 분류군을 고를 수
+     없다(모바일 지도 높이 400px, 목록 392px). 자리는 열 때 단추에서 계산하고 문서 좌표로 박으므로
+     화면을 굴려도 단추를 따라간다. 아래가 모자라면 위로 편다. */
+  .tx-list{position:absolute;z-index:60;margin:0;padding:4px;list-style:none;min-width:186px;
+    max-height:min(58vh,392px);overflow:auto;background:#fff;border:1px solid #cdd5d1;border-radius:10px;
+    box-shadow:0 6px 20px rgba(0,0,0,.2)}
+  .tx-list[hidden]{display:none}
+  .tx-list li{display:flex;align-items:center;gap:9px;min-height:44px;padding:4px 10px;border-radius:8px;
+    font:600 13px 'Pretendard Variable',system-ui,sans-serif;color:var(--ink);cursor:pointer;white-space:nowrap}
+  .tx-list li .chip{flex:none;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;
+    justify-content:center;color:#fff}
+  .tx-list li.on,.tx-list li:not(.soon):hover{background:#eef3f1}
+  .tx-list li.cur{color:var(--accent)}
+  .tx-list li .sfx{margin-left:auto;padding-left:12px;font-size:11px;font-weight:400;color:var(--faint)}
+  .tx-list li.cur .sfx{color:var(--accent)}
+  .tx-list li.soon{color:var(--muted);cursor:default}       /* 지도에 그릴 자료가 아직 없는 분류군 */
+  .tx-list li.soon .chip{opacity:.45}
   /* 분류군 전체로 돌아가기 — 지도 좌상단(종별 화면). 모드 A 의 분류군 필터가 비우는 자리를 쓴다.
      지도를 보는 동안에는 지도 위쪽 글 버튼이 시야에 들어오지 않아 돌아갈 길이 없는 것처럼 보인다.
      글자를 분류군 색으로 채우면 대비가 모자라므로(주황 #D98C36 위 흰 글자 2.71:1) 상자는 흰색으로 두고,
      색은 아이콘 칩이 맡아 어느 분류군으로 돌아가는지를 알린다. */
-  .taxback-ctrl{position:absolute;top:8px;left:8px;z-index:2}
+  .taxback-ctrl{position:relative;z-index:2}
   .taxback-ctrl button{display:flex;align-items:center;gap:8px;min-height:44px;max-width:min(232px,52vw);
     padding:5px 12px 5px 6px;border:1px solid #cdd5d1;border-radius:10px;background:#fff;color:var(--ink);
     cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.14);font:700 12px 'Pretendard Variable',system-ui,sans-serif}
@@ -485,18 +513,15 @@
   .locate-ctrl button:disabled{opacity:.55;cursor:default}
   .locate-ctrl button.on{color:var(--accent);border-color:var(--accent)}
   .locate-ctrl svg{display:block;flex:none}
-  /* 서식지 후보 레이어 토글 — 지도 좌하단. 발견 지점 위에 겹쳐 켜고 끄는 것이라
-     화면을 갈라 놓는 대신 지도 안에 둔다. 우하단은 내 위치·저작권 표기가 이미 쓰고 있다. */
+  /* 서식지 후보 레이어 토글 — 지역 검색칸 바로 옆(종별 화면에서만 보인다). 좌하단에 두었을 때는
+     44px 확대·축소 단추 위에 폭이 세 배쯤 되는 상자가 얹혀 어느 묶음에도 속하지 않아 보였다.
+     지도 위 컨트롤을 한 띠에 모으면서 이 자리로 옮긴다. */
   /* 간격 14px 은 여백이 아니라 타격영역 계산이다. 물음표의 44px 손가락 영역(.qtip::before)이
      16px 아이콘 밖으로 좌우 14px 씩 뻗으므로, 그보다 좁게 붙이면 버튼 오른쪽 끝을 눌렀을 때
-     레이어가 아니라 설명이 열린다(실측: 4px 일 때 버튼 오른쪽 10px 를 물음표가 가져갔다). */
-  /* 좌하단 바닥은 확대·축소 스택이 이미 쓴다(위 #map .ol-zoom — 아래에서 9.6px, 높이 91px).
-     bottom:8px 로 두면 축소 버튼을 통째로 덮어 버튼 중심이 이 토글로 히트테스트된다(실측:
-     916×600 지도에서 축소 버튼 y 545~590 vs 토글 y 557~591 — 축소가 눌리지 않았다).
-     오른쪽으로 비키는 방법은 좁은 화면에서 막힌다 — 375px 에서 물음표 말풍선(210px)이 지도
-     오른쪽 끝까지 15px 밖에 안 남아, 조금만 밀어도 잘린다. 그래서 확대·축소 위로 올린다. */
-  .gap-ctrl{position:absolute;left:8px;bottom:110px;z-index:2;display:flex;align-items:center;gap:14px}
-  .gap-ctrl .gapbtn{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:6px 11px;
+     레이어가 아니라 설명이 열린다(실측: 4px 일 때 버튼 오른쪽 10px 를 물음표가 가져갔다).
+     오른쪽 6px 도 같은 이유다 — 띠의 간격 8px 과 합쳐 옆 컨트롤과 14px 를 띄운다. */
+  .gap-ctrl{position:relative;z-index:2;display:flex;align-items:center;gap:14px;margin-right:6px}
+  .gap-ctrl .gapbtn{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:6px 11px;
     border:1px solid #cdd5d1;border-radius:8px;background:#fff;color:#5a665f;cursor:pointer;
     font:600 12px 'Pretendard Variable',system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.14)}
   .gap-ctrl .gapbtn i{width:12px;height:12px;display:inline-block;flex:none;opacity:.5}
@@ -504,13 +529,14 @@
   .gap-ctrl .gapbtn[aria-pressed="true"] i{background:#fff;opacity:1}
   .gap-ctrl .gapbtn:disabled{opacity:.5;cursor:default}
   .gap-ctrl .qtip{margin-left:0;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.14)}
-  /* 지도 아래쪽 컨트롤이라 말풍선을 아래로 펼치면 지도 밖으로 잘린다 — 기준을 위로 뒤집는다 */
-  .gap-ctrl .qtip::after{top:auto;bottom:calc(100% + 7px)}
-  /* 지역 검색 — 지도 위쪽. 지도를 눌러 찾아 들어가는 길만 있으면, 이름은 아는데 지도에서
-     어디쯤인지 모르는 지역에는 닿을 수 없다. 좌상단 분류군과 우상단 토글 사이의 빈 띠를 쓴다.
-     목록은 우상단 토글(z-index:2) 위로 펼쳐져야 가려지지 않는다. */
-  .regsearch{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:3;width:min(272px,36%)}
-  .regsearch input{width:100%;min-height:36px;padding:6px 10px;border:1px solid #cdd5d1;border-radius:8px;
+  /* 이 물음표는 띠의 오른쪽 절반에 놓인다 — 말풍선을 왼쪽 기준으로 펼치면 지도 오른쪽에서 잘리므로
+     기준을 뒤집어 왼쪽으로 펼친다(좁은 화면에서는 검색칸 바로 옆이라 더 그렇다). */
+  .gap-ctrl .qtip::after{left:auto;right:-4px}
+  /* 지역 검색 — 지도 위 컨트롤 띠 가운데. 지도를 눌러 찾아 들어가는 길만 있으면, 이름은 아는데
+     지도에서 어디쯤인지 모르는 지역에는 닿을 수 없다. 남는 폭을 이 칸이 먹고, 좁아지면 156px 까지
+     줄었다가 그 아래에서는 줄이 바뀐다. 목록은 옆 컨트롤(z-index:2) 위로 펼쳐져야 가려지지 않는다. */
+  .regsearch{position:relative;z-index:4;flex:1 1 156px;max-width:272px}
+  .regsearch input{width:100%;min-height:44px;padding:6px 10px;border:1px solid #cdd5d1;border-radius:8px;
     background:#fff;color:var(--ink);font:600 12px 'Pretendard Variable',system-ui,sans-serif;
     box-shadow:0 1px 4px rgba(0,0,0,.14)}
   .regsearch input::placeholder{font-weight:400;color:var(--faint)}
@@ -523,12 +549,6 @@
   .rq-list li .lv{margin-left:auto;flex:none;font-size:11px;color:var(--faint)}
   .rq-list li.on,.rq-list li:hover{background:#eef3f1}
   .rq-list li.none{cursor:default;color:var(--muted)}
-  /* 1,100px 아래에서는 좌우 컨트롤이 가운데 띠를 다 먹는다(실측 881px: 남는 폭 136px).
-     검색을 맨 윗줄로 빼고 컨트롤을 한 줄 내려, 셋이 서로의 타격영역을 가져가지 않게 한다. */
-  @media(max-width:1100px){
-    .regsearch{left:8px;right:8px;width:auto;transform:none}
-    .taxon-ctrl,.taxback-ctrl,.map-ctrls{top:60px}
-  }
   .regchips{display:flex;flex-wrap:wrap;gap:6px}
   .regchips .rc{background:#eef3f1;border:1px solid #d7e3df;border-radius:8px;padding:4px 9px;font-size:12px}
   .regchips .rc b{font-variant-numeric:tabular-nums;color:var(--accent)}
@@ -579,33 +599,16 @@
     #modeB .split>div:first-child>.repshot{grid-column:1}
     #modeB .split>div:first-child>.repshot{grid-row:auto;margin:8px 0 0;min-height:150px;max-height:230px}
 
-    /* 지도 오버레이 폭 제한 → 지도 팬/줌 공간 확보 */
-    /* 좌상단 분류군 필터와 우상단 지역 토글이 같은 띠를 쓴다. 분류군 이름은 줄이면 못 읽으므로
-       ("무척추동물"이 제일 길다) 필터 폭을 먼저 확보하고, 토글 쪽을 두 줄로 접는다. */
-    /* 분류군 자리는 아이콘 단추 하나로 접는다 — 목록은 눌러야 뜨는 팝업이므로 지도 위에
-       늘 펼쳐 둘 이유가 없고, 이름 대신 그 분류군의 아이콘이 무엇을 보고 있는지를 알린다.
-       투명한 select 를 상자 위에 그대로 덮어 두는 이유: 손가락으로 눌렀을 때 브라우저의
-       기본 선택 팝업이 그대로 떠야 한다(직접 만든 목록은 화면 아래에서 잘린다). */
-    .taxon-ctrl{width:auto;max-width:none;padding:0;border:0;background:transparent;box-shadow:none}
-    .taxon-ctrl label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
-      clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    .taxon-ctrl .tx-pick{display:flex;align-items:center;gap:5px;min-height:44px;padding:5px 9px 5px 5px;
-      border:1px solid #cdd5d1;border-radius:10px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.14)}
-    .taxon-ctrl .tx-pick:focus-within{outline:2px solid var(--accent);outline-offset:2px}
-    .taxon-ctrl .tx-ico{display:flex;flex:none}
-    .taxon-ctrl .tx-ico .chip{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;
-      justify-content:center;color:#fff}
-    .taxon-ctrl .tx-car{display:block;flex:none;font-size:10px;line-height:1;color:var(--muted)}
-    /* inset 을 테두리 바깥까지 -1px 로 넓힌다 — 0 이면 안쪽 여백 상자에만 걸려 타격영역이 42.4px 이 된다 */
-  .taxon-ctrl select{position:absolute;inset:-1px;width:auto;height:auto;min-height:0;padding:0;opacity:0;
-      border:0;background:transparent;appearance:none;-webkit-appearance:none;cursor:pointer}
-    /* 지도 맨 윗줄은 지역 검색이 통째로 쓴다(위 1,100px 규칙) — 손가락 크기만 올려 준다 */
-    .regsearch input{min-height:44px}
+    /* 지도 위 컨트롤 띠: 좁은 폭에서는 [분류군][지역 검색][서식지 후보]가 첫 줄, 경계 토글이 둘째 줄.
+       분류군 이름은 남긴다 — 아이콘만으로는 처음 보는 사람이 무엇을 고르는 자리인지 알 수 없다.
+       대신 이름이 길면(무척추동물(곤충제외)) 검색칸을 다 먹으므로 폭 상한을 두고 말줄임한다. */
+    .taxon-ctrl .tx-pick{max-width:38vw;gap:5px;padding:5px 9px 5px 5px}
+    .taxon-ctrl .tx-ico .chip{width:30px;height:30px;border-radius:7px}
     .rq-list li{min-height:44px}
-    /* 복귀 버튼도 같은 띠를 쓴다. 우상단 토글 상자(두 줄로 접혀 179px)가 같은 높이에 있고 그 상자가
-       빈 곳에서도 클릭을 가져가므로, 이름이 길면(무척추동물(곤충제외)) 겹치기 전에 잘라 낸다
-       — 실측 375px: 폭을 안 막으면 버튼 오른쪽 19px 를 토글 상자가 먹는다. 전체 이름은 title 에 남는다. */
-    .taxback-ctrl button{max-width:38vw;gap:6px;padding:5px 10px 5px 5px}
+    /* 종별 화면의 복귀 단추는 아이콘만 남긴다 — 돌아갈 곳은 아이콘의 모양·색이 알리고, 좁은 띠에서
+       이름까지 실으면 지역 검색칸이 글자 몇 자 폭으로 줄어든다. 이름은 title·aria-label 에 남는다. */
+    .taxback-ctrl button{max-width:none;min-width:44px;gap:0;padding:5px;justify-content:center}
+    .taxback-ctrl .tb-lbl{display:none}
     .taxback-ctrl .tb-ico .chip{width:30px;height:30px;border-radius:7px}
     /* 좁은 화면에서는 도움말 말풍선이 240px 이면 오른쪽으로 삐져나가 페이지가 가로로 밀린다.
        버튼이 놓이는 위치를 감안해 폭을 줄인다. */
@@ -616,9 +619,13 @@
        데스크톱은 마우스라 기본 크기로 둔다. */
     #map .ol-attribution button,#mapB .ol-attribution button,
     #map .ol-rotate button,#mapB .ol-rotate button{min-width:44px;min-height:44px}
-    .map-ctrls{z-index:2;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 170px)}
+    .map-ctrls{flex-wrap:wrap;justify-content:flex-end}
     .reg-toggle button{min-height:44px;display:inline-flex;align-items:center}
-    .gap-ctrl .gapbtn{min-height:44px}
+    /* 서식지 후보도 별표만 남긴다 — 첫 줄에 이름까지 실으면 검색칸이 남지 않는다.
+       뜻은 바로 옆 물음표가 설명하고, 켜진 상태는 상자 색이 알린다. */
+    .gap-ctrl .gapbtn{min-height:44px;min-width:44px;justify-content:center;padding:6px}
+    .gap-ctrl .gapbtn .gb-lbl{display:none}
+    .gap-ctrl .gapbtn i{width:15px;height:15px}
 
     /* 범례: 줄바꿈 허용 + 컬러바 축소 */
     .legend{flex-wrap:wrap;gap:6px 8px}
@@ -1666,7 +1673,9 @@ function initMap(){
       // 국내 조회 서비스이므로 지도 중심이 한반도 밖으로 나가지 못하게 묶는다.
       // (중심만 제한 — 축소해서 주변 나라까지 보는 것은 그대로 된다)
       extent:KOREA_EXTENT, constrainOnlyCenter:true})});
-  addTaxonCtrl(); addTaxonBackCtrl(); addRegSearch(); addRegToggle(); addGapToggle(); addLocateCtrl(); addWheelHint();
+  // 띠를 먼저 만들고 그 안에 차례로 담는다 — 부르는 순서가 곧 화면에 놓이는 순서다.
+  addMapTop(); addTaxonCtrl(); addTaxonBackCtrl(); addRegSearch(); addGapToggle(); addRegToggle();
+  addLocateCtrl(); addWheelHint();
   let _cellZ=cellZoomOK();                               // 줌 경계를 넘을 때만 다시 그린다(줌 애니메이션마다 갱신하면 무겁다)
   map.getView().on('change:resolution',()=>{
     const ok=cellZoomOK(); if(ok===_cellZ) return; _cellZ=ok;
@@ -1759,6 +1768,16 @@ function zoomToFeature(f,force){
      끝나지 않은 채로 남고, 그 뒤의 이동이 모두 그 뒤에 줄을 서서 지도가 움직이지 않는다. */
   v.fit(ext,{padding:[40,40,40,40],maxZoom:10});
 }
+/* 지도 위 컨트롤 띠 — 분류군·지역 검색·서식지 후보·지역 경계 토글을 한 줄에 담는 그릇.
+   따로따로 절대배치하면 서로의 폭을 모른 채 겹치거나, 좁은 화면에서 층층이 쌓인다. */
+let mapTopEl=null;
+function addMapTop(){
+  mapTopEl=document.createElement('div'); mapTopEl.className='ol-unselectable maptop';
+  map.addControl(new ol.control.Control({element:mapTopEl}));
+  /* OpenLayers 가 컨트롤 요소에 pointer-events:auto 를 인라인으로 박는다 — 스타일시트로는 이길 수
+     없어 여기서 되돌린다. 안 그러면 이 띠의 빈 자리가 지도 조작(끌기·확대)을 통째로 가로챈다. */
+  mapTopEl.style.pointerEvents='none';
+}
 /* 지역 검색 — 지도 위쪽. 지도를 눌러 찾아 들어가는 길만으로는, 이름은 아는데 지도에서 어디쯤인지
    모르는 지역에 닿을 수 없다(중구·남구처럼 같은 이름이 여러 시도에 흩어져 있으면 특히 그렇다).
    초성도 받는다 — 종 검색과 같은 규칙이라 따로 배울 것이 없다. */
@@ -1777,7 +1796,7 @@ function addRegSearch(){
     ev.preventDefault(); pickRegion(REGHITS[+li.dataset.i]);
   });
   regQEl.addEventListener('blur',()=>setTimeout(closeRegList,150));
-  map.addControl(new ol.control.Control({element:el}));
+  mapTopEl.appendChild(el);
 }
 function buildRegIndex(){
   REGIDX=[];
@@ -1851,37 +1870,139 @@ function pickRegion(r){
   if(f) zoomToFeature(f,true);
   window.fgTrack&&fgTrack('region_search',{level:r.lvl});
 }
-/* 분류군 필터 — 지도 좌상단. 조회 대상(관리분류군)을 지도를 보면서 바꾼다.
-   종별 검색(모드 B)은 분류군과 무관하므로 그때는 숨긴다. */
-let taxonCtrlEl=null, taxonSelEl=null, taxonIcoEl=null;
+/* 분류군 선택 — 지도 위 컨트롤 띠의 맨 왼쪽. 조회 대상(관리분류군)을 지도를 보면서 바꾼다.
+   종별 검색(모드 B)은 분류군과 무관하므로 그때는 숨긴다.
+
+   기본 <select> 를 쓰지 않는 까닭: 목록에 아이콘을 실을 수 없다. 분류군은 서비스 곳곳에서
+   아이콘 상자로 갈리는데 이 자리만 글자뿐이면, 고른 것과 지도에 보이는 것이 같은 것인지 이어지지
+   않는다. 단추와 목록 양쪽에 아이콘과 이름을 함께 실어 그 연결을 만든다. */
+let taxonCtrlEl=null, taxonPickEl=null, taxonIcoEl=null, taxonLblEl=null,
+    txListEl=null, TXOPT=[], txCur=-1, txOpen=false, txPick='';
+/* 단추에 보이는 분류군. 지도의 curTaxon 은 그릴 자료가 있는 분류군만 따라오므로(수집예정은 지도가
+   비어 있다) 화면에 무엇이 골라져 있는지는 따로 들고 있어야 한다. */
+function txNow(){ return txPick||curTaxon; }
 function addTaxonCtrl(){
   const el=document.createElement('div'); el.className='ol-unselectable taxon-ctrl';
-  /* 좁은 화면에서는 이 상자가 아이콘 단추 하나로 접힌다(반응형 규칙). 목록은 어차피 눌러야 뜨는
-     팝업이라 지도 위에 늘 펼쳐 둘 이유가 없고, select 를 투명하게 덮어 두면 손가락으로 눌렀을 때
-     브라우저의 기본 선택 팝업이 그대로 뜬다 — 직접 만든 목록은 화면 아래에서 잘린다. */
-  el.innerHTML='<label for="mTaxon">분류군</label>'+
-    '<span class="tx-pick"><span class="tx-ico" aria-hidden="true"></span>'+
-    '<span class="tx-car" aria-hidden="true">▾</span><select id="mTaxon"></select></span>';
-  const sel=el.querySelector('select');
-  sel.addEventListener('change',()=>{ select(sel.value,false); syncTaxonIco(); });
-  map.addControl(new ol.control.Control({element:el}));
-  taxonCtrlEl=el; taxonSelEl=sel; taxonIcoEl=el.querySelector('.tx-ico'); fillTaxonCtrl();
+  el.innerHTML='<button type="button" class="tx-pick" id="mTaxon" aria-haspopup="listbox" '+
+    'aria-expanded="false" aria-controls="mTaxonList">'+
+    '<span class="tx-ico" aria-hidden="true"></span><span class="tx-lbl"></span>'+
+    '<span class="tx-car" aria-hidden="true">▾</span></button>';
+  taxonPickEl=el.querySelector('.tx-pick');
+  taxonIcoEl=el.querySelector('.tx-ico'); taxonLblEl=el.querySelector('.tx-lbl');
+  taxonPickEl.addEventListener('click',()=>{ txOpen?closeTaxList():openTaxList(); });
+  taxonPickEl.addEventListener('keydown',txKey);
+  /* 목록은 지도 상자가 아니라 본문에 붙인다 — 지도 안에 두면 넘치는 부분이 잘려
+     뒤쪽 분류군을 고를 수 없다. 자리는 열 때 단추 위치에서 계산한다. */
+  txListEl=document.createElement('ul');
+  txListEl.className='tx-list'; txListEl.id='mTaxonList'; txListEl.hidden=true;
+  txListEl.setAttribute('role','listbox'); txListEl.setAttribute('aria-label','분류군 선택');
+  txListEl.addEventListener('mousedown',ev=>{      // 단추가 초점을 잃기 전에 잡는다
+    ev.preventDefault();
+    const li=ev.target.closest('li[data-g]'); if(li) pickTaxon(li.dataset.g);
+  });
+  document.body.appendChild(txListEl);
+  mapTopEl.appendChild(el);
+  taxonCtrlEl=el; fillTaxonCtrl();
 }
 function fillTaxonCtrl(){
   const all=window.__TAXA__||[];              // 수집예정 분류군도 남겨 두되 고를 수는 없게 한다(지도에 그릴 자료가 없다)
-  if(!taxonSelEl || !all.length) return;
-  taxonSelEl.innerHTML=all.map(t=>
-    `<option value="${t.group}"${t.has_data?'':' disabled'}>${t.kor}${t.has_data?'':' · 수집예정'}</option>`).join('');
-  if(curTaxon) taxonSelEl.value=curTaxon;
+  if(!txListEl || !all.length) return;
+  TXOPT=all.map(t=>({g:t.group,kor:t.kor,soon:!t.has_data}));
   syncTaxonIco();
 }
-function syncTaxonIco(){                      // 접힌 상태에서는 이름 대신 아이콘이 지금 무엇을 보고 있는지 알린다
-  if(!taxonIcoEl||!taxonSelEl) return;
-  const g=taxonSelEl.value||curTaxon;
-  const kor=(taxonSelEl.selectedOptions&&taxonSelEl.selectedOptions[0]&&taxonSelEl.selectedOptions[0].textContent)||'분류군';
+function drawTaxList(){
+  if(!txListEl) return;
+  const now=txNow();
+  txListEl.innerHTML=TXOPT.map((o,i)=>{
+    const cur=o.g===now, ico=(typeof chipHTML==='function')?chipHTML(o.g,17):'';
+    return `<li role="option" id="txo${i}"${o.soon?'':` data-g="${o.g}"`}`+
+      ` aria-disabled="${o.soon?'true':'false'}" aria-selected="${cur?'true':'false'}"`+
+      ` class="${o.soon?'soon ':''}${cur?'cur ':''}${i===txCur?'on':''}">`+
+      `${ico}<span>${o.kor}</span>`+
+      (o.soon?'<span class="sfx">수집예정</span>':(cur?'<span class="sfx">✓</span>':''))+'</li>';
+  }).join('');
+}
+/* 자리는 문서 좌표로 박는다 — 화면 기준(fixed)으로 두면 스크롤할 때 단추만 움직이고 목록은
+   제자리에 남는다. 위·아래는 열리는 순간의 화면 여유로 정한다. */
+function placeTaxList(){
+  if(!txListEl||!taxonPickEl) return;
+  const b=taxonPickEl.getBoundingClientRect(), h=txListEl.offsetHeight, w=txListEl.offsetWidth;
+  const below=window.innerHeight-b.bottom-8;
+  const top=(below>=h||below>=b.top-8) ? b.bottom+4 : Math.max(8,b.top-h-4);
+  txListEl.style.top=(top+window.scrollY)+'px';
+  txListEl.style.left=(Math.max(8,Math.min(b.left,window.innerWidth-w-8))+window.scrollX)+'px';
+}
+function openTaxList(){
+  if(!txListEl||!TXOPT.length) return;
+  txCur=Math.max(0,TXOPT.findIndex(o=>o.g===txNow()));
+  drawTaxList(); txListEl.hidden=false; txOpen=true;
+  taxonPickEl.setAttribute('aria-expanded','true');
+  taxonPickEl.setAttribute('aria-activedescendant','txo'+txCur);
+  placeTaxList();
+  const li=txListEl.querySelector('li.on'); if(li) li.scrollIntoView({block:'nearest'});
+  document.addEventListener('pointerdown',txOutside,true);
+  window.addEventListener('resize',placeTaxList,true);
+}
+function closeTaxList(){
+  if(!txOpen) return;
+  txListEl.hidden=true; txListEl.innerHTML=''; txOpen=false; txCur=-1;
+  taxonPickEl.setAttribute('aria-expanded','false');
+  taxonPickEl.removeAttribute('aria-activedescendant');
+  document.removeEventListener('pointerdown',txOutside,true);
+  window.removeEventListener('resize',placeTaxList,true);
+}
+function txOutside(ev){
+  if(txListEl.contains(ev.target)||taxonCtrlEl.contains(ev.target)) return;
+  closeTaxList();
+}
+function moveTaxCur(d){
+  if(!txOpen) return;
+  const n=TXOPT.length; let i=txCur;
+  for(let k=0;k<n;k++){                        // 수집예정은 건너뛴다 — 멈춰 서 봐야 고를 수 없다
+    i=(i+d+n)%n; if(!TXOPT[i].soon) break;
+  }
+  txCur=i;
+  [...txListEl.querySelectorAll('li')].forEach((li,k)=>li.classList.toggle('on',k===txCur));
+  taxonPickEl.setAttribute('aria-activedescendant','txo'+txCur);
+  const on=txListEl.querySelector('li.on'); if(on) on.scrollIntoView({block:'nearest'});
+}
+function txKey(ev){
+  if(ev.key==='ArrowDown'||ev.key==='ArrowUp'){
+    ev.preventDefault();
+    if(!txOpen) openTaxList(); else moveTaxCur(ev.key==='ArrowDown'?1:-1);
+  }
+  else if(ev.key==='Home'||ev.key==='End'){
+    if(!txOpen) return;
+    ev.preventDefault();                       // 끝에서 한 칸 움직여 첫·마지막의 수집예정까지 건너뛴다
+    if(ev.key==='Home'){ txCur=TXOPT.length-1; moveTaxCur(1); }
+    else { txCur=0; moveTaxCur(-1); }
+  }
+  else if(ev.key==='Enter'||ev.key===' '){
+    ev.preventDefault();
+    if(!txOpen) openTaxList();
+    else if(TXOPT[txCur]&&!TXOPT[txCur].soon) pickTaxon(TXOPT[txCur].g);
+  }
+  else if(ev.key==='Escape'){ if(txOpen){ ev.preventDefault(); closeTaxList(); } }
+  else if(ev.key==='Tab'){ closeTaxList(); }
+}
+function pickTaxon(g){
+  closeTaxList();
+  if(!g||g===txNow()) return;
+  txPick=g;
+  if(typeof select==='function') select(g,false);
+  syncTaxonIco();
+}
+function setTaxonPick(g){                     // 지도 밖(대문 타일·분류군 칩)에서 바뀐 것을 단추에 되비춘다
+  if(g) txPick=g;
+  syncTaxonIco();
+}
+function syncTaxonIco(){
+  if(!taxonIcoEl||!taxonLblEl) return;
+  const g=txNow(), o=TXOPT.find(x=>x.g===g), kor=(o&&o.kor)||TAXON_KOR[g]||'분류군';
   if(typeof chipHTML==='function') taxonIcoEl.innerHTML=chipHTML(g,20);
-  taxonSelEl.setAttribute('aria-label','분류군 선택 — 현재 '+kor);
-  taxonSelEl.title=kor+' · 눌러서 분류군 바꾸기';
+  taxonLblEl.textContent=kor;
+  taxonPickEl.setAttribute('aria-label','분류군 선택 — 현재 '+kor);
+  taxonPickEl.title=kor+' · 눌러서 분류군 바꾸기';
 }
 /* 분류군 전체로 돌아가기 — 지도 좌상단, 종별 화면(모드 B)에서만.
    지도 위쪽의 글 버튼(← 분류군 전체)은 지도를 들여다보는 동안 시야 밖이라 돌아갈 길로 읽히지 않는다.
@@ -1897,7 +2018,7 @@ function addTaxonBackCtrl(){
     setMode('A');
     if(typeof select==='function') select(g,true);       // 분류군까지 되돌린다(모드만 바꾸면 직전 분류군이 남는다)
   });
-  map.addControl(new ol.control.Control({element:el}));
+  mapTopEl.appendChild(el);
   taxBackEl=el; syncTaxonBack();
 }
 function syncTaxonBack(){
@@ -1945,20 +2066,23 @@ function addRegToggle(){                                  // 지도 안 컨트�
   pv.innerHTML='<button type="button" class="poly on" aria-pressed="true" title="지역 경계 표시/숨김(검색 필터는 유지)">ON</button>';
   pv.addEventListener('click',()=>setPolyVisible(!polyVisible));
   wrap.appendChild(lvl); wrap.appendChild(hv); wrap.appendChild(pv);
-  map.addControl(new ol.control.Control({element:wrap}));
+  mapTopEl.appendChild(wrap);
   regToggleEl=lvl; polyToggleEl=pv;
 }
-/* 서식지 후보 켜기 — 지도 좌하단. 발견 지점과 겹쳐 보는 층이라 지도 밖 버튼으로 화면을 가르지 않는다.
+/* 서식지 후보 켜기 — 지역 검색칸 바로 옆(종별 화면에서만 보인다). 발견 지점과 겹쳐 보는 층이라
+   지도 밖 버튼으로 화면을 가르지 않는다. 좁은 화면에서는 이름을 접고 별표만 남기므로
+   이름을 title·aria-label 에도 싣는다.
    설명(?)을 옆에 붙이는 이유: "후보"라는 말만으로는 무엇을 근거로 뽑았는지 알 수 없다. */
 function addGapToggle(){
   const wrap=document.createElement('div'); wrap.className='ol-unselectable gap-ctrl';
-  wrap.innerHTML='<button type="button" class="gapbtn" aria-pressed="false">'+
-      '<i class="starmk"></i>서식지 후보</button>'+
+  wrap.innerHTML='<button type="button" class="gapbtn" aria-pressed="false" '+
+      'title="서식지 후보 켜기·끄기" aria-label="서식지 후보">'+
+      '<i class="starmk"></i><span class="gb-lbl">서식지 후보</span></button>'+
     '<button type="button" class="qtip" aria-label="서식지 후보 설명" '+
       'data-tip="선택한 종의 발견지점과 전국 환경(기후·고도·식생)을 대조해 학습한 적합 모형이 적합하다고 본 곳 중, 아직 발견기록이 없는 1km 지역입니다. 근거의 세기는 종마다 달라 표 아래에 함께 밝힙니다. 실제 서식을 보장하지 않으며, 찾아볼 만한 곳을 좁히는 용도입니다.">?</button>';
   gapBtnEl=wrap.querySelector('.gapbtn');
   gapBtnEl.addEventListener('click',toggleGap);
-  map.addControl(new ol.control.Control({element:wrap}));
+  mapTopEl.appendChild(wrap);
   syncGapBtn();
 }
 function applyLayerVis(){                                 // 활성 레벨만, 그리고 polyVisible 일 때만 폴리곤 표시
@@ -2860,8 +2984,7 @@ function select(group,scroll){
   if(ready) renderDash(group); else renderSoon(t);
   syncTaxonToMap(group,ready);
   if(window.fgSyncSearchHint) window.fgSyncSearchHint(group);   // 검색 예시도 이 분류군의 대표 종으로
-  if(taxonSelEl && taxonSelEl.value!==group) taxonSelEl.value=group;
-  if(typeof syncTaxonIco==='function') syncTaxonIco();          // 접힌 상태의 아이콘도 함께 따라온다
+  if(typeof setTaxonPick==='function') setTaxonPick(group);     // 지도 위 분류군 단추의 아이콘·이름도 함께 따라온다
   if(scroll!==false){ const tgt=document.getElementById('modeA')||document.getElementById('dash');
     if(tgt) tgt.scrollIntoView({behavior:'smooth',block:'start'}); }
 }
