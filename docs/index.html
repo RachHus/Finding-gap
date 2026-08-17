@@ -782,7 +782,6 @@
       <span class="scount" id="sCount"></span>
     </span>
     <span class="tabsright">
-      <button id="backA" class="sharebtn" type="button" style="display:none" title="분류군 전체 화면으로 돌아가기" onclick="setMode('A')">← 분류군 전체</button>
       <button id="shareBtn" class="sharebtn" type="button" title="현재 화면을 링크로 공유">🔗 공유</button>
     </span>
   </div>
@@ -2004,9 +2003,10 @@ function syncTaxonIco(){
   taxonPickEl.setAttribute('aria-label','분류군 선택 — 현재 '+kor);
   taxonPickEl.title=kor+' · 눌러서 분류군 바꾸기';
 }
-/* 분류군 전체로 돌아가기 — 지도 좌상단, 종별 화면(모드 B)에서만.
-   지도 위쪽의 글 버튼(← 분류군 전체)은 지도를 들여다보는 동안 시야 밖이라 돌아갈 길로 읽히지 않는다.
-   보고 있는 종이 속한 분류군의 아이콘을 함께 실어, 어디로 돌아가는지까지 아이콘으로 알린다. */
+/* 분류군 전체로 돌아가기 — 지도 좌상단, 종별 화면(모드 B)에서만. 돌아가는 길은 이것 하나다.
+   지도 밖 글 버튼도 함께 두었을 때는 지도를 들여다보는 동안 시야 밖이라 길로 읽히지 않으면서
+   같은 일을 하는 단추만 둘이 되었다. 보고 있는 종이 속한 분류군의 아이콘을 실어 어디로
+   돌아가는지까지 알린다. */
 let taxBackEl=null, taxBackBtn=null;
 function addTaxonBackCtrl(){
   const el=document.createElement('div'); el.className='ol-unselectable taxback-ctrl';
@@ -2671,10 +2671,9 @@ function setMode(m){
   mapMode=m;
   window.fgTrack&&fgTrack('mode_switch',{mode:m});
   modeA.style.display=m==='A'?'':'none'; modeB.style.display=m==='B'?'':'none';
-  backA.style.display=m==='B'?'':'none';   // 종을 고르면 들어오는 화면이라 돌아갈 길을 같이 낸다
   syncCellLayer(); applyGapVis(); syncGapBtn();                   // 발견 격자·서식지 후보는 종별 화면에서만
   if(taxonCtrlEl) taxonCtrlEl.style.display=m==='A'?'':'none';   // 종별 검색은 분류군과 무관
-  syncTaxonBack();                                                // 대신 그 자리에 분류군 복귀 버튼을 낸다
+  syncTaxonBack();                            // 돌아가는 길은 지도 좌상단 복귀 버튼 하나로 낸다
   if(map){ map.setTarget(m==='A'?'map':'mapB'); setTimeout(()=>{ map.updateSize(); sidoLayer&&sidoLayer.changed(); },30); }
 }
 function setMetric(m){ metric=m; mFound.classList.toggle('on',m==='found'); mGap.classList.toggle('on',m==='gap');
