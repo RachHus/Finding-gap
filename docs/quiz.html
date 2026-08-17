@@ -12,21 +12,29 @@
 <meta property="og:image" content="https://rachhus.github.io/Finding-gap/og.png?v=2">
 <meta property="og:url" content="https://rachhus.github.io/Finding-gap/quiz.html">
 <meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root{
     --ink:#1b201d;--muted:#6b7280;--faint:#9aa0a6;--line:#e2e9e2;--bg:#f5f8f4;--card:#fff;--accent:#015543;
     --success:#5CB85C;--danger:#D81E05;--radius:12px;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.5}
+  /* 글자 크기·굵기는 조회 화면(index.html)과 같은 단을 쓴다 — 11(메타·각주) / 12(표·칩) /
+     13(본문) / 15(강조 본문·선택지) / 19(절 제목) / 24(화면 제목), 굵기 400 / 600 / 700.
+     크기를 body 에 못박지 않으면 규칙이 닿지 않은 글이 브라우저 기본값(16px)으로 새어 나간다. */
+  body{margin:0;background:var(--bg);color:var(--ink);font-size:13px;
+    font-family:'Pretendard Variable',system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.5}
+  /* 폼 컨트롤은 서체도 크기도 물려받지 않아 그냥 두면 단추·선택칸만 브라우저 기본값으로 남는다. */
+  button,input,select,textarea{font-family:inherit;font-size:inherit}
   .wrap{max-width:720px;margin:0 auto;padding:28px 16px 72px}
   a{color:inherit;text-decoration:none}
   /* ── header (대문·서비스와 동일 결) ── */
   header{margin-bottom:18px;display:flex;align-items:flex-start;gap:12px;justify-content:space-between}
-  header h1{margin:0 0 4px;font-size:20px;letter-spacing:-.01em}
-  header h1 b{color:var(--accent)}
-  header .sub{margin:0;color:var(--muted);font-size:12.5px;max-width:46ch;line-height:1.5}
+  header h1{margin:0 0 4px;font-size:24px;letter-spacing:-.01em}
+  /* 이름을 가르는 일은 색이 한다. b 를 그냥 두면 브라우저가 h1(700)에 한 단 더 얹어 900 으로
+     그려서, 이 한 곳만 굵기 네 번째 단이 된다. */
+  header h1 b{color:var(--accent);font-weight:inherit}
+  header .sub{margin:0;color:var(--muted);font-size:12px;max-width:46ch;line-height:1.5}
   header .back{flex:none;font-size:12px;color:var(--muted);border:1px solid var(--line);
     border-radius:9px;padding:7px 12px;background:#fff;white-space:nowrap}
   header .back:hover{border-color:var(--accent);color:var(--accent)}
@@ -34,8 +42,8 @@
   .streak-bar{display:flex;gap:8px;margin-bottom:20px}
   .streak-card{background:var(--card);border:1px solid var(--line);border-radius:10px;
     padding:9px 14px;display:flex;flex-direction:column;gap:2px;flex:1}
-  .streak-card .v{font-size:19px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-  .streak-card .l{font-size:11.5px;color:var(--muted)}
+  .streak-card .v{font-size:19px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .streak-card .l{font-size:12px;color:var(--muted)}
   /* ── 퀴즈 범위(과·속) ── */
   .scope-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-8px 0 18px}
   .scope-bar[hidden]{display:none}
@@ -55,17 +63,17 @@
   .scope-opt{display:flex;align-items:baseline;gap:8px;padding:7px 10px;border-radius:7px;cursor:pointer;white-space:nowrap}
   .scope-opt:hover,.scope-opt.active{background:#eef3f1}
   .scope-opt .ko{font-size:13px;font-weight:600;color:var(--ink)}
-  .scope-opt .la{font-size:11.5px;color:var(--muted);font-style:italic}
+  .scope-opt .la{font-size:12px;color:var(--muted);font-style:italic}
   .scope-opt .cnt{margin-left:auto;padding-left:12px;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
   .scope-empty{padding:9px 10px;font-size:12px;color:var(--faint)}
-  .scope-count{font-size:11.5px;color:var(--faint)}
+  .scope-count{font-size:12px;color:var(--faint)}
   /* ── taxon picker ── */
   .taxon-picker{display:none;text-align:center;padding:8px 0 20px}
   .taxon-picker.active{display:block}
   .taxon-picker h2{margin:0 0 14px;font-size:15px;color:var(--ink)}
   .taxon-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
   .taxon-btn{appearance:none;border:1.5px solid var(--line);background:var(--card);
-    border-radius:10px;padding:14px 12px;cursor:pointer;font-size:14px;font-weight:600;
+    border-radius:10px;padding:14px 12px;cursor:pointer;font-size:15px;font-weight:600;
     transition:all .15s;color:var(--ink);min-height:44px}
   .taxon-btn:hover{border-color:var(--accent);background:#f1f6f0}
   .taxon-btn:active{transform:scale(.97)}
@@ -87,7 +95,7 @@
     min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px}
   .option:hover{border-color:var(--accent);background:#f1f6f0}
   .option:active{transform:scale(.99)}
-  .option .mk{font-size:14px;font-weight:800;opacity:0}
+  .option .mk{font-size:15px;font-weight:700;opacity:0}
   .option.correct{border-color:var(--success);background:#f0f9f0;color:#2a6f2a}
   .option.correct .mk{opacity:1;color:var(--success)}
   .option.incorrect{border-color:var(--danger);background:#fdf1f0;color:#a23b1a}
@@ -97,14 +105,14 @@
   .quiz-name-section.active{display:block}
   .quiz-name-box{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
     padding:18px;margin-bottom:14px;text-align:center}
-  .quiz-name-box .korean{font-size:22px;font-weight:800;letter-spacing:-.01em;margin-bottom:4px}
-  .quiz-name-box .scientific{font-size:13.5px;color:var(--muted);font-style:italic}
+  .quiz-name-box .korean{font-size:24px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px}
+  .quiz-name-box .scientific{font-size:13px;color:var(--muted);font-style:italic}
   .photo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:8px}
   .photo-option{position:relative;cursor:pointer;border:1.5px solid var(--line);
     border-radius:10px;overflow:hidden;background:#f1f1ec;transition:all .12s;aspect-ratio:1}
   .photo-option:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.08)}
   .photo-option img{width:100%;height:100%;object-fit:cover;display:block}
-  .photo-attr{font-size:9px;color:#fff;padding:3px 6px;line-height:1.3;word-break:keep-all;
+  .photo-attr{font-size:11px;color:#fff;padding:3px 6px;line-height:1.3;word-break:keep-all;
     background:rgba(0,0,0,.42);position:absolute;bottom:0;left:0;right:0}
   .photo-option.correct{border-color:var(--success);box-shadow:0 0 0 3px var(--success)}
   .photo-option.incorrect{border-color:var(--danger);box-shadow:0 0 0 3px var(--danger)}
@@ -112,8 +120,8 @@
     background:rgba(27,32,29,.72);color:#fff;text-align:center;word-break:keep-all}
   .photo-name.is-correct{background:rgba(47,111,94,.92)}
   /* ── result banner ── */
-  .result-banner{border-radius:10px;padding:12px 14px;font-size:14px;margin-bottom:12px;line-height:1.5}
-  .result-banner b{font-weight:800}
+  .result-banner{border-radius:10px;padding:12px 14px;font-size:15px;margin-bottom:12px;line-height:1.5}
+  .result-banner b{font-weight:700}
   .result-banner i{font-style:italic;opacity:.85;font-size:13px}
   .result-banner.ok{background:#f0f9f0;border:1px solid #cfe9cf;color:#2a6f2a}
   .result-banner.no{background:#fdf1f0;border:1px solid #f2d3cd;color:#a23b1a}
@@ -123,7 +131,7 @@
   .learning.active{display:block}
   .learning-header{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
   .species-name{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
-  .species-name .korean{font-size:20px;font-weight:800}
+  .species-name .korean{font-size:24px;font-weight:700}
   .species-name .scientific{font-size:13px;color:var(--muted);font-style:italic}
   .badges{display:flex;flex-wrap:wrap;gap:6px}
   .badge{font-size:11px;font-weight:700;border-radius:6px;padding:4px 10px;white-space:nowrap;display:inline-block;
@@ -137,12 +145,16 @@
     overflow:hidden;cursor:pointer;transition:all .15s;position:relative}
   .gallery-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.1)}
   .gallery-item img{width:100%;height:100%;object-fit:cover}
-  .gallery-item .item-attr{font-size:9px;color:#fff;padding:3px 4px;line-height:1.2;word-break:keep-all;
-    background:rgba(0,0,0,.42);position:absolute;bottom:0;left:0;right:0}
+  /* 이 자막은 100px 남짓한 정사각 썸네일 위에 얹힌다. 줄 수를 묶지 않으면 출처가 긴 사진에서
+     넉 줄까지 늘어나 사진의 절반을 덮는다. 두 줄로 자르고, 잘린 전문은 마우스를 올리거나
+     사진을 눌러 여는 확대 화면에서 온전히 보이게 한다. */
+  .gallery-item .item-attr{font-size:11px;color:#fff;padding:3px 4px;line-height:1.2;word-break:keep-all;
+    background:rgba(0,0,0,.42);position:absolute;bottom:0;left:0;right:0;
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
   .photo-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;padding:16px;overflow-y:auto}
   .photo-modal.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
   .modal-close{position:fixed;top:16px;right:16px;background:#fff;border:0;width:40px;height:40px;
-    border-radius:999px;cursor:pointer;font-size:18px;z-index:101;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+    border-radius:999px;cursor:pointer;font-size:19px;z-index:101;display:flex;align-items:center;justify-content:center;color:var(--ink)}
   .modal-photo{max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;margin-bottom:12px;background:#111}
   .modal-info{background:var(--card);border-radius:8px;padding:12px;width:100%;max-width:500px}
   .modal-info .attr{font-size:12px;color:var(--muted);line-height:1.6}
@@ -153,7 +165,7 @@
   .info b{color:var(--ink);font-weight:600}
   .buttons{display:flex;gap:10px}
   .buttons[hidden]{display:none}
-  .btn{appearance:none;border:0;border-radius:10px;padding:12px 16px;font-size:13.5px;font-weight:600;
+  .btn{appearance:none;border:0;border-radius:10px;padding:12px 16px;font-size:13px;font-weight:600;
     cursor:pointer;font-family:inherit;min-height:44px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex:1}
   .btn.primary{background:var(--accent);color:#fff}
   .btn.primary:hover{background:#1f5d4f}
@@ -175,7 +187,7 @@
   /* 종 이름은 과·속보다 길어 입력칸을 넓게 */
   #speciesInput{width:300px}
   /* 아직 고르지 않았을 때의 안내 — 퀴즈 자리를 대신한다 */
-  .notice{display:none;text-align:center;padding:34px 16px;font-size:13.5px;color:var(--muted);line-height:1.7}
+  .notice{display:none;text-align:center;padding:34px 16px;font-size:13px;color:var(--muted);line-height:1.7}
   .notice.active{display:block}
   .notice .cta{display:inline-block;margin-top:12px;padding:11px 16px;border-radius:10px;
     background:var(--accent);color:#fff;font-weight:600;line-height:22px}
@@ -191,14 +203,14 @@
   }
   @media(max-width:400px){
     .wrap{padding:20px 12px 56px}
-    .streak-card{padding:8px 11px}.streak-card .v{font-size:17px}
-    .options{gap:8px}.option{padding:14px;font-size:14px}
-    .species-name .korean{font-size:18px}
+    .streak-card{padding:8px 11px}
+    .options{gap:8px}.option{padding:14px}
+    .species-name .korean{font-size:19px}
     .gallery{grid-template-columns:repeat(3,1fr)}
-    header h1{font-size:18px}
+    header h1{font-size:19px}
     .taxon-buttons{grid-template-columns:repeat(2,1fr)}
     .tab-bar{gap:0;margin-bottom:12px}
-    .tab-btn{flex:1;padding:11px 8px;font-size:14px;border-bottom-width:2px}
+    .tab-btn{flex:1;padding:11px 8px;border-bottom-width:2px}
   }
 </style>
 </head>
@@ -961,6 +973,7 @@ function showLearning(ktsn){
     img.onerror=function(){if(this.src!==photo.full&&photo.full){this.src=photo.full;}else{item.style.display='none';}};
     item.appendChild(img);
     const attr=document.createElement('div');attr.className='item-attr';attr.textContent=attrText(photo);
+    attr.title=attr.textContent;
     item.appendChild(attr);
     g.appendChild(item);
   });

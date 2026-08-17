@@ -13,12 +13,13 @@
 <meta property="og:url" content="https://rachhus.github.io/Finding-gap/index.html">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@9.2.4/ol.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root{
     /* --faint 는 --muted 보다 한 단계 옅은 보조색이었다. 본문 대비 4.5:1 을 지키면
        두 색 사이에 눈으로 구분될 여지가 남지 않아(4.71:1 대 4.83:1) 색으로는 더 이상
        단계를 만들 수 없다. 보조 텍스트 색은 하나로 두고, 그 아래 단계는 색이 아니라
-       글자 크기(10~11.5px)와 굵기로 준다. 이름은 쓰임새를 남기기 위해 유지한다. */
+       글자 크기(11~12px)와 굵기로 준다. 이름은 쓰임새를 남기기 위해 유지한다. */
     --ink:#1b201d; --muted:#6b7280; --faint:var(--muted); --line:#e2e9e2; --bg:#f5f8f4; --card:#fff;
     /* 강조색은 로고의 진녹(고리·"Finding")에서 딴다. 흰 글자를 얹는 배경으로도,
        흰 바탕 위 글자로도 쓰이므로 양방향 대비가 필요하다 — 8.8:1 로 둘 다 만족한다. */
@@ -29,20 +30,29 @@
        한 곳에서만 관리한다. CSS 토큰으로도 두면 두 벌이 되어 값이 갈린다. */
   }
   *{box-sizing:border-box}
-  /* 제목 크기는 세 단만 쓴다 — 23(페이지) / 18(섹션) / 15(패널·카드).
-     h2 가 h3 보다 작아지는 역전이 있었다. 새 제목을 넣을 때 중간값(16·17)을 만들지 말 것.
-     본문 설명글은 13.5, 표·조밀한 컨트롤은 12.5 다. */
-  body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.5}
+  /* 글자 크기는 여섯 단만 쓴다 — 11(메타·각주) / 12(표·칩·조밀한 컨트롤) / 13(본문) /
+     15(강조 본문·카드 제목) / 19(절 제목) / 24(화면 제목). 굵기는 세 단이다 —
+     400(본문) / 600(강조·제목) / 700(최상위). 예전에는 열아홉 단이 섞여 있어 0.5px 차이가
+     위계인지 실수인지 구분되지 않았다. 사이 값이 필요해 보이면 크기가 아니라 굵기·색으로 단을 준다. */
+  /* 본문 단을 body 에 못박는다. 크기를 적지 않으면 규칙이 닿지 않은 글이 브라우저 기본값(16px)으로
+     떨어져 여섯 단 밖으로 새어 나간다 — 검색 결과의 국명이 실제로 그렇게 16px 로 그려지고 있었다. */
+  body{margin:0;background:var(--bg);color:var(--ink);font-size:13px;
+    font-family:'Pretendard Variable',system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;line-height:1.5}
   a{color:inherit}
+  /* 폼 컨트롤은 서체도 크기도 물려받지 않는다. 그냥 두면 단추·선택칸·입력칸만 브라우저 기본값
+     (Arial 13.33px → 한글은 설치된 기본 고딕)으로 남아, 화면에서 두 서체와 스케일 밖 크기가 섞인다.
+     굵기는 각 규칙이 정한다. 아래 개별 규칙이 크기를 지정하면 그쪽이 이긴다. */
+  button,input,select,textarea{font-family:inherit;font-size:inherit}
   /* ── header ── */
-  header h1{margin:0 0 6px;font-size:23px;letter-spacing:-.01em}
+  header h1{margin:0 0 6px;font-size:24px;letter-spacing:-.01em}
   header h1 b{color:var(--accent)}
   /* 로고에 이름과 부제가 함께 들어 있어 h1 은 이미지 한 장이다.
-     width/height 를 속성으로 박아 로드 전에도 자리를 잡게 한다(글이 밀려 올라갔다 내려오지 않게). */
+     width/height 를 속성으로 박아 로드 전에도 자리를 잡게 한다(글이 밀려 올라갔다 내려오지 않게).
+     위 font-size 는 이미지가 뜨지 않을 때의 대체 글에만 걸린다 — 절 제목(19px)보다 커야
+     그 상황에서도 위계가 남으므로 좁은 화면에서도 줄이지 않는다. */
   header h1 img{display:block;height:72px;width:auto}
   @media(max-width:560px){ header h1 img{height:56px} }
-  header .sub{color:var(--muted);font-size:13.5px;margin:0;max-width:60ch}
+  header .sub{color:var(--muted);font-size:13px;margin:0;max-width:60ch}
   /* ── dashboard ── */
   .dash{margin-top:18px}
   .dhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 14px}
@@ -50,7 +60,7 @@
   /* 아이콘은 flex 자식이라 flex:none 이 없으면 상자 폭에 맞춰 눌린다 —
      22px 로 그린 그림이 8px 로 납작해져 무엇인지 알아볼 수 없게 된다. */
   .dhead .chip>svg{flex:none;display:block}
-  .dhead h2{margin:0;font-size:18px}
+  .dhead h2{margin:0;font-size:19px}
   /* ── 홈 3축 내비 ── */
   .axes{display:flex;gap:2px;margin:20px 0 2px;border-bottom:1px solid var(--line)}
   .axes .ax{appearance:none;border:0;background:none;cursor:pointer;padding:10px 15px 12px;
@@ -59,14 +69,14 @@
   .axes .ax:hover{color:var(--ink)}
   .axes .ax.on{color:var(--accent);border-bottom-color:var(--accent)}
   .vintro{margin:18px 0 6px}
-  .vintro h2{margin:0 0 6px;font-size:18px}
-  .vintro p{margin:0;color:var(--muted);font-size:13.5px;max-width:64ch;line-height:1.6}
+  .vintro h2{margin:0 0 6px;font-size:19px}
+  .vintro p{margin:0;color:var(--muted);font-size:13px;max-width:64ch;line-height:1.6}
   .vintro p b{color:var(--ink);font-weight:600}
   /* cards */
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
   @media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}.cards .card.quiz{grid-column:1/-1;flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}}
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
-  .card .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .card .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
   .card .l{font-size:12px;color:var(--muted);margin-top:1px}
   .card .s{font-size:11px;color:var(--muted);margin-top:5px}
   .card.gap .v{color:#b8541f}
@@ -75,8 +85,8 @@
     display:flex;flex-direction:column;justify-content:center;
     transition:border-color .12s,box-shadow .12s,transform .12s}
   .card.quiz:hover{border-color:var(--accent);box-shadow:0 4px 14px rgba(47,111,94,.12);transform:translateY(-1px)}
-  .card.quiz .qt{font-size:15px;font-weight:800;color:var(--accent);display:flex;align-items:center;gap:6px}
-  .card.quiz .ql{font-size:11.5px;color:#4a5a54;margin-top:3px}
+  .card.quiz .qt{font-size:15px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:6px}
+  .card.quiz .ql{font-size:12px;color:#4a5a54;margin-top:3px}
   .card.quiz .qs{font-size:11px;color:var(--accent);font-weight:700;margin-top:7px}
   /* panel */
   .dashpanel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px}
@@ -90,12 +100,12 @@
   .bar .track{height:16px;display:flex;border-radius:4px;overflow:hidden;background:#f1f1ec}
   .bar .track i{height:100%}
   .bar .bn{font-size:12px;font-variant-numeric:tabular-nums;text-align:right;color:#444;font-weight:600}
-  .bar .go{font-size:10px;color:var(--faint);margin-left:4px}
+  .bar .go{font-size:11px;color:var(--faint);margin-left:4px}
   /* 전국 발견/미발견 2막대 */
   .bar.bar2{grid-template-columns:64px 1fr 66px;padding:4px 4px}
   .bar.bar2 .bl{font-size:13px;font-weight:600;color:#2a2f2c}
   .bar.bar2 .track{height:22px}
-  .bar.bar2 .bn{font-size:14px}
+  .bar.bar2 .bn{font-size:15px}
   /* encoding legend */
   .enc{display:flex;flex-wrap:wrap;gap:14px;margin:12px 0 2px;padding:9px 12px;background:#f7f8f6;
     border:1px solid #ecefe9;border-radius:8px;font-size:12px;color:#4a4f4c}
@@ -110,24 +120,24 @@
   .donuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px;margin-top:14px}
   @media(max-width:520px){.donuts{grid-template-columns:repeat(2,1fr)}}
   .dcard{text-align:center}
-  .dcard .dt{font-size:13.5px;margin-bottom:4px}
+  .dcard .dt{font-size:13px;margin-bottom:4px}
   .dcard .dt b{font-size:13px}
-  .dcard .dn{font-size:10.5px;color:#5a5f5c;display:flex;flex-direction:column;gap:1px;margin-bottom:6px}
+  .dcard .dn{font-size:11px;color:#5a5f5c;display:flex;flex-direction:column;gap:1px;margin-bottom:6px;font-variant-numeric:tabular-nums}
   .dcard .dn span{display:inline-flex;align-items:center;justify-content:center}
   .dcard .dn i{width:9px;height:9px;margin-right:4px}
   .donut{width:104px;height:104px}
-  .note{font-size:11.5px;color:var(--faint);margin-top:10px}
+  .note{font-size:12px;color:var(--faint);margin-top:10px}
   /* coming soon */
   .soonbox{background:var(--card);border:1px dashed var(--line);border-radius:var(--radius);padding:28px 20px;text-align:center}
-  .soonbox .v{font-size:30px;font-weight:800}
+  .soonbox .v{font-size:24px;font-weight:700}
   .soonbox .l{color:var(--muted);font-size:13px;margin-top:4px}
-  .soonbox .msg{margin-top:14px;font-size:13.5px;color:#7a7f7c;max-width:46ch;margin-left:auto;margin-right:auto}
+  .soonbox .msg{margin-top:14px;font-size:13px;color:#7a7f7c;max-width:46ch;margin-left:auto;margin-right:auto}
   /* ── 마이데이터(인증·관심종) ── */
   .authcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;max-width:440px}
   .authcard h3{margin:0;font-size:15px}
   .authcard p{margin:6px 0 14px;color:var(--muted);font-size:13px}
-  .authcard input[type=email]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:10px;font-family:inherit}
-  .btn{appearance:none;border:0;border-radius:9px;padding:10px 16px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
+  .authcard input[type=email]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:15px;margin-bottom:10px;font-family:inherit}
+  .btn{appearance:none;border:0;border-radius:9px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
   .btn.sec{background:#eef1ef;color:#33403b}
   .btn:disabled{opacity:.6;cursor:default}
   .authdiv{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:12px}
@@ -136,15 +146,15 @@
   .btn.goog svg{width:17px;height:17px;display:block;flex:none}
   .wl{list-style:none;padding:0;margin:12px 0 0;display:flex;flex-direction:column;gap:8px}
   .wl li{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);flex-wrap:wrap}
-  .wl li .nm{font-weight:600;font-size:13.5px}
+  .wl li .nm{font-weight:600;font-size:13px}
   .wl li .sci{font-style:italic;color:var(--muted);font-size:12px}
   .wl li .rm{margin-left:auto;border:0;background:none;color:var(--faint);cursor:pointer;font-size:12px}
   .wl li .rm:hover{color:#b8541f}
-  .muted2{color:var(--muted);font-size:13.5px}
-  .authmsg{margin-top:10px;font-size:13.5px;padding:8px 10px;border-radius:8px}
+  .muted2{color:var(--muted);font-size:13px}
+  .authmsg{margin-top:10px;font-size:13px;padding:8px 10px;border-radius:8px}
   .authmsg.ok{background:#eef6f0;color:#2c6a4f;border:1px solid #cfe6d8}
   .authmsg.err{background:#fbeeea;color:#9a3412;border:1px solid #f1d2c6}
-  footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.7}
+  footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;line-height:1.7}
   footer a{min-height:44px;display:inline-flex;align-items:center;padding:10px 0;margin-right:6px}
 
   /* ══ 지도 서비스(구 service.html) 스타일 ══ */
@@ -159,13 +169,13 @@
   /* 계정·알림 묶음 — 머리말 오른쪽 끝. 알림 목록이 이 묶음을 기준으로 떠야 해서 위치 기준점을 준다. */
   header .acct{margin-left:auto;position:relative;display:flex;align-items:center;gap:6px;flex:none}
   header .acct button{border:1px solid var(--line);border-radius:9px;background:#fff;color:#3a4a43;cursor:pointer;
-    min-height:40px;padding:0 12px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+    min-height:40px;padding:0 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
   header .acct[hidden],header .acct button[hidden]{display:none}   /* display 지정이 hidden 속성을 덮는다 */
   header .acct button:hover{border-color:var(--accent);color:var(--accent)}
   header .acct .who{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;line-height:38px}
   header .acct .bell{position:relative;padding:0;width:40px;justify-content:center}
   header .acct .bell .ndot{position:absolute;top:5px;right:5px;min-width:16px;height:16px;padding:0 4px;border-radius:9px;
-    background:#b8541f;color:#fff;font-size:10.5px;line-height:16px;font-weight:700;text-align:center}
+    background:#b8541f;color:#fff;font-size:11px;line-height:16px;font-weight:700;text-align:center}
   .notifpop{position:absolute;right:0;top:calc(100% + 8px);width:min(320px,86vw);z-index:150;background:var(--card);
     border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.14);padding:6px;max-height:60vh;overflow:auto}
   .notifpop ul{list-style:none;margin:0;padding:0}
@@ -173,16 +183,16 @@
   .notifpop li button{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;
     padding:9px 10px;font-size:13px;color:var(--ink);line-height:1.5;min-height:44px}
   .notifpop li button:hover{background:#f2f7f4}
-  .notifpop li .when{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+  .notifpop li .when{display:block;color:var(--muted);font-size:12px;margin-top:2px}
   .notifpop .empty{padding:12px 10px;color:var(--muted);font-size:13px}
   /* 마이페이지 알림 목록 — 종 모양 팝오버와 같은 내용을 넓은 폭에서 다시 보여준다 */
   .notiflist{list-style:none;margin:0;padding:0}
   .notiflist li{border-top:1px solid var(--line)}
   .notiflist li:first-child{border-top:0}
   .notiflist li button{display:flex;align-items:baseline;gap:10px;width:100%;text-align:left;border:0;background:none;
-    cursor:pointer;font:inherit;font-size:13.5px;color:var(--ink);line-height:1.55;padding:11px 6px;min-height:44px;border-radius:8px}
+    cursor:pointer;font:inherit;font-size:13px;color:var(--ink);line-height:1.55;padding:11px 6px;min-height:44px;border-radius:8px}
   .notiflist li button:hover{background:#f2f7f4}
-  .notiflist li .when{margin-left:auto;color:var(--faint);font-size:11.5px;white-space:nowrap}
+  .notiflist li .when{margin-left:auto;color:var(--faint);font-size:12px;white-space:nowrap}
   .notiflist li .go{color:var(--accent);font-size:12px;white-space:nowrap}
   /* 활동 지역·관심 종 설정 — 첫 로그인 모달과 마이페이지 카드가 같은 부품을 쓴다 */
   .selrow{display:flex;gap:8px;flex-wrap:wrap}
@@ -193,13 +203,13 @@
      그쪽 규칙이 뒤에 있어 같은 이름을 쓰면 여백·글자 크기를 덮어쓴다 */
   .wlchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
   .wlchips .wlchip{display:inline-flex;align-items:center;background:#eef4f0;border:1px solid #d7e5dd;
-    border-radius:999px;padding:0 0 0 13px;font-size:12.5px;overflow:hidden}
+    border-radius:999px;padding:0 0 0 13px;font-size:12px;overflow:hidden}
   /* 빼기 단추가 칩 높이를 정한다 — 겹치는 투명 영역을 만들면 옆 칩의 단추를 가로챈다 */
-  .wlchips .wlchip button{border:0;background:none;cursor:pointer;color:#6b7280;font-size:16px;line-height:1;
+  .wlchips .wlchip button{border:0;background:none;cursor:pointer;color:#6b7280;font-size:15px;line-height:1;
     padding:0;width:40px;min-height:44px;margin-left:4px}
   .wlchips .wlchip button:hover{background:#dde8e2;color:var(--ink)}
   .regstat{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-  .regstat .rs{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font:inherit;font-size:12.5px;
+  .regstat .rs{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font:inherit;font-size:12px;
     background:#fbfdfc;color:var(--ink);cursor:pointer;min-height:44px;text-align:left}
   .regstat .rs:hover{background:#eef4f0;border-color:#c6d8ce}
   .regstat .rs b{color:#b5482f}
@@ -212,10 +222,10 @@
   /* 현재 화면 공유(딥링크) · 대화형 도우미 토글 — 오른쪽 정렬 그룹 */
   .tabs .tabsright{margin-left:auto;display:flex;align-items:center;gap:6px}
   .tabs button.sharebtn{align-self:center;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;
-    padding:8px 12px;font-size:12.5px;color:#3a4a43;display:inline-flex;align-items:center;gap:5px}
+    padding:8px 12px;font-size:12px;color:#3a4a43;display:inline-flex;align-items:center;gap:5px}
   .tabs button.sharebtn:hover{border-color:var(--accent);color:var(--accent)}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2b332e;color:#fff;
-    padding:9px 15px;border-radius:9px;font-size:12.5px;box-shadow:0 6px 20px rgba(0,0,0,.22);
+    padding:9px 15px;border-radius:9px;font-size:12px;box-shadow:0 6px 20px rgba(0,0,0,.22);
     opacity:0;pointer-events:none;transition:opacity .2s;z-index:2000}
   .toast.show{opacity:1}
   .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px}
@@ -224,10 +234,10 @@
   /* 선택 지역은 남은 폭을 채우되, 좁아지면 찌그러지지 말고 다음 줄로 내려간다. */
   #modeA .controls .field:last-child{min-width:240px}
   .field label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em}
-  select,input[type=search]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px}
+  select,input[type=search]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:15px}
   select{min-width:130px;min-height:44px}
   .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
-  .seg button{border:0;background:#fff;padding:8px 12px;font-size:12.5px;cursor:pointer;color:#555}
+  .seg button{border:0;background:#fff;padding:8px 12px;font-size:12px;cursor:pointer;color:#555}
   .seg button.on{background:var(--accent);color:#fff;font-weight:600}
   .selchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:#555}
   .selchips .c{background:#eef3f1;border:1px solid #d7e3df;border-radius:999px;padding:3px 9px}
@@ -256,12 +266,12 @@
      판 자체는 그림자로 사진에서 떼어 놓는다. 크기는 img 의 width/height 속성이 정한다. */
   .repshot .quiz{position:absolute;top:10px;left:10px;z-index:2;display:inline-flex;align-items:center;gap:8px;
     min-height:44px;padding:0 16px 0 12px;border-radius:999px;background:#fff;color:var(--accent);
-    font-size:13.5px;font-weight:700;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.28)}
+    font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.28)}
   .repshot .quiz img{display:block;flex:none}
   .repshot .quiz:hover{background:#f1f6f0}
   .repshot .quiz:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
   .repshot figcaption{position:absolute;left:0;right:0;bottom:0;padding:14px 10px 5px;text-align:right;
-    font-size:10.5px;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.66))}
+    font-size:11px;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.66))}
   .ramp{height:10px;width:120px;border-radius:3px;border:1px solid rgba(0,0,0,.14);
     background:linear-gradient(90deg,#FFF59D,#7CB342,#1E5631)}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
@@ -269,27 +279,27 @@
   @media(max-width:880px){.panel{max-height:none}}
   .panel h2{margin:0;padding:11px 14px;font-size:15px;border-bottom:1px solid var(--line);background:#fcfcfb;
     display:flex;align-items:center;gap:8px}
-  .panel h2 .cnt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500}
+  .panel h2 .cnt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums}
   .panel h2 .dl{font-size:12px;border:1px solid var(--line);border-radius:7px;padding:5px 9px;background:#fff;cursor:pointer}
   .tblwrap{overflow:auto}
   /* 넓은 화면에서는 표 머리글을 눌러 정렬한다. 이 막대는 머리글이 화면에서 사라지는
      좁은 화면에서만 나온다(아래 880px 이하 규칙). */
   .sortbar{display:none}
-  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  table{border-collapse:collapse;width:100%;font-size:12px}
   th,td{padding:7px 10px;text-align:left;border-bottom:1px solid #f1f1ee;white-space:nowrap}
   #tbl th,#tbl td{padding:7px 6px}                         /* 6열 수용 위해 종 목록만 가로 패딩 축소 */
-  th{position:sticky;top:0;background:#fbfbfa;cursor:pointer;font-size:11.5px;color:#555;user-select:none;z-index:1}
+  th{position:sticky;top:0;background:#fbfbfa;cursor:pointer;font-size:12px;color:#555;user-select:none;z-index:1}
   tbody tr.rowlink{cursor:pointer}
   tbody tr.rowlink:hover{background:#f1f6f3}
   th:hover{color:var(--accent)}
-  th .ar{font-size:10px;margin-left:3px}
+  th .ar{font-size:11px;margin-left:3px}
   th .ar.on{color:var(--accent)}
   th .ar.off{color:#57606a}
   th:hover .ar.off{color:#9aa0a6}
-  .panel h2 .hint{margin-left:8px;font-size:10.5px;color:var(--faint);font-weight:400}
+  .panel h2 .hint{margin-left:8px;font-size:11px;color:var(--faint);font-weight:400}
   td .sci{font-style:italic;color:var(--muted)}
-  .badge{font-size:10px;font-weight:700;border-radius:999px;padding:1px 6px;white-space:nowrap}
-  .st{display:inline-flex;align-items:center;gap:4px;font-size:11.5px}
+  .badge{font-size:11px;font-weight:700;border-radius:999px;padding:1px 6px;white-space:nowrap}
+  .st{display:inline-flex;align-items:center;gap:4px;font-size:12px}
   .dot{width:7px;height:7px;border-radius:999px;display:inline-block}
   .dot-pt{width:9px;height:9px;background:#FF8F00;border:1px solid rgba(74,40,0,.85)}     /* 발견 지점 */
   /* 서식지 후보 표식 — 지도에 별표로 그리므로 범례·표에서도 같은 모양이라야 지도와 이어진다.
@@ -308,18 +318,18 @@
   }
   /* 주목할 미발견 종 추천 스트립 */
   .recstrip{padding:9px 14px 4px;border-bottom:1px solid var(--line);background:#fcfdfc}
-  .recstrip .rec-h{font-size:11.5px;font-weight:600;color:#4f6f61;margin-bottom:7px}
+  .recstrip .rec-h{font-size:12px;font-weight:600;color:#4f6f61;margin-bottom:7px}
   .recstrip .rec-h .rec-sub{font-weight:400;color:var(--faint);margin-left:6px}
   /* 물음표 툴팁: 옅은 안내문을 아이콘 뒤로 — 호버·포커스·탭(모바일) 시 표출 */
   .qtip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
-    border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:10px;line-height:1;
+    border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:11px;line-height:1;
     font-weight:700;cursor:help;padding:0;margin-left:5px;vertical-align:middle;flex:none;appearance:none}
   .qtip:hover,.qtip.on{border-color:var(--accent);color:var(--accent)}
   .qtip:focus-visible{border-color:var(--accent);color:var(--accent);outline:2px solid var(--accent);outline-offset:2px}
   /* width 를 주지 않으면 말풍선이 16px 버튼 폭에 맞춰져 글자가 세로로 길게 늘어난다(1,500px 넘게).
      max-content 로 글줄 길이를 잡고 max-width 로 상한을 둔다 — 둘은 같이 있어야 한다. */
   .qtip::after{content:attr(data-tip);position:absolute;left:-4px;top:calc(100% + 7px);z-index:60;
-    width:max-content;max-width:min(240px,74vw);padding:7px 10px;border-radius:8px;background:#2b332e;color:#fff;font-size:11.5px;
+    width:max-content;max-width:min(240px,74vw);padding:7px 10px;border-radius:8px;background:#2b332e;color:#fff;font-size:12px;
     font-weight:400;line-height:1.5;text-align:left;white-space:normal;box-shadow:0 6px 20px rgba(0,0,0,.18);
     opacity:0;visibility:hidden;transition:opacity .12s}
   /* 이 버튼은 제목 줄 안에 인라인으로 들어가므로 실제 크기를 키우면 줄이 무너진다.
@@ -344,12 +354,12 @@
   /* mode B */
   .searchrow{display:flex;gap:10px;align-items:center;margin-bottom:6px}
   .searchrow input{flex:1;max-width:440px}
-  .scount{font-size:12px;color:var(--muted)}
+  .scount{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
   .sresults{border:1px solid var(--line);border-radius:var(--radius);max-height:300px;overflow:auto;background:#fff;margin-bottom:16px}
   .sresults .r{padding:9px 14px;border-bottom:1px solid #f1f1ee;cursor:pointer;display:flex;align-items:center;gap:9px}
   .sresults .r:hover{background:#f6f7f5}
   .sresults .r:last-child{border-bottom:0}
-  .sresults .nm{font-weight:600}.sresults .sci{font-style:italic;color:var(--muted);font-size:12px}
+  .sresults .nm{font-weight:600;font-size:15px}.sresults .sci{font-style:italic;color:var(--muted);font-size:12px}
   .sresults .tg{margin-left:auto;font-size:11px;color:var(--faint)}
   /* 종 목록 접기 — 좁은 화면에서만 켠다(아래 반응형). 목록이 스스로 스크롤하는 상자라
      손가락이 그 안에 갇히면 아래 지도·사진·카드로 내려가기 어렵다. */
@@ -360,23 +370,28 @@
   .sfold .ar{font-size:11px;color:var(--accent)}
   /* 종 상세는 위의 지도+사진과 같은 폭을 쓴다 — 폭을 묶어 두면 넓은 화면에서 오른쪽이 통째로 빈다. */
   .scard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;max-width:100%}
-  .scard h3{margin:0 0 2px;font-size:18px}
-  .scard .sci{font-style:italic;color:var(--muted);font-size:13.5px}
+  .scard h3{margin:0 0 2px;font-size:19px}
+  .scard .sci{font-style:italic;color:var(--muted);font-size:13px}
   .scard .row{margin-top:14px}
-  .scard .row .k{font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:5px}
+  .scard .row .k{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px}
   .map-ctrls{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2}
   .reg-toggle{display:flex;background:#fff;border:1px solid #cdd5d1;border-radius:7px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.14)}
-  .reg-toggle button{border:0;background:#fff;padding:5px 11px;font:600 12px system-ui,sans-serif;color:#5a665f;cursor:pointer}
+  .reg-toggle button{border:0;background:#fff;padding:5px 11px;font:600 12px 'Pretendard Variable',system-ui,sans-serif;color:#5a665f;cursor:pointer}
   .reg-toggle button.on{background:var(--accent);color:#fff}
   /* 확대 버튼이 좌상단 분류군 필터에 가려지므로 좌하단으로 내린다(저작권 표기는 우하단). */
   #map .ol-zoom,#mapB .ol-zoom{top:auto;bottom:.6em;left:.6em}
-  #map .ol-zoom button,#mapB .ol-zoom button{width:44px;height:44px;font-size:16px}
+  #map .ol-zoom button,#mapB .ol-zoom button{width:44px;height:44px;font-size:15px}
+  /* ol.css 는 기본 컨트롤 크기를 em 으로 잡아 물려받은 글자 크기를 따라간다. 본문을 13px 로 못박으면
+     저작권 펼침·회전 초기화 단추가 20px 에서 18px 로 줄어들므로 원래 크기를 지켜 준다.
+     좁은 화면에서는 아래 미디어 규칙이 이 값을 44px 로 다시 올린다. */
+  #map .ol-attribution button,#mapB .ol-attribution button,
+  #map .ol-rotate button,#mapB .ol-rotate button{min-width:20px;min-height:20px}
   /* 맨휠은 페이지 스크롤로 넘기므로, 확대 방법을 그 자리에서 알려 준다.
      ol.css 의 `.ol-overlaycontainer-stopevent > *{pointer-events:auto}` 와 특이도가 같아 밀리므로
      선택자를 한 단계 더 준다(안 그러면 이 오버레이가 지도 클릭·확대 버튼·휠을 전부 가로챈다). */
   .ol-overlaycontainer-stopevent .wheel-hint{pointer-events:none}
   .wheel-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    background:rgba(20,28,24,.65);color:#fff;font:600 14px system-ui,sans-serif;
+    background:rgba(20,28,24,.65);color:#fff;font:600 15px 'Pretendard Variable',system-ui,sans-serif;
     opacity:0;transition:opacity .18s;z-index:4}
   .wheel-hint.on{opacity:1}
   @media(hover:none){.wheel-hint{display:none}}
@@ -389,7 +404,7 @@
   .regtbl tbody tr:last-child td{border-bottom:0}
   .regtbl .num{text-align:right;font-variant-numeric:tabular-nums}
   .regtbl-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px;flex-wrap:wrap}
-  .spsub{font-size:11.5px;font-weight:600;color:#4f6f61;margin:12px 0 6px}   /* 종 카드 안 표 구분 제목 */
+  .spsub{font-size:12px;font-weight:600;color:#4f6f61;margin:12px 0 6px}   /* 종 카드 안 표 구분 제목 */
   .spsub:first-child{margin-top:0}
   .gaplegend{display:flex;flex-wrap:wrap;align-items:center;gap:5px 12px;font-size:11px;color:#5a635d;margin-bottom:7px}
   .gaplegend .lgi{display:inline-flex;align-items:center;gap:5px}
@@ -397,7 +412,7 @@
   .gaplegend .lgi i.starmk{border-radius:0}                 /* 별 끝이 모서리 곡률에 잘리지 않게 */
   .gaptbl tbody tr{cursor:pointer}
   .gaptbl tbody tr:hover td{background:#f1f6f3}
-  .rdl{border:1px solid var(--accent);background:#fff;color:var(--accent);font:600 12px system-ui,sans-serif;padding:5px 11px;border-radius:7px;cursor:pointer}
+  .rdl{border:1px solid var(--accent);background:#fff;color:var(--accent);font:600 12px 'Pretendard Variable',system-ui,sans-serif;padding:5px 11px;border-radius:7px;cursor:pointer}
   .rdl:hover{background:var(--accent);color:#fff}
   /* 종 카드 — 발견지점 기후 및 고도 막대 */
   .khead{display:flex;align-items:center;gap:6px}
@@ -429,14 +444,14 @@
   .envrow.season{grid-template-columns:92px 1fr!important;position:relative;align-items:start}
   .monthbars{display:flex;gap:2px;height:88px;align-items:flex-end;background:#f5f5f3;border-radius:4px 4px 0 0;padding:0 6px}
   .mb{flex:1;background:var(--accent);border-radius:2px 2px 0 0}
-  .monthlbl{display:flex;gap:2px;padding:3px 6px 0;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .monthlbl{display:flex;gap:2px;padding:3px 6px 0;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
   .monthlbl span{flex:1;text-align:center}
   .season-table{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border-width:0}
   /* 지도 — 분류군 필터(좌상단) */
   .taxon-ctrl{position:absolute;top:8px;left:8px;z-index:2;background:#fff;border:1px solid #cdd5d1;border-radius:8px;
-    box-shadow:0 1px 4px rgba(0,0,0,.14);padding:7px 9px;width:188px;font:12px system-ui,sans-serif}
-  .taxon-ctrl label{display:block;font-size:10.5px;font-weight:700;color:var(--muted);letter-spacing:.02em;margin-bottom:4px}
-  .taxon-ctrl select{width:100%;min-width:0;min-height:36px;font-size:12.5px;font-weight:600;padding:5px 6px;
+    box-shadow:0 1px 4px rgba(0,0,0,.14);padding:7px 9px;width:188px;font:12px 'Pretendard Variable',system-ui,sans-serif}
+  .taxon-ctrl label{display:block;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.02em;margin-bottom:4px}
+  .taxon-ctrl select{width:100%;min-width:0;min-height:36px;font-size:12px;font-weight:600;padding:5px 6px;
     border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
   /* 분류군 전체로 돌아가기 — 지도 좌상단(종별 화면). 모드 A 의 분류군 필터가 비우는 자리를 쓴다.
      지도를 보는 동안에는 지도 위쪽 글 버튼이 시야에 들어오지 않아 돌아갈 길이 없는 것처럼 보인다.
@@ -445,7 +460,7 @@
   .taxback-ctrl{position:absolute;top:8px;left:8px;z-index:2}
   .taxback-ctrl button{display:flex;align-items:center;gap:8px;min-height:44px;max-width:min(232px,52vw);
     padding:5px 12px 5px 6px;border:1px solid #cdd5d1;border-radius:10px;background:#fff;color:var(--ink);
-    cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.14);font:700 12.5px system-ui,sans-serif}
+    cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.14);font:700 12px 'Pretendard Variable',system-ui,sans-serif}
   .taxback-ctrl button:hover{border-color:var(--accent)}
   .taxback-ctrl .tb-ico{flex:none;display:flex}
   .taxback-ctrl .tb-ico .chip{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;
@@ -473,7 +488,7 @@
   .gap-ctrl{position:absolute;left:8px;bottom:110px;z-index:2;display:flex;align-items:center;gap:14px}
   .gap-ctrl .gapbtn{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:6px 11px;
     border:1px solid #cdd5d1;border-radius:8px;background:#fff;color:#5a665f;cursor:pointer;
-    font:600 12px system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.14)}
+    font:600 12px 'Pretendard Variable',system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.14)}
   .gap-ctrl .gapbtn i{width:12px;height:12px;display:inline-block;flex:none;opacity:.5}
   .gap-ctrl .gapbtn[aria-pressed="true"]{background:#A85A00;border-color:#8c4b00;color:#fff}
   .gap-ctrl .gapbtn[aria-pressed="true"] i{background:#fff;opacity:1}
@@ -492,14 +507,12 @@
   .lk .mk{flex:none;width:100px;display:flex;align-items:center;justify-content:center}
   .lk .mk img{display:block;max-width:100%;object-fit:contain}
   .lk .t{font-weight:600;line-height:1.3;word-break:keep-all;min-width:0}
-  .muted{color:var(--muted);font-size:13.5px}
-  footer{margin-top:24px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.7}
+  .muted{color:var(--muted);font-size:13px}
+  footer{margin-top:24px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;line-height:1.7}
 
   /* ═══════ 모바일(≤880px) 반응형 — 데스크톱(≥881px)은 위 규칙 그대로 ═══════ */
   @media(max-width:880px){
     .wrap{padding:14px 12px 56px}
-    /* 섹션 제목이 18px 이라 H1 도 18px 이면 위계가 사라진다. 375px 폭에서 한 줄에 들어가는 상한이 20px 다. */
-    header h1{font-size:20px}
     header .back{padding:8px 14px;min-height:44px;display:inline-flex;align-items:center;font-size:13px}
     /* 계정 묶음은 로고와 같은 줄 오른쪽에 두고, 설명 문장을 그 아래 한 줄로 내린다.
        설명이 먼저 오면 계정 버튼이 셋째 줄까지 밀려 화면 위쪽을 낭비한다. */
@@ -538,11 +551,11 @@
        ("무척추동물"이 제일 길다) 필터 폭을 먼저 확보하고, 토글 쪽을 두 줄로 접는다. */
     .taxon-ctrl{width:auto;max-width:146px;font-size:11px;padding:6px 8px}
     .taxon-ctrl label{margin-bottom:3px}
-    .taxon-ctrl select{min-height:44px;padding:5px 4px;font-size:12px}
+    .taxon-ctrl select{min-height:44px;padding:5px 4px}
     /* 복귀 버튼도 같은 띠를 쓴다. 우상단 토글 상자(두 줄로 접혀 179px)가 같은 높이에 있고 그 상자가
        빈 곳에서도 클릭을 가져가므로, 이름이 길면(무척추동물(곤충제외)) 겹치기 전에 잘라 낸다
        — 실측 375px: 폭을 안 막으면 버튼 오른쪽 19px 를 토글 상자가 먹는다. 전체 이름은 title 에 남는다. */
-    .taxback-ctrl button{max-width:38vw;gap:6px;padding:5px 10px 5px 5px;font-size:11.5px}
+    .taxback-ctrl button{max-width:38vw;gap:6px;padding:5px 10px 5px 5px}
     .taxback-ctrl .tb-ico .chip{width:30px;height:30px;border-radius:7px}
     /* 좁은 화면에서는 도움말 말풍선이 240px 이면 오른쪽으로 삐져나가 페이지가 가로로 밀린다.
        버튼이 놓이는 위치를 감안해 폭을 줄인다. */
@@ -558,7 +571,7 @@
     .gap-ctrl .gapbtn{min-height:44px}
 
     /* 범례: 줄바꿈 허용 + 컬러바 축소 */
-    .legend{flex-wrap:wrap;gap:6px 8px;font-size:10.5px}
+    .legend{flex-wrap:wrap;gap:6px 8px}
     .ramp{width:84px;flex:none}
     #legCap,#legCapB{flex-basis:100%}
 
@@ -580,8 +593,8 @@
     #tbl tbody tr.rowlink{border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px;margin:0 0 8px}
     #tbl tbody tr.rowlink:hover{background:#f6f9f7}
     #tbl td{display:inline;border:0;padding:0;white-space:normal;font-size:13px}
-    #tbl td:nth-child(1){display:block;font-weight:600;font-size:14px;line-height:1.35}
-    #tbl td:nth-child(1) .sci{font-weight:600;font-size:14px}
+    #tbl td:nth-child(1){display:block;font-weight:600;font-size:15px;line-height:1.35}
+    #tbl td:nth-child(1) .sci{font-weight:600;font-size:15px}
     #tbl td:nth-child(2){display:block;margin:1px 0 8px;font-size:12px}
     #tbl td:nth-child(3),#tbl td:nth-child(4){margin-right:6px}
     #tbl td:nth-child(5){display:block;margin-top:8px;color:var(--muted);font-size:12px;text-align:left}
@@ -597,7 +610,7 @@
     #tbl tbody tr.rowlink td:nth-child(1):has(.sci)+td:nth-child(2){display:none}
 
     /* 발견지역표/적합지표(3열): 카드 대신 콤팩트 유지 + 가로 스크롤 폴백 */
-    .regtbl,.gaptbl{font-size:11.5px}
+    .regtbl,.gaptbl{font-size:12px}
     .regtbl th,.gaptbl th{padding:6px 7px}
     .regtbl td,.gaptbl td{padding:5px 7px;word-break:break-word}
     .regtbl-wrap{-webkit-overflow-scrolling:touch}
@@ -609,7 +622,7 @@
 
     /* 종 카드 */
     .scard{padding:14px 16px;max-width:100%}
-    .scard h3{font-size:17px;word-break:keep-all;overflow-wrap:anywhere}
+    .scard h3{word-break:keep-all;overflow-wrap:anywhere}
     .links{grid-template-columns:1fr}
 
     /* 지도 아래 대표 사진: 세로로 쌓이면 왼쪽 칸이 늘어날 일이 없어 flex 기준이 사진 없는
@@ -645,7 +658,7 @@
     margin-bottom:14px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--card)}
   .back:hover{color:var(--accent);border-color:var(--accent)}
   .btn:disabled{opacity:.6;cursor:default}
-  .divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--faint);font-size:11.5px}
+  .divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--faint);font-size:12px}
   .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
   .topline{display:flex;align-items:center;gap:10px;margin:22px 0 12px;flex-wrap:wrap}
   .topline .who{font-size:13px;color:var(--muted)}
@@ -653,11 +666,11 @@
   .chatbox{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
     padding:16px;min-height:340px;max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
   .intro{color:var(--muted);font-size:13px;line-height:1.6}
-  .msg{max-width:82%;padding:10px 13px;border-radius:13px;font-size:13.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+  .msg{max-width:82%;padding:10px 13px;border-radius:13px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
   .msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:5px}
   .msg.bot{align-self:flex-start;background:#f1f3f1;color:var(--ink);border-bottom-left-radius:5px}
   .msg.err{align-self:flex-start;background:#fbeeea;color:#9a3412;border:1px solid #f1d2c6}
-  .msg .tools{display:block;margin-top:6px;font-size:10.5px;color:var(--faint)}
+  .msg .tools{display:block;margin-top:6px;font-size:11px;color:var(--faint)}
   .msg .maplink{display:inline-flex;align-items:center;gap:5px;margin-top:8px;margin-right:6px;font-size:12px;font-weight:600;
     color:var(--accent);text-decoration:none;border:1px solid #cdddce;background:#f4f8f6;border-radius:8px;padding:6px 11px;
     appearance:none;font-family:inherit;cursor:pointer}
@@ -674,7 +687,7 @@
     font-size:12px;color:#3a3f3c;cursor:pointer}
   .chips .chip:hover{border-color:var(--accent);color:var(--accent)}
   .inrow{display:flex;gap:8px;margin-top:12px}
-  .inrow textarea{flex:1;padding:11px 13px;border:1px solid var(--line);border-radius:11px;font-size:14px;
+  .inrow textarea{flex:1;padding:11px 13px;border:1px solid var(--line);border-radius:11px;font-size:15px;
     font-family:inherit;resize:none;line-height:1.5;max-height:120px}
   .inrow textarea:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
   @media(max-width:560px){ .msg{max-width:90%}
@@ -885,29 +898,29 @@
   .dbadge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;margin-left:4px;vertical-align:middle}
   .trendlist li{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .trendlist .rank{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:#eef3f1;color:#015543;border-radius:50%;font-size:12px;font-weight:700;flex:none}
-  .trendlist .cnt{margin-left:auto;font-weight:700;color:#015543;white-space:nowrap}
+  .trendlist .cnt{margin-left:auto;font-weight:700;color:#015543;white-space:nowrap;font-variant-numeric:tabular-nums}
   .ctarow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 16px}
   .btn.cta{display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap}
   .btn.cta.sm{padding:7px 12px;font-size:13px}
   .feedlist .fmeta{color:var(--muted);font-size:12px}
-  .feedlist .fnote{flex-basis:100%;color:#4a4f4c;font-size:13.5px;margin-top:2px;background:#f6f9f7;border-radius:6px;padding:6px 9px}
+  .feedlist .fnote{flex-basis:100%;color:#4a4f4c;font-size:13px;margin-top:2px;background:#f6f9f7;border-radius:6px;padding:6px 9px}
   .missions{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
   .mission{display:block;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card);color:inherit}
   .mission:hover{border-color:#9ec3b2;background:#f6f9f7}
   .mission .mrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .mission .mnm{font-weight:600;font-size:13.5px}
+  .mission .mnm{font-weight:600;font-size:13px}
   .mission .msci{font-style:italic;color:var(--muted);font-size:12px;margin:2px 0 4px}
-  .mission .mreg{font-size:11.5px;color:#4f6f61}
+  .mission .mreg{font-size:12px;color:#4f6f61}
   .lblist li{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .lblist .rank{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:#eef3f1;color:#015543;border-radius:50%;font-size:12px;font-weight:700;flex:none}
-  .lblist .cnt{margin-left:auto;font-weight:600;color:#015543;white-space:nowrap;font-size:12.5px}
+  .lblist .cnt{margin-left:auto;font-weight:600;color:#015543;white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums}
   .btn.sm{padding:5px 12px;font-size:12px}
   .btn.sm.rej{background:#f3eeee;color:#a03027}
   .admbtns{margin-left:auto;display:inline-flex;gap:6px;flex:none}
   .feedlist .fphoto{flex-basis:100%;margin-top:4px}
   .feedlist .fphoto img{max-width:220px;max-height:160px;border-radius:8px;display:block;border:1px solid var(--line)}
 
-  .watchbtn{appearance:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer;color:#5a5f5c;white-space:nowrap}
+  .watchbtn{appearance:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:#5a5f5c;white-space:nowrap}
   .watchbtn.on{background:#fff7e6;border-color:#f0d9a0;color:#9a7b2e}
   .watchbtn:hover{border-color:#cfcfc7}
   .watchbtn:disabled{opacity:.6;cursor:default}
@@ -918,9 +931,9 @@
   .rpt-modal{background:#fff;border-radius:14px;width:100%;max-width:460px;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.28)}
   .rpt-hd{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:2}
   .rpt-hd h3{margin:0;font-size:15px}
-  /* 헤더 우측 닫기(×) 공통 기준: 44×44 타격영역 · 22px 글리프 · 색 #8a8f8c. 모달·패널 모두 이 규칙을 쓴다. */
+  /* 헤더 우측 닫기(×) 공통 기준: 44×44 타격영역 · 24px 글리프 · 색 #8a8f8c. 모달·패널 모두 이 규칙을 쓴다. */
   .rpt-hd .x,.chathd .x{margin-left:auto;display:flex;align-items:center;justify-content:center;
-    border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:#8a8f8c;padding:0 6px;min-width:44px;min-height:44px}
+    border:0;background:none;font-size:24px;line-height:1;cursor:pointer;color:#8a8f8c;padding:0 6px;min-width:44px;min-height:44px}
   .rpt-bd{padding:14px 16px}
   .rpt-f{margin-bottom:13px}
   .rpt-f>label{display:block;font-size:12px;font-weight:600;color:#4f6f61;margin-bottom:5px}
@@ -937,11 +950,11 @@
   .rpt-srlist .it .sci{font-style:italic;color:var(--muted);font-size:12px;margin-left:6px}
   .rpt-srlist .it .tg{float:right;font-size:11px;color:var(--faint)}
   .rpt-map{height:232px;border:1px solid #d7ded9;border-radius:8px;overflow:hidden;background:#eef1ef}
-  .rpt-hint{font-size:11.5px;color:var(--faint);margin:5px 0 0}
-  .rpt-coord{font-size:12px;color:#256b48;font-weight:600;margin-top:5px;min-height:16px}
-  .rpt-submit{width:100%;border:0;border-radius:9px;padding:12px;font:inherit;font-weight:700;font-size:14px;background:var(--accent);color:#fff;cursor:pointer;min-height:46px}
+  .rpt-hint{font-size:12px;color:var(--faint);margin:5px 0 0}
+  .rpt-coord{font-size:12px;color:#256b48;font-weight:600;margin-top:5px;min-height:16px;font-variant-numeric:tabular-nums}
+  .rpt-submit{width:100%;border:0;border-radius:9px;padding:12px;font:inherit;font-weight:700;font-size:15px;background:var(--accent);color:#fff;cursor:pointer;min-height:46px}
   .rpt-submit:disabled{opacity:.5;cursor:default}
-  .rpt-msg{font-size:13.5px;margin-top:11px;padding:10px 12px;border-radius:8px;display:none;line-height:1.5}
+  .rpt-msg{font-size:13px;margin-top:11px;padding:10px 12px;border-radius:8px;display:none;line-height:1.5}
   .rpt-msg.err{display:block;background:#fdecea;color:#a03027}
   .rpt-msg.ok{display:block;background:#eaf6ef;color:#256b48}
   .rpt-gate{text-align:center;padding:14px 4px}
@@ -956,20 +969,20 @@
 
   /* 근거의 세기 설명 — 읽는 글이라 본문보다 넓게 두고 줄간을 늘린다 */
   .grade-modal{max-width:560px}
-  #gradeBody{font-size:13.5px;line-height:1.75;color:#3d4340}
-  #gradeBody h4{margin:18px 0 6px;font-size:13.5px;color:#1E5631}
+  #gradeBody{font-size:13px;line-height:1.75;color:#3d4340}
+  #gradeBody h4{margin:18px 0 6px;font-size:13px;color:#1E5631}
   #gradeBody h4:first-child{margin-top:0}
   #gradeBody p{margin:0 0 8px}
-  #gradeBody .faint{color:var(--muted);font-size:12.5px}
-  #gradeBody .gnow{background:#f1f6f3;border-radius:8px;padding:9px 12px;margin:0 0 4px;font-size:13.5px}
+  #gradeBody .faint{color:var(--muted);font-size:12px}
+  #gradeBody .gnow{background:#f1f6f3;border-radius:8px;padding:9px 12px;margin:0 0 4px;font-size:13px}
   #gradeBody ol.gsteps{margin:0 0 8px;padding-left:20px}
   #gradeBody ol.gsteps li{margin-bottom:3px}
   #gradeBody ul.gvars{margin:0 0 8px;padding-left:18px}
   #gradeBody ul.gvars li{margin-bottom:2px}
-  #gradeBody ul.gvars .faint{font-size:11.5px}
+  #gradeBody ul.gvars .faint{font-size:12px}
   /* 좁은 폭에서 표만 옆으로 밀리게 둔다. 감싸지 않으면 본문 전체가 가로로 흘러 글줄이 잘린다 */
   .gtbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:4px 0 8px}
-  .gtbl{width:100%;min-width:340px;border-collapse:collapse;font-size:12.5px}
+  .gtbl{width:100%;min-width:340px;border-collapse:collapse;font-size:12px}
   .gtbl th{text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);padding:5px 6px}
   .gtbl td{padding:5px 6px;border-bottom:1px solid #f1f1ee}
   .gtbl .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -1529,7 +1542,7 @@ function densScale(v){                                  // 값 v(현 metric)→�
 }
 function colorFor(v){ return dens(densScale(v),0.82); }
 function regLabel(txt,onDark){                          // 짙은 채움 위에서는 글자를 뒤집어야 읽힌다
-  return new ol.style.Text({text:txt,font:'11px system-ui,sans-serif',
+  return new ol.style.Text({text:txt,font:'11px "Pretendard Variable",system-ui,sans-serif',
     fill:new ol.style.Fill({color:onDark?'#ffffff':'#1b201d'}),
     stroke:new ol.style.Stroke({color:onDark?'rgba(12,42,26,0.92)':'#ffffff',width:2.6})});
 }
@@ -2278,7 +2291,7 @@ function renderSpecies(sp){
     <div style="margin-top:8px;display:flex;align-items:center;gap:8px" title="같은 분류군·희귀도 그룹 안에서 이 종에 대한 대중 관심(관측 기록·한국어 위키 조회 기반)의 상대 위치">
       <span class="muted" style="font-size:12px;white-space:nowrap">관심도</span>
       <span style="flex:1;max-width:150px;height:6px;background:#eef1f0;border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(interestOf(sp.k)*100)}%;background:#6a9a86"></span></span>
-      <span class="muted" style="font-size:12px">${Math.round(interestOf(sp.k)*100)}<span style="font-size:10px">/100</span></span></div>
+      <span class="muted" style="font-size:12px">${Math.round(interestOf(sp.k)*100)}<span style="font-size:11px">/100</span></span></div>
     <div class="row"><div class="k khead">분포 · ${sy0}–${sy1}</div>
       <div id="spViewHost"></div></div>
     ${envRow}
@@ -2564,7 +2577,7 @@ function renderDash(group){
   const html=`
   <div class="dhead">
     ${chipHTML(group,24)}
-    <h2>${D.taxon_kor} <span style="font-size:13px;color:var(--muted);font-weight:500">(${group})</span></h2>
+    <h2>${D.taxon_kor} <span style="font-size:13px;color:var(--muted);font-weight:400">(${group})</span></h2>
   </div>
 
   <div class="cards">
@@ -2600,12 +2613,12 @@ function renderSoon(t){
   document.getElementById('defs').innerHTML='';
   const obs=t.n_obs_species||0, gap=(t.n_species||0)-obs;
   const box=(v,l)=>`<div style="flex:1;min-width:118px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px">`+
-    `<div style="font-size:24px;font-weight:800;letter-spacing:-.02em">${nf(v)}</div>`+
-    `<div style="font-size:11.5px;color:var(--muted);margin-top:2px">${l}</div></div>`;
+    `<div style="font-size:24px;font-weight:700;letter-spacing:-.02em">${nf(v)}</div>`+
+    `<div style="font-size:12px;color:var(--muted);margin-top:2px">${l}</div></div>`;
   document.getElementById('dash').innerHTML=`
   <div class="dhead">
     ${chipHTML(t.group,24)}
-    <h2>${t.kor} <span style="font-size:13px;color:var(--muted);font-weight:500">(${t.group})</span></h2>
+    <h2>${t.kor} <span style="font-size:13px;color:var(--muted);font-weight:400">(${t.group})</span></h2>
   </div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px">
     ${box(t.n_species,'대상 종(국가생물종목록)')}
