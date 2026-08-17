@@ -438,6 +438,19 @@
   .taxon-ctrl label{display:block;font-size:10.5px;font-weight:700;color:var(--muted);letter-spacing:.02em;margin-bottom:4px}
   .taxon-ctrl select{width:100%;min-width:0;min-height:36px;font-size:12.5px;font-weight:600;padding:5px 6px;
     border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+  /* 분류군 전체로 돌아가기 — 지도 좌상단(종별 화면). 모드 A 의 분류군 필터가 비우는 자리를 쓴다.
+     지도를 보는 동안에는 지도 위쪽 글 버튼이 시야에 들어오지 않아 돌아갈 길이 없는 것처럼 보인다.
+     글자를 분류군 색으로 채우면 대비가 모자라므로(주황 #D98C36 위 흰 글자 2.71:1) 상자는 흰색으로 두고,
+     색은 아이콘 칩이 맡아 어느 분류군으로 돌아가는지를 알린다. */
+  .taxback-ctrl{position:absolute;top:8px;left:8px;z-index:2}
+  .taxback-ctrl button{display:flex;align-items:center;gap:8px;min-height:44px;max-width:min(232px,52vw);
+    padding:5px 12px 5px 6px;border:1px solid #cdd5d1;border-radius:10px;background:#fff;color:var(--ink);
+    cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.14);font:700 12.5px system-ui,sans-serif}
+  .taxback-ctrl button:hover{border-color:var(--accent)}
+  .taxback-ctrl .tb-ico{flex:none;display:flex}
+  .taxback-ctrl .tb-ico .chip{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;
+    justify-content:center;color:#fff}
+  .taxback-ctrl .tb-lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* 내 위치 — 지도 우하단(저작권 표기 위). 지도 서비스에서 흔한 조준점 아이콘 */
   .locate-ctrl{position:absolute;right:.6em;bottom:2.4em;z-index:2}
   .locate-ctrl button{width:44px;height:44px;display:flex;align-items:center;justify-content:center;
@@ -526,6 +539,11 @@
     .taxon-ctrl{width:auto;max-width:146px;font-size:11px;padding:6px 8px}
     .taxon-ctrl label{margin-bottom:3px}
     .taxon-ctrl select{min-height:44px;padding:5px 4px;font-size:12px}
+    /* 복귀 버튼도 같은 띠를 쓴다. 우상단 토글 상자(두 줄로 접혀 179px)가 같은 높이에 있고 그 상자가
+       빈 곳에서도 클릭을 가져가므로, 이름이 길면(무척추동물(곤충제외)) 겹치기 전에 잘라 낸다
+       — 실측 375px: 폭을 안 막으면 버튼 오른쪽 19px 를 토글 상자가 먹는다. 전체 이름은 title 에 남는다. */
+    .taxback-ctrl button{max-width:38vw;gap:6px;padding:5px 10px 5px 5px;font-size:11.5px}
+    .taxback-ctrl .tb-ico .chip{width:30px;height:30px;border-radius:7px}
     /* 좁은 화면에서는 도움말 말풍선이 240px 이면 오른쪽으로 삐져나가 페이지가 가로로 밀린다.
        버튼이 놓이는 위치를 감안해 폭을 줄인다. */
     .qtip::after{max-width:min(210px,58vw)}
@@ -1586,7 +1604,7 @@ function initMap(){
       // 국내 조회 서비스이므로 지도 중심이 한반도 밖으로 나가지 못하게 묶는다.
       // (중심만 제한 — 축소해서 주변 나라까지 보는 것은 그대로 된다)
       extent:KOREA_EXTENT, constrainOnlyCenter:true})});
-  addTaxonCtrl(); addRegToggle(); addGapToggle(); addLocateCtrl(); addWheelHint();
+  addTaxonCtrl(); addTaxonBackCtrl(); addRegToggle(); addGapToggle(); addLocateCtrl(); addWheelHint();
   let _cellZ=cellZoomOK();                               // 줌 경계를 넘을 때만 다시 그린다(줌 애니메이션마다 갱신하면 무겁다)
   map.getView().on('change:resolution',()=>{
     const ok=cellZoomOK(); if(ok===_cellZ) return; _cellZ=ok;
@@ -1675,6 +1693,39 @@ function fillTaxonCtrl(){
     `<option value="${t.group}"${t.has_data?'':' disabled'}>${t.kor}${t.has_data?'':' · 수집예정'}</option>`).join('');
   if(curTaxon) taxonSelEl.value=curTaxon;
 }
+/* 분류군 전체로 돌아가기 — 지도 좌상단, 종별 화면(모드 B)에서만.
+   지도 위쪽의 글 버튼(← 분류군 전체)은 지도를 들여다보는 동안 시야 밖이라 돌아갈 길로 읽히지 않는다.
+   보고 있는 종이 속한 분류군의 아이콘을 함께 실어, 어디로 돌아가는지까지 아이콘으로 알린다. */
+let taxBackEl=null, taxBackBtn=null;
+function addTaxonBackCtrl(){
+  const el=document.createElement('div'); el.className='ol-unselectable taxback-ctrl';
+  el.innerHTML='<button type="button"><span class="tb-ico"></span><span class="tb-lbl"></span></button>';
+  taxBackBtn=el.querySelector('button');
+  taxBackBtn.addEventListener('click',()=>{
+    const g=taxBackBtn.dataset.g||curTaxon;
+    window.fgTrack&&fgTrack('taxon_back',{taxon:g});
+    setMode('A');
+    if(typeof select==='function') select(g,true);       // 분류군까지 되돌린다(모드만 바꾸면 직전 분류군이 남는다)
+  });
+  map.addControl(new ol.control.Control({element:el}));
+  taxBackEl=el; syncTaxonBack();
+}
+function syncTaxonBack(){
+  if(!taxBackBtn) return;
+  const on=mapMode==='B';
+  taxBackEl.style.display=on?'':'none';
+  if(!on) return;
+  const g=(selSpecies&&selSpecies.t)||curTaxon;          // 종을 아직 안 고른 검색 화면이면 직전 분류군으로
+  const kor=TAXON_KOR[g]||'분류군';
+  taxBackBtn.dataset.g=g;
+  taxBackBtn.title=kor+' 전체 화면으로 돌아가기';
+  taxBackBtn.setAttribute('aria-label',kor+' 전체 화면으로 돌아가기');
+  taxBackBtn.querySelector('.tb-lbl').textContent='← '+kor+' 전체';
+  // 아이콘 정의는 뒤 스크립트 블록에 있다. 딥링크(?sp=)로 곧장 들어오면 여기가 먼저 도니
+  // 준비된 뒤에만 그리고, 부트 끝에서 한 번 더 부른다.
+  if(typeof chipHTML==='function') taxBackBtn.querySelector('.tb-ico').innerHTML=chipHTML(g,20);
+}
+window.fgSyncTaxonBack=syncTaxonBack;
 /* 내 위치 — 지도 우하단 조준점 버튼. 지도 서비스에서 통용되는 자리·아이콘이라 설명 없이도 찾는다. */
 let locateBtnEl=null;
 function addLocateCtrl(){
@@ -2199,6 +2250,7 @@ function envBars(sp){                                     // 발견지점 고도
 }
 function renderSpecies(sp){
   selSpecies=sp;
+  syncTaxonBack();                                        // 복귀 버튼의 분류군 아이콘을 이 종에 맞춘다
   window.fgTrack&&fgTrack('species_open',{ktsn:sp.k,taxon:sp.t});
   // 종별 조회 순위의 원천. 사용자 지정 매개변수는 맞춤 측정기준 등록 전까지 보고서에 뜨지 않고
   // 소급되지도 않으므로, 순위로 쓸 신호는 표준 측정기준인 페이지 경로로도 함께 남긴다.
@@ -2273,7 +2325,7 @@ function renderRepShot(sp){                               // 지도 아래 빈 �
 function clearSelSpecies(){ selSpecies=null; selRegions=new Map(); GAPRES=null;
   if(gapLayer)gapLayer.setVisible(false); if(gapSource)gapSource.clear();
   syncCellLayer(); syncGapBtn();
-  sCard.innerHTML=''; clearRepShot(); refreshSpeciesMap(); }
+  sCard.innerHTML=''; clearRepShot(); refreshSpeciesMap(); syncTaxonBack(); }
 
 /* 분류군별 조회 테이블의 종 클릭 → 종별 검색(Mode B)으로 전환 + 해당 종 카드 표시 */
 function openSpecies(k){
@@ -2295,6 +2347,7 @@ function setMode(m){
   backA.style.display=m==='B'?'':'none';   // 종을 고르면 들어오는 화면이라 돌아갈 길을 같이 낸다
   syncCellLayer(); applyGapVis(); syncGapBtn();                   // 발견 격자·서식지 후보는 종별 화면에서만
   if(taxonCtrlEl) taxonCtrlEl.style.display=m==='A'?'':'none';   // 종별 검색은 분류군과 무관
+  syncTaxonBack();                                                // 대신 그 자리에 분류군 복귀 버튼을 낸다
   if(map){ map.setTarget(m==='A'?'map':'mapB'); setTimeout(()=>{ map.updateSize(); sidoLayer&&sidoLayer.changed(); },30); }
 }
 function setMetric(m){ metric=m; mFound.classList.toggle('on',m==='found'); mGap.classList.toggle('on',m==='gap');
@@ -2701,6 +2754,7 @@ function bootHome(){
   // (여기서 첫 분류군을 강제하면 딥링크의 분류군·지역 선택이 지워진다.)
   const dl = (typeof curTaxon!=='undefined' && TAXA_ALL.some(t=>t.group===curTaxon)) ? curTaxon : null;
   select(dl || (TAXA_ALL.find(t=>t.has_data)||TAXA_ALL[0]).group, false);
+  window.fgSyncTaxonBack&&fgSyncTaxonBack();           // ?sp= 딥링크는 아이콘이 정의되기 전에 버튼을 세운다
 }
 if(window.__TAXA__) bootHome();
 else Promise.all([

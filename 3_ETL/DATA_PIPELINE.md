@@ -108,11 +108,11 @@
 - **스키마**: `ktsn, taxon_group, bio, n, min, q1, median, q3, max, mean`. 좌표 보유 20,275종 중 래스터 범위 내 약 17,948종 집계.
 - ⚠ Rscript는 **공백 포함 경로의 스크립트 파일 직접 실행 실패**(exit 127) → `Rscript --vanilla -e "source('…/bioclim_points.R')"` 로 실행.
 
-### 1-H2. 환경변수 레이어·종별 지위 — `species_env_stats.csv` · `env_national.csv` · `env_layers_meta.csv` · `demo/data/env/*.png`
+### 1-H2. 환경변수 종별 지위·전국 분포 — `species_env_stats.csv` · `env_national.csv`
 - **생성**: `R/env_layers.R` ← obs_points 좌표 + bioclim `bio01/05/06/12.tif`(EPSG:5186·30m) + `spatial/한반도.zip` 내 `한반도90m_GRS80.img`(GRS80 TM, `/vsizip/`로 직접 읽기).
-- **산출**: ⑴ `species_env_stats.csv`(long: `ktsn,taxon_group,var,n,min,q1,median,q3,max,mean,sd`) — 5변수(bio01/05/06/12·dem) 종별 점추출 통계 **+표준편차**(박스플롯·평균±SD용). 92,025행·20,233종(bio 17,948 / dem 20,233). ⑵ `env_national.csv` — 변수별 **전국 1km 격자 분위수**(p01·q1·median·q3·p99·min·max) — 회색트랙·빨간원 기준. ⑶ `demo/data/env/<var>.png`(5장) — 1km 집계→EPSG:3857 저해상 컬러 오버레이(NA 투명). ⑷ `env_layers_meta.csv` — png·extent(3857)·색 vmin/vmax.
-- **방법**: 점추출=**원본 풀해상도**, 지도 레이어=**1km 저해상**. DEM은 바다(0)·북한 제외 위해 **bio01 육지격자에 투영·마스크**(전국 격자수=bioclim과 동일 105,340).
-- **소비**: `5_App/build_env_data.py` 가 species_env_stats → `species_env.js`(window.__ENV__, 종별 변수당 [min,q1,median,q3,max,mean,sd]·종 20,233·gzip 909KB·지연 로드) + env_national/메타 → `env_meta.js`(window.__ENVMETA__). service.html 종 카드 **박스플롯(Q1–Q3)+평균±SD** + 지도 환경변수 레이어(범례·투명도).
+- **산출**: ⑴ `species_env_stats.csv`(long: `ktsn,taxon_group,var,n,min,q1,median,q3,max,mean,sd`) — 5변수(bio01/05/06/12·dem) 종별 점추출 통계 **+표준편차**(박스플롯·평균±SD용). 92,025행·20,233종(bio 17,948 / dem 20,233). ⑵ `env_national.csv` — 변수별 **전국 1km 격자 분위수**(p01·q1·median·q3·p99·min·max) — 회색트랙·빨간원 기준.
+- **방법**: 점추출=**원본 풀해상도**, 전국 분포=**1km 집계**. DEM은 바다(0)·북한 제외 위해 **bio01 육지격자에 투영·마스크**(전국 격자수=bioclim과 동일 105,340).
+- **소비**: `5_App/build_env_data.py` 가 species_env_stats → `species_env.js`(window.__ENV__, 종별 변수당 [min,q1,median,q3,max,mean,sd]·종 20,233·gzip 909KB·지연 로드) + env_national → `env_meta.js`(window.__ENVMETA__={vars,ref}). 종 카드의 **고도 막대**(박스플롯 Q1–Q3 + 평균±SD)가 유일한 소비처다.
 - ⚠ 공백 경로라 `Rscript --vanilla -e "source('…/env_layers.R')"` 로 실행.
 
 ### 1-I. 시군구 집계 — `observation_sigungu.csv` (점 DB 파생, region=SIGUNGU_CD)
@@ -189,7 +189,7 @@ python 3_ETL/run_pipeline.py --only cell_water env_data gap_data
 | # | 단계 | 스크립트 | 산출물 |
 |---|---|---|---|
 | 1 | `sentinel` | (내장) | NDVI/NDWI 평문 `.tif` 로컬 캐시(zip→캐시, `.ovr` 제외) |
-| 2 | `env_layers` | `R/env_layers.R` | `species_env_stats.csv` · `env_national.csv` · `env_layers_meta.csv` · `env_grid.csv` · `demo/data/env/*.png` |
+| 2 | `env_layers` | `R/env_layers.R` | `species_env_stats.csv` · `env_national.csv` · `env_grid.csv` |
 | 3 | `species_cells` | `R/species_cells.R` | `species_cells.csv` (종별 1km 점유 + 최종연도, `cid`=env_grid 일치) |
 | 4 | `cell_sigungu` | `python/build_cell_sigungu.py` | `cell_sigungu.csv` (셀→시군구; 적합지 비율표의 분모) |
 | 5 | `ndwi_sp` | `python/build_ndwi_species.py` | `ndwi_species.csv` (어류 + 저서성 무척추 — 물에서 사는 종 목록) |

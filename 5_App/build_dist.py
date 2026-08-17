@@ -35,8 +35,6 @@ DATA_FILES = ["taxa_summary.js", "demo_mm.js",
               "region_gaps.js"]                    # 시군구×분류군 발견/공백 합계 — 활동지역 선택·알림용(build_region_gaps.py)
 # 분류군별 관측·점유·미디어·계절·모형은 분할 산출 — obs_/cells_/media_/season_/rep_/model_<T>.js 전부 복사(지연 로드)
 DATA_GLOBS = ["obs_*.js", "cells_*.js", "media_*.js", "season_*.js", "rep_*.js", "model_*.js"]
-# 환경변수 래스터 오버레이(서브디렉터리 보존)
-DATA_DIRS = ["env"]
 
 HEADERS = """\
 /*
@@ -88,17 +86,6 @@ def main():
             shutil.copy2(src, DIST / "demo" / "data" / src.name)
         if not hit:
             print(f"(경고) 글롭 누락: {pat}")
-    for d in DATA_DIRS:
-        sdir = DATA / d
-        if sdir.is_dir():
-            ddir = DIST / "demo" / "data" / d
-            ddir.mkdir(parents=True, exist_ok=True)
-            for src in sorted(sdir.iterdir()):
-                if src.is_file():
-                    shutil.copy2(src, ddir / src.name)
-        else:
-            print(f"(경고) 디렉터리 누락: demo/data/{d}")
-
     osm_only = "--osm-only" in args
     no_supabase = "--no-supabase" in args              # docs(public) 에서 Supabase 키 제외하고 싶을 때
     key = "" if osm_only else env_val("VWORLD_KEY")

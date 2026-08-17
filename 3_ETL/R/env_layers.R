@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
-# env_layers.R — 종 페이지 "기후·지형 지위" + 지도 환경변수 레이어용 데이터 산출
+# env_layers.R — 종 페이지 "기후·지형 지위" + 모델용 1km 환경격자 산출
 # 입력 : observations.sqlite(obs_points)  ·  bioclim bio01/05/06/12(EPSG:5186,30m)  ·  한반도90m DEM(GRS80 TM)
 # 산출 :
 #   1) species_env_stats.csv   — 종별 환경 지위 long(ktsn,var,n,min,q1,median,q3,max,mean,sd)
 #   2) env_national.csv        — 변수별 전국(1km 격자) 분포 분위수 — 비교막대 회색트랙·빨간원 기준
-#   3) 5_App/demo/data/env/<var>.png — 저해상 컬러 오버레이(EPSG:3857, NA 투명)
-#   4) env_layers_meta.csv     — 변수·png·extent(3857 xmin,ymin,xmax,ymax)·color vmin/vmax
-#   5) env_grid.csv            — 전국 1km 격자(cid·좌표·dem/ndvi/bio01) — 서식지 후보 판정의 좌표계 기준
-# 방법 : 점추출은 원본 풀해상도, 지도 레이어는 1km로 집계 후 3857 투영(저해상). 고유좌표 1회 추출.
+#   3) env_grid.csv            — 전국 1km 격자(cid·좌표·dem/ndvi/bio01) — 서식지 후보 판정의 좌표계 기준
+# 방법 : 점추출은 원본 풀해상도, 전국 분포·격자는 1km로 집계. 고유좌표 1회 추출.
 # 실행 : Rscript 3_ETL/R/env_layers.R   (공백경로면 -e "source('3_ETL/R/env_layers.R')")
 
-suppressMessages({library(terra); library(DBI); library(RSQLite); library(png)})
+suppressMessages({library(terra); library(DBI); library(RSQLite)})
 
 BASE <- "D:/Google_Drive/Finding gap"
 PROC <- file.path(BASE, "1_Data", "processed")
@@ -25,8 +23,6 @@ SENT  <- file.path(CACHE, "sentinel")
 NDVI  <- file.path(SENT, "S2_NDVI.tif")
 NDWI  <- file.path(SENT, "S2_NDWI.tif")
 DBF  <- file.path(PROC, "observations.sqlite")
-ENVDIR <- file.path(BASE, "5_App", "demo", "data", "env")
-dir.create(ENVDIR, showWarnings = FALSE, recursive = TRUE)
 
 t0 <- Sys.time(); mins <- function() as.numeric(difftime(Sys.time(), t0, units = "mins"))
 dir.create(CACHE, showWarnings = FALSE, recursive = TRUE)
@@ -35,25 +31,18 @@ cat("", file=LOG)
 lg <- function(m){ con <- file(LOG, "a"); writeLines(sprintf("[%s] %s", format(Sys.time(),"%H:%M:%S"), m), con); close(con) }
 lg("START")
 
-# 변수 정의: key·래스터·집계계수(≈1km)·색 타입
+# 변수 정의: key·래스터·집계계수(≈1km)
 VARS <- list(
-  list(key="bio01", path=file.path(BIO,"bio01.tif"), fact=33, type="temp"),
-  list(key="bio05", path=file.path(BIO,"bio05.tif"), fact=33, type="temp"),
-  list(key="bio06", path=file.path(BIO,"bio06.tif"), fact=33, type="temp"),
-  list(key="bio12", path=file.path(BIO,"bio12.tif"), fact=33, type="precip"),
-  list(key="dem",   path=DEMP,                       fact=11, type="elev"),
-  list(key="ndvi",  path=NDVI,                       fact=22, type="ndvi"),   # 실효 ~46m→≈1km
-  list(key="ndwi",  path=NDWI,                       fact=22, type="ndwi")
+  list(key="bio01", path=file.path(BIO,"bio01.tif"), fact=33),
+  list(key="bio05", path=file.path(BIO,"bio05.tif"), fact=33),
+  list(key="bio06", path=file.path(BIO,"bio06.tif"), fact=33),
+  list(key="bio12", path=file.path(BIO,"bio12.tif"), fact=33),
+  list(key="dem",   path=DEMP,                       fact=11),
+  list(key="ndvi",  path=NDVI,                       fact=22),   # 실효 ~46m→≈1km
+  list(key="ndwi",  path=NDWI,                       fact=22)
 )
 # 모델용 1km 격자에 실을 변수(display용 bio05 제외). ndwi는 종별 적용여부를 build 단계에서 분기.
 GRID_VARS <- c("bio01","bio06","bio12","dem","ndvi","ndwi")
-PAL <- list(
-  temp   = c("#2c7bb6","#abd9e9","#ffffbf","#fdae61","#d7191c"),
-  precip = c("#f7fbff","#c6dbef","#6baed6","#2171b5","#08306b"),
-  elev   = c("#2b7a3d","#a6d96a","#ffffbf","#e0a060","#8c510a"),
-  ndvi   = c("#a6611a","#dfc27d","#f5f5f5","#a6d96a","#1a9641"),   # 갈색(저)→녹색(고)
-  ndwi   = c("#8c510a","#dfc27d","#f5f5f5","#92c5de","#2166ac")    # 갈색(저)→청색(고=물)
-)
 
 # ── 1) 5변수 점추출 → 종별 통계(min·Q1·median·Q3·max·mean·sd) ──────────────
 con <- dbConnect(SQLite(), DBF)
@@ -96,19 +85,8 @@ write.csv(stat, file.path(PROC,"species_env_stats.csv"), row.names=FALSE, fileEn
 cat(sprintf("species_env_stats.csv 행 %s · 종 %s (%.1f분)\n",
             format(nrow(stat),big.mark=","), format(length(unique(stat$ktsn)),big.mark=","), mins()))
 
-# ── 2~4) 변수별: 1km 집계 → 전국 분위수 + 3857 PNG + 메타 ──────────────────
-val2rgb <- function(m, vmin, vmax, pal){
-  ramp <- colorRamp(pal)                       # 0..1 → 0..255
-  norm <- (m - vmin)/(vmax - vmin)
-  norm[norm<0] <- 0; norm[norm>1] <- 1
-  fin <- is.finite(norm)
-  rgb <- matrix(0, length(norm), 3)
-  if(any(fin)) rgb[fin,] <- ramp(norm[fin])
-  a <- ifelse(fin, 1, 0)
-  list(r=matrix(rgb[,1]/255, nrow(m)), g=matrix(rgb[,2]/255, nrow(m)),
-       b=matrix(rgb[,3]/255, nrow(m)), a=matrix(a, nrow(m)))
-}
-natl <- list(); meta <- list(); agref <- NULL   # agref = bio01 1km 격자(육지 기준)
+# ── 2) 변수별: 1km 집계 → 전국 분위수 ─────────────────────────────────────
+natl <- list(); agref <- NULL                   # agref = bio01 1km 격자(육지 기준)
 grid_cols <- list()                             # agref 셀별 변수값(모델 1km 격자용)
 for(v in VARS){
   lg(paste0("S2 aggregate 시작: ", v$key))
@@ -130,30 +108,15 @@ for(v in VARS){
   natl[[v$key]] <- data.frame(var=v$key, p01=qs[1], p05=qs[2], q1=qs[3], median=qs[4],
                               q3=qs[5], p95=qs[6], p99=qs[7], min=min(vv), max=max(vv),
                               n=length(vv))
-  vmin <- qs[1]; vmax <- qs[7]                              # 색 범위 = p01..p99(이상치 둔감)
-  ag3 <- project(ag, "EPSG:3857", method="bilinear")
-  m   <- as.matrix(ag3, wide=TRUE)                          # [row(top=N), col]
-  ch  <- val2rgb(m, vmin, vmax, PAL[[v$type]])
-  arr <- array(0, dim=c(nrow(m), ncol(m), 4))
-  arr[,,1] <- ch$r; arr[,,2] <- ch$g; arr[,,3] <- ch$b; arr[,,4] <- ch$a
-  writePNG(arr, file.path(ENVDIR, paste0(v$key, ".png")))
-  e <- as.vector(ext(ag3))                                 # xmin,xmax,ymin,ymax
-  meta[[v$key]] <- data.frame(var=v$key, png=paste0("env/",v$key,".png"),
-                              xmin=e[1], ymin=e[3], xmax=e[2], ymax=e[4],
-                              vmin=vmin, vmax=vmax)
-  cat(sprintf("  %s: 격자 %s · 색 %.1f~%.1f · PNG %dx%d (%.1f분)\n",
-              v$key, format(length(vv),big.mark=","), vmin, vmax, ncol(m), nrow(m), mins()))
+  cat(sprintf("  %s: 격자 %s · 분포 %.1f~%.1f (%.1f분)\n",
+              v$key, format(length(vv),big.mark=","), qs[1], qs[7], mins()))
   lg(sprintf("S2 %s 완료(격자 %s)", v$key, length(vv)))
 }
 lg("S5 env_grid 시작")
 nat <- do.call(rbind, natl); nat[,-1] <- round(nat[,-1], 1)
 write.csv(nat, file.path(PROC,"env_national.csv"), row.names=FALSE, fileEncoding="UTF-8")
-mt <- do.call(rbind, meta)
-mt[c("xmin","ymin","xmax","ymax")] <- round(mt[c("xmin","ymin","xmax","ymax")], 1)
-mt[c("vmin","vmax")] <- round(mt[c("vmin","vmax")], 1)
-write.csv(mt, file.path(PROC,"env_layers_meta.csv"), row.names=FALSE, fileEncoding="UTF-8")
 
-# ── 5) 모델용 1km 환경격자 테이블 — agref(육지) 셀별 변수값 + 셀중심 경위도 ──────────
+# ── 3) 모델용 1km 환경격자 테이블 — agref(육지) 셀별 변수값 + 셀중심 경위도 ──────────
 xy   <- crds(agref, na.rm=FALSE)                            # 5186 셀중심(모든 셀)
 land <- is.finite(grid_cols[["bio01"]])                    # bio01 유효 = 육지 격자
 ll   <- crds(project(vect(xy[land,,drop=FALSE], type="points", crs=crs(agref)), "EPSG:4326"))  # 육지 셀만 경위도
@@ -168,4 +131,4 @@ cat(sprintf("env_grid.csv 셀 %s · NDVI값있음 %s · NDWI값있음 %s (%.1f�
             format(sum(is.finite(grid$ndwi)),big.mark=","), mins()))
 
 lg(sprintf("DONE env_grid %s행", nrow(grid)))
-cat(sprintf("완료: species_env_stats.csv · env_national.csv · env_layers_meta.csv · env_grid.csv · env/*.png  (%.1f분)\n", mins()))
+cat(sprintf("완료: species_env_stats.csv · env_national.csv · env_grid.csv  (%.1f분)\n", mins()))

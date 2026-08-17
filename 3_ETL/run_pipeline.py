@@ -7,7 +7,7 @@ R 실행의 Windows 함정(공백경로·인용)은 subprocess 리스트 + `-e s
 
 현재 구현(환경적합 후보 하위체인 — 검증 완료):
   sentinel  : NDVI/NDWI zip → 평문 .tif 로컬 캐시 추출(**.ovr 제외** — 손상 오버뷰가 heap 크래시 유발)
-  env_layers: 3_ETL/R/env_layers.R  → species_env_stats·env_national·env_layers_meta·env_grid·env/*.png
+  env_layers: 3_ETL/R/env_layers.R  → species_env_stats·env_national·env_grid
   ndwi_sp   : python/build_ndwi_species.py → ndwi_species.csv(어류+저서무척추 = NDWI 적용 종)
   env_data  : 5_App/build_env_data.py → species_env.js·env_meta.js
   dist      : 5_App/build_dist.py --osm-only --out docs → docs/ 정적 배포본(vworld 키 미주입)
@@ -81,7 +81,7 @@ def step_env_layers():
     """R env_layers.R — 점추출·1km 집계·env_grid·PNG. 진행로그는 LOCALAPPDATA/fg_cache/env_layers_run.log."""
     script = (RDIR / "env_layers.R").as_posix()
     sh([RSCRIPT, "-e", f"source('{script}')"])
-    for f in ("species_env_stats.csv", "env_national.csv", "env_layers_meta.csv", "env_grid.csv"):
+    for f in ("species_env_stats.csv", "env_national.csv", "env_grid.csv"):
         need(PROC / f, f)
 
 
