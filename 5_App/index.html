@@ -459,6 +459,10 @@
   .taxon-ctrl label{display:block;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.02em;margin-bottom:4px}
   .taxon-ctrl select{width:100%;min-width:0;min-height:36px;font-size:12px;font-weight:600;padding:5px 6px;
     border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+  /* 좁은 화면에서는 이 자리를 아이콘 단추 하나로 접는다(아래 반응형). 목록은 어차피 눌러야 뜨는
+     팝업이라, 지도 위에는 "여기가 분류군을 고르는 자리"라는 표시만 있으면 된다. */
+  .taxon-ctrl .tx-pick{position:relative;display:block}
+  .taxon-ctrl .tx-ico,.taxon-ctrl .tx-car{display:none}
   /* 분류군 전체로 돌아가기 — 지도 좌상단(종별 화면). 모드 A 의 분류군 필터가 비우는 자리를 쓴다.
      지도를 보는 동안에는 지도 위쪽 글 버튼이 시야에 들어오지 않아 돌아갈 길이 없는 것처럼 보인다.
      글자를 분류군 색으로 채우면 대비가 모자라므로(주황 #D98C36 위 흰 글자 2.71:1) 상자는 흰색으로 두고,
@@ -502,6 +506,29 @@
   .gap-ctrl .qtip{margin-left:0;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.14)}
   /* 지도 아래쪽 컨트롤이라 말풍선을 아래로 펼치면 지도 밖으로 잘린다 — 기준을 위로 뒤집는다 */
   .gap-ctrl .qtip::after{top:auto;bottom:calc(100% + 7px)}
+  /* 지역 검색 — 지도 위쪽. 지도를 눌러 찾아 들어가는 길만 있으면, 이름은 아는데 지도에서
+     어디쯤인지 모르는 지역에는 닿을 수 없다. 좌상단 분류군과 우상단 토글 사이의 빈 띠를 쓴다.
+     목록은 우상단 토글(z-index:2) 위로 펼쳐져야 가려지지 않는다. */
+  .regsearch{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:3;width:min(272px,36%)}
+  .regsearch input{width:100%;min-height:36px;padding:6px 10px;border:1px solid #cdd5d1;border-radius:8px;
+    background:#fff;color:var(--ink);font:600 12px 'Pretendard Variable',system-ui,sans-serif;
+    box-shadow:0 1px 4px rgba(0,0,0,.14)}
+  .regsearch input::placeholder{font-weight:400;color:var(--faint)}
+  .regsearch input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .rq-list{position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:228px;overflow:auto;
+    margin:0;padding:4px;list-style:none;background:#fff;border:1px solid #cdd5d1;border-radius:8px;
+    box-shadow:0 4px 14px rgba(0,0,0,.18)}
+  .rq-list li{display:flex;align-items:center;gap:8px;min-height:36px;padding:5px 8px;border-radius:6px;
+    font-size:12px;color:var(--ink);cursor:pointer}
+  .rq-list li .lv{margin-left:auto;flex:none;font-size:11px;color:var(--faint)}
+  .rq-list li.on,.rq-list li:hover{background:#eef3f1}
+  .rq-list li.none{cursor:default;color:var(--muted)}
+  /* 1,100px 아래에서는 좌우 컨트롤이 가운데 띠를 다 먹는다(실측 881px: 남는 폭 136px).
+     검색을 맨 윗줄로 빼고 컨트롤을 한 줄 내려, 셋이 서로의 타격영역을 가져가지 않게 한다. */
+  @media(max-width:1100px){
+    .regsearch{left:8px;right:8px;width:auto;transform:none}
+    .taxon-ctrl,.taxback-ctrl,.map-ctrls{top:60px}
+  }
   .regchips{display:flex;flex-wrap:wrap;gap:6px}
   .regchips .rc{background:#eef3f1;border:1px solid #d7e3df;border-radius:8px;padding:4px 9px;font-size:12px}
   .regchips .rc b{font-variant-numeric:tabular-nums;color:var(--accent)}
@@ -555,9 +582,26 @@
     /* 지도 오버레이 폭 제한 → 지도 팬/줌 공간 확보 */
     /* 좌상단 분류군 필터와 우상단 지역 토글이 같은 띠를 쓴다. 분류군 이름은 줄이면 못 읽으므로
        ("무척추동물"이 제일 길다) 필터 폭을 먼저 확보하고, 토글 쪽을 두 줄로 접는다. */
-    .taxon-ctrl{width:auto;max-width:146px;font-size:11px;padding:6px 8px}
-    .taxon-ctrl label{margin-bottom:3px}
-    .taxon-ctrl select{min-height:44px;padding:5px 4px}
+    /* 분류군 자리는 아이콘 단추 하나로 접는다 — 목록은 눌러야 뜨는 팝업이므로 지도 위에
+       늘 펼쳐 둘 이유가 없고, 이름 대신 그 분류군의 아이콘이 무엇을 보고 있는지를 알린다.
+       투명한 select 를 상자 위에 그대로 덮어 두는 이유: 손가락으로 눌렀을 때 브라우저의
+       기본 선택 팝업이 그대로 떠야 한다(직접 만든 목록은 화면 아래에서 잘린다). */
+    .taxon-ctrl{width:auto;max-width:none;padding:0;border:0;background:transparent;box-shadow:none}
+    .taxon-ctrl label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+      clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .taxon-ctrl .tx-pick{display:flex;align-items:center;gap:5px;min-height:44px;padding:5px 9px 5px 5px;
+      border:1px solid #cdd5d1;border-radius:10px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.14)}
+    .taxon-ctrl .tx-pick:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+    .taxon-ctrl .tx-ico{display:flex;flex:none}
+    .taxon-ctrl .tx-ico .chip{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;
+      justify-content:center;color:#fff}
+    .taxon-ctrl .tx-car{display:block;flex:none;font-size:10px;line-height:1;color:var(--muted)}
+    /* inset 을 테두리 바깥까지 -1px 로 넓힌다 — 0 이면 안쪽 여백 상자에만 걸려 타격영역이 42.4px 이 된다 */
+  .taxon-ctrl select{position:absolute;inset:-1px;width:auto;height:auto;min-height:0;padding:0;opacity:0;
+      border:0;background:transparent;appearance:none;-webkit-appearance:none;cursor:pointer}
+    /* 지도 맨 윗줄은 지역 검색이 통째로 쓴다(위 1,100px 규칙) — 손가락 크기만 올려 준다 */
+    .regsearch input{min-height:44px}
+    .rq-list li{min-height:44px}
     /* 복귀 버튼도 같은 띠를 쓴다. 우상단 토글 상자(두 줄로 접혀 179px)가 같은 높이에 있고 그 상자가
        빈 곳에서도 클릭을 가져가므로, 이름이 길면(무척추동물(곤충제외)) 겹치기 전에 잘라 낸다
        — 실측 375px: 폭을 안 막으면 버튼 오른쪽 19px 를 토글 상자가 먹는다. 전체 이름은 title 에 남는다. */
@@ -1622,7 +1666,7 @@ function initMap(){
       // 국내 조회 서비스이므로 지도 중심이 한반도 밖으로 나가지 못하게 묶는다.
       // (중심만 제한 — 축소해서 주변 나라까지 보는 것은 그대로 된다)
       extent:KOREA_EXTENT, constrainOnlyCenter:true})});
-  addTaxonCtrl(); addTaxonBackCtrl(); addRegToggle(); addGapToggle(); addLocateCtrl(); addWheelHint();
+  addTaxonCtrl(); addTaxonBackCtrl(); addRegSearch(); addRegToggle(); addGapToggle(); addLocateCtrl(); addWheelHint();
   let _cellZ=cellZoomOK();                               // 줌 경계를 넘을 때만 다시 그린다(줌 애니메이션마다 갱신하면 무겁다)
   map.getView().on('change:resolution',()=>{
     const ok=cellZoomOK(); if(ok===_cellZ) return; _cellZ=ok;
@@ -1642,6 +1686,7 @@ function initMap(){
       feats.forEach(f=>{ RNAME[lvl][f.get('code')]=f.get(nmKey); });
     }
     SIDO_NAMES=ACODES[regLevel];
+    buildRegIndex();                                         // 지역 검색 색인 — 경계 이름이 들어온 뒤에야 만들 수 있다
     mapMsg.style.display='none';
     if(DEEPLINK.sigungu){                                    // 딥링크 시군구: 레벨 전환→선택→해당 구역으로 확대
       setRegLevel('sigungu'); selSidos.add(DEEPLINK.sigungu);
@@ -1652,12 +1697,17 @@ function initMap(){
     loadTaxon(curTaxon, ()=>{ recompute(); sidoLayer.changed(); renderTable(); });
   }).catch(()=>{ mapMsg.textContent='경계 자료를 불러오지 못했습니다.'; });
   map.on('singleclick',e=>{
-    if(mapMode!=='A') return;                            // 종별 모드 지도는 표시 전용
-    let hit=false;
-    map.forEachFeatureAtPixel(e.pixel,f=>{ const code=f.get('code'); if(code){ selSidos.has(code)?selSidos.delete(code):selSidos.add(code); hit=true; } return true; },
+    let hit=null;
+    map.forEachFeatureAtPixel(e.pixel,f=>{ if(f.get('code')){ hit=f; return true; } },
       {layerFilter:l=>l===sidoLayer});                   // 활성 레벨 레이어만 클릭 대상
-    if(!hit) selSidos.clear();
-    sidoLayer.changed(); renderSelChips(); renderTable();
+    if(mapMode==='A'){                                   // 모드 A 에서만 지역이 검색 필터가 된다
+      if(hit){ const code=hit.get('code'); selSidos.has(code)?selSidos.delete(code):selSidos.add(code); }
+      else selSidos.clear();
+      sidoLayer.changed(); renderSelChips(); renderTable();
+    }
+    /* 고른 지역은 그 자리로 확대해 준다. 해제하거나 폴리곤 밖을 눌렀을 때는 지도를 움직이지 않는다
+       — 선택을 지우는 동작이 화면까지 되돌리면 무엇이 지워졌는지 확인할 자리가 사라진다. */
+    if(hit && (mapMode!=='A' || selSidos.has(hit.get('code')))) zoomToFeature(hit);
   });
 }
 // 지도 중심 허용 범위(한반도 + 여유) — 실수로 지구 반대편까지 끌려가는 일을 막는다.
@@ -1693,16 +1743,129 @@ function resetMapView(){                                  // 확대해 들어간
   map.getView().setCenter(ol.proj.fromLonLat([127.8,36.1]));
   map.getView().setZoom(6.6);
 }
+/* 지역 하나를 화면에 채운다(지도 클릭·지역 검색·내 위치가 함께 쓴다).
+   force 가 아닐 때는 이미 그 지역을 더 크게 들여다보고 있으면 움직이지 않는다 — 1km 격자를
+   확대해 보던 사람이 지역을 한 번 눌렀다고 시군구 전체 범위로 밀려나면 보던 자리를 잃는다. */
+function zoomToFeature(f,force){
+  if(!f||!map) return;
+  const g=f.getGeometry(); if(!g) return;
+  const v=map.getView(), size=map.getSize(), ext=g.getExtent();
+  if(!size||!size[0]||!size[1]) return;
+  if(!force){
+    const need=v.getResolutionForExtent(ext,[Math.max(1,size[0]-80),Math.max(1,size[1]-80)]);
+    if(need>=v.getResolution() && ol.extent.containsExtent(v.calculateExtent(size),ext)) return;
+  }
+  /* 애니메이션 없이 바로 맞춘다 — 탭이 뒤로 가 있는 동안 프레임이 멈추면 진행 중이던 이동이
+     끝나지 않은 채로 남고, 그 뒤의 이동이 모두 그 뒤에 줄을 서서 지도가 움직이지 않는다. */
+  v.fit(ext,{padding:[40,40,40,40],maxZoom:10});
+}
+/* 지역 검색 — 지도 위쪽. 지도를 눌러 찾아 들어가는 길만으로는, 이름은 아는데 지도에서 어디쯤인지
+   모르는 지역에 닿을 수 없다(중구·남구처럼 같은 이름이 여러 시도에 흩어져 있으면 특히 그렇다).
+   초성도 받는다 — 종 검색과 같은 규칙이라 따로 배울 것이 없다. */
+let regQEl=null, regQListEl=null, REGIDX=[], REGHITS=[], regQCur=-1;
+function addRegSearch(){
+  const el=document.createElement('div'); el.className='ol-unselectable regsearch';
+  el.innerHTML='<input type="search" id="regQ" autocomplete="off" placeholder="지역 검색 — 시도·시군구" '+
+    'aria-label="지역 검색" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="regQList">'+
+    '<ul class="rq-list" id="regQList" role="listbox" aria-label="지역 검색 결과" hidden></ul>';
+  regQEl=el.querySelector('input'); regQListEl=el.querySelector('ul');
+  regQEl.addEventListener('input',()=>regSearch(regQEl.value));
+  regQEl.addEventListener('keydown',regQKey);
+  regQEl.addEventListener('focus',()=>{ if(regQEl.value.trim()) regSearch(regQEl.value); });
+  regQListEl.addEventListener('mousedown',ev=>{      // blur 보다 먼저 잡아야 목록이 닫히기 전에 선택된다
+    const li=ev.target.closest('li[data-i]'); if(!li) return;
+    ev.preventDefault(); pickRegion(REGHITS[+li.dataset.i]);
+  });
+  regQEl.addEventListener('blur',()=>setTimeout(closeRegList,150));
+  map.addControl(new ol.control.Control({element:el}));
+}
+function buildRegIndex(){
+  REGIDX=[];
+  for(const code of (ACODES.sido||[])){
+    const nm=RNAME.sido[code]; if(!nm||isUnknownReg(code)) continue;
+    REGIDX.push({lvl:'sido',code,nm,sub:'시도',cho:toCho(nm),alt:shortSido(nm)});
+  }
+  for(const code of (ACODES.sigungu||[])){
+    const nm=RNAME.sigungu[code]; if(!nm||isUnknownReg(code)) continue;
+    const up=shortSido(RNAME.sido[String(code).slice(0,2)]||'');   // 경계자료의 시군구 이름은 시도가 빠져 있다
+    REGIDX.push({lvl:'sigungu',code,nm,sub:up||'시군구',cho:toCho(nm),alt:(up?up+' ':'')+nm});
+  }
+}
+function regSearch(raw){
+  const s=(raw||'').trim();
+  if(!s){ closeRegList(); return; }
+  if(!REGIDX.length) buildRegIndex();
+  const isCho=/^[ㄱ-ㅎ]+$/.test(s);                  // 초성쿼리일 때만 초성매칭(종 검색과 같은 규칙)
+  const hits=[];
+  for(const r of REGIDX){
+    let i;
+    if(isCho) i=r.cho.indexOf(s);
+    else { i=r.nm.indexOf(s); if(i<0) i=r.alt.indexOf(s); }
+    if(i<0) continue;
+    hits.push({r,sc:i*10+(r.lvl==='sido'?0:1)});     // 앞에서 걸린 것·시도 먼저
+  }
+  hits.sort((a,b)=>a.sc-b.sc || a.r.nm.localeCompare(b.r.nm,'ko'));
+  REGHITS=hits.slice(0,20).map(h=>h.r);
+  regQCur=REGHITS.length?0:-1;
+  drawRegList();
+}
+function drawRegList(){
+  if(!regQListEl) return;
+  regQListEl.innerHTML = REGHITS.length
+    ? REGHITS.map((r,i)=>`<li role="option" data-i="${i}" class="${i===regQCur?'on':''}" aria-selected="${i===regQCur}">`+
+        `<span>${r.nm}</span><span class="lv">${r.sub}</span></li>`).join('')
+    : '<li class="none">일치하는 지역이 없습니다</li>';
+  regQListEl.hidden=false; if(regQEl) regQEl.setAttribute('aria-expanded','true');
+}
+function closeRegList(){
+  if(!regQListEl) return;
+  regQListEl.hidden=true; regQListEl.innerHTML=''; regQCur=-1;
+  if(regQEl) regQEl.setAttribute('aria-expanded','false');
+}
+function moveRegCur(d){
+  if(!REGHITS.length) return;
+  regQCur=(regQCur+d+REGHITS.length)%REGHITS.length;
+  [...regQListEl.querySelectorAll('li[data-i]')].forEach((li,i)=>{
+    const on=i===regQCur;
+    li.classList.toggle('on',on); li.setAttribute('aria-selected',on?'true':'false');
+    if(on) li.scrollIntoView({block:'nearest'});
+  });
+}
+function regQKey(ev){
+  if(ev.key==='ArrowDown'){ ev.preventDefault(); moveRegCur(1); }
+  else if(ev.key==='ArrowUp'){ ev.preventDefault(); moveRegCur(-1); }
+  else if(ev.key==='Enter'){ ev.preventDefault(); if(REGHITS[regQCur]) pickRegion(REGHITS[regQCur]); }
+  else if(ev.key==='Escape'){ closeRegList(); }
+}
+function pickRegion(r){
+  if(!r||!map) return;
+  closeRegList();
+  if(regQEl){ regQEl.value=r.nm; regQEl.blur(); }
+  setRegLevel(r.lvl);                                 // 이미 그 레벨이면 아무 일도 하지 않는다
+  const src=LAYERS[r.lvl]&&LAYERS[r.lvl].getSource();
+  const f=src?src.getFeatures().find(x=>x.get('code')===r.code):null;
+  if(mapMode==='A'){                                  // 지도를 눌러 고른 것과 같은 상태로 맞춘다
+    selSidos.clear(); selSidos.add(r.code);
+    recompute(); renderSelChips(); renderTable(); if(sidoLayer) sidoLayer.changed();
+  }
+  if(f) zoomToFeature(f,true);
+  window.fgTrack&&fgTrack('region_search',{level:r.lvl});
+}
 /* 분류군 필터 — 지도 좌상단. 조회 대상(관리분류군)을 지도를 보면서 바꾼다.
    종별 검색(모드 B)은 분류군과 무관하므로 그때는 숨긴다. */
-let taxonCtrlEl=null, taxonSelEl=null;
+let taxonCtrlEl=null, taxonSelEl=null, taxonIcoEl=null;
 function addTaxonCtrl(){
   const el=document.createElement('div'); el.className='ol-unselectable taxon-ctrl';
-  el.innerHTML='<label for="mTaxon">분류군</label><select id="mTaxon"></select>';
+  /* 좁은 화면에서는 이 상자가 아이콘 단추 하나로 접힌다(반응형 규칙). 목록은 어차피 눌러야 뜨는
+     팝업이라 지도 위에 늘 펼쳐 둘 이유가 없고, select 를 투명하게 덮어 두면 손가락으로 눌렀을 때
+     브라우저의 기본 선택 팝업이 그대로 뜬다 — 직접 만든 목록은 화면 아래에서 잘린다. */
+  el.innerHTML='<label for="mTaxon">분류군</label>'+
+    '<span class="tx-pick"><span class="tx-ico" aria-hidden="true"></span>'+
+    '<span class="tx-car" aria-hidden="true">▾</span><select id="mTaxon"></select></span>';
   const sel=el.querySelector('select');
-  sel.addEventListener('change',()=>select(sel.value,false));
+  sel.addEventListener('change',()=>{ select(sel.value,false); syncTaxonIco(); });
   map.addControl(new ol.control.Control({element:el}));
-  taxonCtrlEl=el; taxonSelEl=sel; fillTaxonCtrl();
+  taxonCtrlEl=el; taxonSelEl=sel; taxonIcoEl=el.querySelector('.tx-ico'); fillTaxonCtrl();
 }
 function fillTaxonCtrl(){
   const all=window.__TAXA__||[];              // 수집예정 분류군도 남겨 두되 고를 수는 없게 한다(지도에 그릴 자료가 없다)
@@ -1710,6 +1873,15 @@ function fillTaxonCtrl(){
   taxonSelEl.innerHTML=all.map(t=>
     `<option value="${t.group}"${t.has_data?'':' disabled'}>${t.kor}${t.has_data?'':' · 수집예정'}</option>`).join('');
   if(curTaxon) taxonSelEl.value=curTaxon;
+  syncTaxonIco();
+}
+function syncTaxonIco(){                      // 접힌 상태에서는 이름 대신 아이콘이 지금 무엇을 보고 있는지 알린다
+  if(!taxonIcoEl||!taxonSelEl) return;
+  const g=taxonSelEl.value||curTaxon;
+  const kor=(taxonSelEl.selectedOptions&&taxonSelEl.selectedOptions[0]&&taxonSelEl.selectedOptions[0].textContent)||'분류군';
+  if(typeof chipHTML==='function') taxonIcoEl.innerHTML=chipHTML(g,20);
+  taxonSelEl.setAttribute('aria-label','분류군 선택 — 현재 '+kor);
+  taxonSelEl.title=kor+' · 눌러서 분류군 바꾸기';
 }
 /* 분류군 전체로 돌아가기 — 지도 좌상단, 종별 화면(모드 B)에서만.
    지도 위쪽의 글 버튼(← 분류군 전체)은 지도를 들여다보는 동안 시야 밖이라 돌아갈 길로 읽히지 않는다.
@@ -1748,7 +1920,7 @@ window.fgSyncTaxonBack=syncTaxonBack;
 let locateBtnEl=null;
 function addLocateCtrl(){
   const el=document.createElement('div'); el.className='ol-unselectable locate-ctrl';
-  el.innerHTML='<button type="button" title="현재 위치의 시군구 발견공백 보기" aria-label="내 위치">'+
+  el.innerHTML='<button type="button" title="현재 위치의 시군구 보기" aria-label="내 위치">'+
     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">'+
     '<circle cx="12" cy="12" r="6.3"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/>'+
     '<path d="M12 1.7v3.3M12 19v3.3M1.7 12H5M19 12h3.3"/></svg></button>';
@@ -1828,14 +2000,22 @@ function locateNearby(){
     const hit=LAYERS.sigungu.getSource().getFeatures().find(f=>{ const g=f.getGeometry(); return g && g.intersectsCoordinate(coord); });
     if(!hit){ nearbyMsg('현재 위치가 국내 시군구 경계 밖입니다.'); return; }
     const code=hit.get('code');
-    if(mapMode!=='A') setMode('A');
     setRegLevel('sigungu');                                 // 시군구 레벨(이미면 no-op)
-    selSidos.clear(); selSidos.add(code);
-    metric='gap'; mFound.classList.remove('on'); mGap.classList.add('on');   // 내 주변은 발견공백(미발견) 중심
-    recompute(); renderSelChips(); renderTable(); if(sidoLayer) sidoLayer.changed();
+    /* 보고 있던 화면은 그대로 두고 위치만 비춘다. 종을 조회하던 중에 분류군 전체로 되돌리면
+       무엇을 보고 있었는지가 사라진다 — 위치를 물었을 뿐 화면을 바꿔 달라고 한 것이 아니다. */
+    if(mapMode==='A'){
+      selSidos.clear(); selSidos.add(code);
+      metric='gap'; mFound.classList.remove('on'); mGap.classList.add('on');   // 내 주변은 발견공백(미발견) 중심
+      recompute(); renderSelChips(); renderTable(); if(sidoLayer) sidoLayer.changed();
+      nearbyMsg(rname(code)+' 발견공백', true);
+    }else{
+      const n=selRegions.get(code)||0;
+      nearbyMsg(selSpecies
+        ? `${rname(code)} · ${selSpecies.n||selSpecies.s} 기록 ${n?nf(n)+'건':'없음'}`
+        : rname(code), true);
+    }
     map.getView().fit(hit.getGeometry().getExtent(), {padding:[40,40,40,40], maxZoom:10});
-    nearbyMsg(rname(code)+' 발견공백', true);
-    window.fgTrack && fgTrack('nearby_locate');
+    window.fgTrack && fgTrack('nearby_locate',{mode:mapMode});
   }, err=>{
     if(btn) btn.disabled=false;
     nearbyMsg(err && err.code===1 ? '위치 권한이 거부되었습니다. 브라우저 설정에서 허용해 주세요.' : '위치를 가져오지 못했습니다.');
@@ -1961,7 +2141,7 @@ function recompute(){
   legCap.textContent= metric==='found'?`${lvl} 발견 종수 — 짙을수록 많음`:`${lvl} 미발견(공백) 종수 — 짙을수록 많음`;
 }
 function renderSelChips(){
-  if(!selSidos.size){ selChips.innerHTML=`<span class="muted">지도에서 ${regLevel==='sido'?'시도':'시군구'}를 클릭(폴리곤 밖 클릭=전체)</span>`; return; }
+  if(!selSidos.size){ selChips.innerHTML=`<span class="muted">지도에서 ${regLevel==='sido'?'시도':'시군구'}를 클릭하면 그 지역만 보면서 확대합니다(폴리곤 밖 클릭=전체, 되돌리기는 지도의 ‘전국’)</span>`; return; }
   selChips.innerHTML=[...selSidos].map(code=>`<span class="c">${rname(code)}</span>`).join('')+
     `<button class="clr" onclick="clearSel()">전체 해제</button>`;
 }
@@ -2681,6 +2861,7 @@ function select(group,scroll){
   syncTaxonToMap(group,ready);
   if(window.fgSyncSearchHint) window.fgSyncSearchHint(group);   // 검색 예시도 이 분류군의 대표 종으로
   if(taxonSelEl && taxonSelEl.value!==group) taxonSelEl.value=group;
+  if(typeof syncTaxonIco==='function') syncTaxonIco();          // 접힌 상태의 아이콘도 함께 따라온다
   if(scroll!==false){ const tgt=document.getElementById('modeA')||document.getElementById('dash');
     if(tgt) tgt.scrollIntoView({behavior:'smooth',block:'start'}); }
 }
