@@ -467,6 +467,23 @@
   .regtbl tbody tr:last-child td{border-bottom:0}
   .regtbl .num{text-align:right;font-variant-numeric:tabular-nums}
   .regtbl-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px;flex-wrap:wrap}
+  /* 마이페이지 — 카드 제목줄 오른쪽에 추가 버튼을 두고, 담아 둔 것은 표로 보여 준다 */
+  .cardhd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 4px}
+  .cardhd h3{margin:0}
+  .cardhd .addbtn{margin-left:auto;padding:9px 14px;font-size:13px;min-height:40px}
+  .addpanel{border:1px solid var(--line);border-radius:10px;background:#fbfcfb;padding:12px;margin:11px 0 4px}
+  .addpanel .arow{display:flex;align-items:center;gap:10px;margin-top:11px;flex-wrap:wrap}
+  .txfilter{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 9px}
+  .txfilter button{border:1px solid var(--line);border-radius:999px;padding:7px 12px;font:inherit;font-size:12px;
+    background:#fff;color:var(--ink);cursor:pointer;min-height:36px}
+  .txfilter button.on{background:#eef4f0;border-color:#c6d8ce;font-weight:600}
+  .txfilter button:hover{background:#f2f6f3}
+  .mytb .nm{font-weight:600}
+  .mytb .act{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .mytb .act button{border:1px solid var(--line);border-radius:7px;background:#fff;color:#4a5550;
+    font:inherit;font-size:12px;padding:7px 10px;cursor:pointer;min-height:36px;white-space:nowrap}
+  .mytb .act button:hover{background:#eef4f0;border-color:#c6d8ce}
+  .mytb .act button.rmv:hover{background:#f7e7e2;border-color:#e0bfb4;color:#b5482f}
   .spsub{font-size:12px;font-weight:600;color:#4f6f61;margin:12px 0 6px}   /* 종 카드 안 표 구분 제목 */
   .spsub:first-child{margin-top:0}
   .gaplegend{display:flex;flex-wrap:wrap;align-items:center;gap:5px 12px;font-size:11px;color:#5a635d;margin-bottom:7px}
@@ -719,6 +736,10 @@
     .regtbl,.gaptbl{font-size:12px}
     .regtbl th,.gaptbl th{padding:6px 7px}
     .regtbl td,.gaptbl td{padding:5px 7px;word-break:break-word}
+    .mytb th:nth-child(2),.mytb td:nth-child(2){display:none}
+    .mytb .act button{min-height:44px;padding:9px 11px}
+    .txfilter button{min-height:44px}
+    .cardhd .addbtn{min-height:44px}
     .regtbl-wrap{-webkit-overflow-scrolling:touch}
 
     /* 환경변수 막대 그리드: 고정폭(92/138) 축소 */
@@ -3371,7 +3392,8 @@ function onboard(user, ks){
     save.disabled=true; save.textContent='저장 중…'; msg.className='rpt-msg';
     try{
       for(const k of chosen){ if(ks.indexOf(k)<0){ const {error}=await watchAdd(k); if(error) throw error; } }
-      await saveProfile({sgg:code, sggName:g.sg[code][0], sido:g.sg[code][1]});
+      const list=[code].concat((prof.sggs||[]).filter(c=>c!==code));
+      await saveProfile({sggs:list, sggName:g.sg[code][0], sido:g.sg[code][1]});
       ov.hidden=true; obOpen=false;                          // 저장이 끝나면 인증 상태가 갱신돼 마이페이지가 다시 그려진다
     }catch(e){
       save.disabled=false; save.textContent='저장하고 시작하기';
@@ -3393,19 +3415,34 @@ async function myPage(user){
     <ul class="notiflist" id="myNotif"><li class="muted2" style="padding:10px 2px">불러오는 중…</li></ul>
   </div>
   <div class="authcard" id="regCard" style="max-width:none;margin-top:14px">
-    <h3 style="margin:0 0 4px">내 활동 지역</h3>
-    <p class="muted2" style="margin:0 0 12px">이 지역에 새로 생기는 발견공백과 계절 안내를 받습니다.</p>
-    <div id="regPick"></div>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
-      <button class="btn sm" id="regSave" disabled>저장</button>
-      <span class="muted2" id="regMsg"></span>
+    <div class="cardhd"><h3>내 활동 지역</h3>
+      <button class="btn sm addbtn" id="regAdd" aria-expanded="false" aria-controls="regPanel">＋ 지역 추가</button></div>
+    <p class="muted2" style="margin:0">담아 둔 지역에 새로 생기는 발견공백과 계절 안내를 받습니다.</p>
+    <div class="addpanel" id="regPanel" hidden>
+      <div id="regPick"></div>
+      <div class="arow">
+        <button class="btn sm" id="regSave" disabled>담기</button>
+        <button class="btn sm" id="regClose">닫기</button>
+        <span class="muted2" id="regMsg"></span>
+      </div>
     </div>
+    <div id="regList"><div class="muted2" style="margin-top:12px">불러오는 중…</div></div>
     <div id="regStat"></div>
   </div>
   <div class="authcard" style="max-width:none;margin-top:14px">
-    <h3 style="margin:0">관심 종의 발견 현황</h3>
-    <div class="muted2" id="wlSummary" style="margin:4px 0 10px">내가 담은 종이 전국에서 최근 발견됐는지 보여줍니다.</div>
-    <ul class="wl" id="wl"><li class="muted2">불러오는 중…</li></ul>
+    <div class="cardhd"><h3>관심 종의 발견 현황</h3>
+      <button class="btn sm addbtn" id="wlAdd" aria-expanded="false" aria-controls="wlPanel">＋ 종 추가</button></div>
+    <div class="muted2" id="wlSummary">내가 담은 종이 전국에서 최근 발견됐는지 보여줍니다.</div>
+    <div class="addpanel" id="wlPanel" hidden>
+      <div id="wlPick"></div>
+      <div class="arow">
+        <button class="btn sm" id="wlSave" disabled>담기</button>
+        <button class="btn sm" id="wlClose">닫기</button>
+        <span class="muted2" id="wlMsg"></span>
+      </div>
+    </div>
+    <div class="txfilter" id="wlFilter" hidden></div>
+    <div id="wlList"><div class="muted2" style="margin-top:12px">불러오는 중…</div></div>
     <div style="display:flex;align-items:center;gap:10px;margin:18px 0 0">
       <h3 style="margin:0">내 제보</h3>
       <a class="btn cta sm" href="#report" style="margin-left:auto">＋ 발견 제보하기</a>
@@ -3419,20 +3456,65 @@ async function myPage(user){
   </div>`;
   view.querySelector('#logoutBtn').onclick=async()=>{ await signOut(); };
   paintMyNotif();
-  {                                                          // 활동 지역 — 시군구까지 고르고 저장한다
-    const rsave=view.querySelector('#regSave'), rmsg=view.querySelector('#regMsg'), rstat=view.querySelector('#regStat');
-    const rp=regionPicker(view.querySelector('#regPick'), prof.sgg, code=>{ rsave.disabled=!code; });
-    rsave.disabled=!prof.sgg;
-    if(prof.sgg) regionStat(rstat, prof.sgg);
+  {                                                          // 활동 지역 — 여러 곳을 담고, 담아 둔 곳을 표로 본다
+    const g=window.__REGGAP__;
+    const panel=view.querySelector('#regPanel'), addb=view.querySelector('#regAdd'),
+          rsave=view.querySelector('#regSave'), rmsg=view.querySelector('#regMsg'),
+          rlist=view.querySelector('#regList'), rstat=view.querySelector('#regStat');
+    let codes=prof.sggs.slice(), openCode='', rp;
+    // 담은 뒤에는 고른 값을 비운다 — 같은 곳이 남아 있으면 왜 다시 못 담는지 알기 어렵다.
+    const bindRp=()=>{ rp=regionPicker(view.querySelector('#regPick'), '', code=>{ rsave.disabled=!code; });
+      rsave.disabled=true; };
+    bindRp();
+    const showPanel=on=>{ panel.hidden=!on; addb.setAttribute('aria-expanded', on?'true':'false');
+      if(!on) rmsg.textContent=''; };
+    addb.onclick=()=>showPanel(panel.hidden);
+    view.querySelector('#regClose').onclick=()=>showPanel(false);
+    // 목록 첫 곳을 대표로도 적어 둔다 — 한 곳만 읽던 자리가 그대로 동작한다.
+    const persist=list=>{ const head=list[0];
+      return saveProfile({sggs:list, sggName:head?g.sg[head][0]:'', sido:head?g.sg[head][1]:''}); };
+    function paint(){
+      if(!g){ rlist.innerHTML='<div class="muted2" style="margin-top:12px">지역 자료를 불러오지 못했습니다.</div>'; return; }
+      const live=codes.filter(c=>g.sg[c]);
+      if(!live.length){
+        rlist.innerHTML='<div class="muted2" style="margin-top:12px">담아 둔 지역이 없습니다. 오른쪽 위 ＋ 지역 추가로 담아 보세요.</div>';
+        rstat.innerHTML=''; return;
+      }
+      const keys=Object.keys(g.tx);
+      const rows=live.map(c=>{
+        const f=g.found[c]||{}; let tot=0, gap=0;
+        keys.forEach(t=>{ tot+=(f[t]||0); gap+=Math.max(0, g.tx[t][1]-(f[t]||0)); });
+        return `<tr><td class="nm">${esc(g.sg[c][0])}</td><td>${esc(g.sido[g.sg[c][1]]||'')}</td>`+
+          `<td class="num">${nf(tot)}</td><td class="num"><b style="color:#b5482f">${nf(gap)}</b></td>`+
+          `<td><div class="act"><button data-d="${esc(c)}">분류군별</button>`+
+          `<button class="rmv" data-x="${esc(c)}">해제</button></div></td></tr>`;
+      }).join('');
+      rlist.innerHTML='<div class="regtbl-wrap" style="margin-top:12px;max-height:none"><table class="regtbl mytb">'+
+        '<thead><tr><th scope="col">시·군·구</th><th scope="col">시·도</th>'+
+        `<th scope="col" class="num">최근 ${g.ref-g.cut}년 발견</th><th scope="col" class="num">아직 기록 없음</th>`+
+        '<th scope="col">보기·해제</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+      rlist.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{
+        openCode=(openCode===b.dataset.d)?'':b.dataset.d;
+        if(openCode) regionStat(rstat, openCode); else rstat.innerHTML='';
+      });
+      rlist.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{
+        const c=b.dataset.x, keep=codes.filter(x=>x!==c);
+        b.disabled=true; rmsg.textContent='';
+        try{ await persist(keep); codes=keep; if(openCode===c){ openCode=''; rstat.innerHTML=''; } paint(); }
+        catch(e){ b.disabled=false; rmsg.textContent='해제 실패: '+(e.message||e); }
+      });
+      if(openCode && live.indexOf(openCode)>=0) regionStat(rstat, openCode);
+    }
     rsave.onclick=async()=>{
-      const code=rp.value(), g=window.__REGGAP__;
+      const code=rp.value();
       if(!code||!g) return;
-      rsave.disabled=true; rmsg.textContent='저장 중…';
-      try{
-        await saveProfile({sgg:code, sggName:g.sg[code][0], sido:g.sg[code][1]});
-        rmsg.textContent='저장했습니다'; regionStat(rstat, code);
-      }catch(e){ rmsg.textContent='저장 실패: '+(e.message||e); rsave.disabled=false; }
+      if(codes.indexOf(code)>=0){ rmsg.textContent='이미 담아 둔 지역입니다'; return; }
+      rsave.disabled=true; rmsg.textContent='담는 중…';
+      const next=codes.concat([code]);
+      try{ await persist(next); codes=next; bindRp(); rmsg.textContent=`${g.sg[code][0]} 담았습니다`; paint(); }
+      catch(e){ rmsg.textContent='담기 실패: '+(e.message||e); rsave.disabled=false; }
     };
+    paint();
   }
   (async()=>{                                              // 관리자 검토 큐(role='admin'만 — RLS 로 비관리자는 빈 결과)
     let role=null; try{ role=await myRole(); }catch(_){}
@@ -3469,25 +3551,78 @@ async function myPage(user){
         mr.appendChild(li); });
     }catch(err){ mr.innerHTML=`<li class="authmsg err">내 제보 로드 실패: ${esc(err.message||String(err))}</li>`; }
   })();
-  const ul=view.querySelector('#wl'), summ=view.querySelector('#wlSummary');
-  let ks=null;
-  try{
-    ks=await watchList();
-    if(!ks.length){ ul.innerHTML='<li class="muted2">아직 관심 종이 없습니다. 종 정보 페이지에서 ☆를 눌러 추가하세요.</li>';
-      if(summ) summ.textContent='관심 종을 담으면 여기서 발견 현황을 모아 봅니다.'; }
-    else{
-      const c={found:0,dormant:0,undiscovered:0}; ks.forEach(k=>c[discState(k)]++);
-      if(summ) summ.innerHTML=`관심 종 <b>${ks.length}</b> · 발견 ${c.found} · 휴면 ${c.dormant} · <b style="color:#b5482f">미발견 ${c.undiscovered}</b> — 미발견 종이 당신이 주목하는 발견공백입니다.`;
-      ul.innerHTML='';
-      for(const k of ks){ const sp=spName(k); const li=document.createElement('li');
-        li.innerHTML=`<span class="nm">${sp.n}</span> <span class="sci">${sp.s}</span> ${discBadge(k)}`+
-          `<a class="muted2" href="#" onclick="fgShowSpecies('${k}');return false" style="margin-left:8px">지도에서 보기 →</a>`+
-          `<button class="rm" title="관심 해제">✕ 해제</button>`;
-        li.querySelector('.rm').onclick=async()=>{ await watchRemove(k); li.remove(); if(!ul.children.length) ul.innerHTML='<li class="muted2">아직 관심 종이 없습니다.</li>'; };
-        ul.appendChild(li);
+  const wlist=view.querySelector('#wlList'), summ=view.querySelector('#wlSummary'),
+        wfil=view.querySelector('#wlFilter'), wpanel=view.querySelector('#wlPanel'),
+        waddb=view.querySelector('#wlAdd'), wsave=view.querySelector('#wlSave'), wmsg=view.querySelector('#wlMsg');
+  let ks=null, curTx='';
+  {                                                          // 관심 종 — 여러 종을 한 번에 담고, 분류군으로 추려 본다
+    const chosen=[];
+    const bindPicker=()=>speciesPicker(view.querySelector('#wlPick'), chosen, list=>{ wsave.disabled=!list.length; });
+    bindPicker();
+    const showPanel=on=>{ wpanel.hidden=!on; waddb.setAttribute('aria-expanded', on?'true':'false');
+      if(!on) wmsg.textContent=''; };
+    waddb.onclick=()=>showPanel(wpanel.hidden);
+    view.querySelector('#wlClose').onclick=()=>showPanel(false);
+    function paint(){
+      if(!ks.length){
+        summ.textContent='관심 종을 담으면 여기서 발견 현황을 모아 봅니다.';
+        wfil.hidden=true; wfil.innerHTML='';
+        wlist.innerHTML='<div class="muted2" style="margin-top:12px">아직 관심 종이 없습니다. 오른쪽 위 ＋ 종 추가로 담아 보세요.</div>';
+        return;
       }
+      const c={found:0,dormant:0,undiscovered:0}; ks.forEach(k=>c[discState(k)]++);
+      summ.innerHTML=`관심 종 <b>${ks.length}</b> · 발견 ${c.found} · 휴면 ${c.dormant} · <b style="color:#b5482f">미발견 ${c.undiscovered}</b> — 미발견 종이 당신이 주목하는 발견공백입니다.`;
+      // 담아 둔 종에 실제로 있는 분류군만 낸다 — 한 분류군뿐이면 고를 것이 없으므로 감춘다.
+      const txs=[...new Set(ks.map(k=>spName(k).t).filter(Boolean))]
+        .sort((x,y)=>(TAXON_KOR[x]||x).localeCompare(TAXON_KOR[y]||y,'ko'));
+      if(txs.length>1){
+        if(curTx && txs.indexOf(curTx)<0) curTx='';
+        wfil.hidden=false;
+        wfil.innerHTML=`<button type="button" data-t=""${curTx?'':' class="on"'} aria-pressed="${curTx?'false':'true'}">전체 ${ks.length}</button>`+
+          txs.map(t=>{ const n=ks.filter(k=>spName(k).t===t).length, on=curTx===t;
+            return `<button type="button" data-t="${esc(t)}"${on?' class="on"':''} aria-pressed="${on?'true':'false'}">${esc(TAXON_KOR[t]||t)} ${n}</button>`;
+          }).join('');
+        wfil.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{ curTx=b.dataset.t; paint(); });
+      } else { curTx=''; wfil.hidden=true; wfil.innerHTML=''; }
+      const rows=curTx?ks.filter(k=>spName(k).t===curTx):ks;
+      // 제보 모듈은 이 아래에서 실행되므로 window.fgReport 는 첫 렌더 때 아직 없다. 같은 설정값을 직접 본다.
+      const canRep=configured;
+      const body=rows.map(k=>{ const sp=spName(k);
+        return `<tr><td class="nm">${esc(sp.n)}</td><td><span class="sci">${esc(sp.s)}</span></td>`+
+          `<td>${esc(TAXON_KOR[sp.t]||'')}</td><td>${discBadge(k)}</td>`+
+          `<td><div class="act"><button data-m="${esc(k)}">지도에서 보기</button>`+
+          (canRep?`<button data-r="${esc(k)}">제보</button>`:'')+
+          `<button class="rmv" data-x="${esc(k)}">해제</button></div></td></tr>`;
+      }).join('');
+      wlist.innerHTML='<div class="regtbl-wrap" style="margin-top:2px;max-height:none"><table class="regtbl mytb">'+
+        '<thead><tr><th scope="col">국명</th><th scope="col">학명</th><th scope="col">분류군</th>'+
+        '<th scope="col">발견 현황</th><th scope="col">보기·제보·해제</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+      wlist.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{ if(window.fgShowSpecies) fgShowSpecies(b.dataset.m); });
+      wlist.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{
+        const k=b.dataset.r, sp=spName(k), x=(window.__SPIDX__||[]).find(y=>y.k===k);
+        if(window.fgReport) window.fgReport.open(x||{k, n:sp.n, s:sp.s, t:sp.t, g:''});
+      });
+      wlist.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{
+        const k=b.dataset.x; b.disabled=true; wmsg.textContent='';
+        try{ const {error}=await watchRemove(k); if(error) throw error;
+          ks=ks.filter(x=>x!==k); paint(); }
+        catch(e){ b.disabled=false; wmsg.textContent='해제 실패: '+(e.message||e); }
+      });
     }
-  }catch(err){ ul.innerHTML=`<li class="authmsg err">관심 종 로드 실패: ${esc(err.message||String(err))}</li>`; }
+    wsave.onclick=async()=>{
+      if(!chosen.length||!ks) return;
+      wsave.disabled=true; wmsg.textContent='담는 중…';
+      const add=chosen.filter(k=>ks.indexOf(k)<0);
+      try{
+        for(const k of add){ const {error}=await watchAdd(k); if(error) throw error; ks.push(k); }
+        chosen.length=0; bindPicker();
+        wmsg.textContent=add.length?`${add.length}종 담았습니다`:'이미 담아 둔 종입니다';
+        paint();
+      }catch(e){ wmsg.textContent='담기 실패: '+(e.message||e); wsave.disabled=false; paint(); }
+    };
+    try{ ks=await watchList(); paint(); }
+    catch(err){ wlist.innerHTML=`<div class="authmsg err">관심 종 로드 실패: ${esc(err.message||String(err))}</div>`; }
+  }
   // 알림에 필요한 최소 정보가 없으면 첫 설정을 연다. 관심 종을 못 불러온 때(ks===null)는 열지 않는다 —
   // 이미 담아 둔 종을 못 본 채로 다시 고르라고 하면 안 된다.
   if(ks && (!prof.onboarded || !prof.sgg || !ks.length)) onboard(user, ks);
@@ -3567,7 +3702,7 @@ if(configured && bar){
     const add=n=>{ if(!have.has(n.id)){ have.add(n.id); list.push(n); } };
     const st=rd(K.st)||{};
     const now=Date.now(), D=new Date(now);
-    const reg=sgg(readProfile(user).sgg);
+    const regs=(readProfile(user).sggs||[]).map(c=>sgg(c)).filter(r=>r&&r.code);
 
     /* ① 내 제보 — 승인·반려·공백 메움 */
     let mine=[]; try{ mine=await myReports(); }catch(_){}
@@ -3645,27 +3780,30 @@ if(configured && bar){
       }
     }catch(_){}
 
-    /* ⑤ 내 활동 지역 — 새로 생긴 공백과 계절 안내 */
+    /* ⑤ 내 활동 지역 — 새로 생긴 공백과 계절 안내. 담아 둔 곳마다 따로 센다. */
     const g=RG();
-    if(g && reg && reg.code){
-      const cur={};
-      for(const t in g.tx) cur[t]=gapOf(reg.code,t);
-      const was=(st.gapCode===reg.code) ? st.gap : null;
-      if(was){
-        let up=0, top='', best=0;
-        for(const t in cur){ const d=cur[t]-(was[t]||0); if(d>0){ up+=d; if(d>best){ best=d; top=t; } } }
-        if(up>0) add({id:`b1:${reg.code}:${g.gen}`, t:now, go:'region', r:reg.code, tx:top,
-                      txt:`${reg.name}에서 아직 기록이 없는 종이 ${up}종 늘었습니다`});
-      }
-      st.gap=cur; st.gapCode=reg.code;
-
+    if(g && regs.length){
+      const gaps=st.gaps||{}, seasons=st.seasons||{};
       const mon=D.getMonth()+1, se=SEASON[mon], skey=`${D.getFullYear()}-${mon}`;
-      if(se && st.season!==skey){
-        st.season=skey;
-        const n=gapOf(reg.code,se[0]);
-        if(n>0) add({id:`b2:${reg.code}:${skey}`, t:now, go:'region', r:reg.code, tx:se[0],
-                     txt:`지금은 ${se[1]} — ${reg.name}에서 아직 기록이 없는 ${txKor(se[0])} ${n.toLocaleString()}종`});
-      }
+      regs.forEach(r=>{
+        const cur={};
+        for(const t in g.tx) cur[t]=gapOf(r.code,t);
+        const was=gaps[r.code];
+        if(was){
+          let up=0, top='', best=0;
+          for(const t in cur){ const d=cur[t]-(was[t]||0); if(d>0){ up+=d; if(d>best){ best=d; top=t; } } }
+          if(up>0) add({id:`b1:${r.code}:${g.gen}`, t:now, go:'region', r:r.code, tx:top,
+                        txt:`${r.name}에서 아직 기록이 없는 종이 ${up}종 늘었습니다`});
+        }
+        gaps[r.code]=cur;
+        if(se && seasons[r.code]!==skey){
+          seasons[r.code]=skey;
+          const n=gapOf(r.code,se[0]);
+          if(n>0) add({id:`b2:${r.code}:${skey}`, t:now, go:'region', r:r.code, tx:se[0],
+                       txt:`지금은 ${se[1]} — ${r.name}에서 아직 기록이 없는 ${txKor(se[0])} ${n.toLocaleString()}종`});
+        }
+      });
+      st.gaps=gaps; st.seasons=seasons;
     }
 
     /* ⑥ 관측자료가 갱신됐을 때 */
