@@ -24,7 +24,10 @@ PAGES = ["index.html", "service.html", "fg_supabase.js", "fg_analytics.js", "qui
          # 로고(헤더) + 기관 마크(상세·제보 버튼) + 자체 마크(발견 제보·동정 연습).
          # build_logo.py 산출물 — 핫링크하지 않는다.
          "logo.png", "logo_nibr.png", "logo_ecobank.png", "logo_naturing.png",
-         "logo_report.png", "logo_quiz.png"]
+         "logo_report.png", "logo_quiz.png",
+         # Search Console 소유권 확인 파일. 빌드가 출력 폴더를 비우고 이 목록만 다시 복사하므로,
+         # 여기 없으면 다음 빌드에서 사라지고 소유권 확인이 풀린다.
+         "google41830be8e09964f4.html"]
 DATA_FILES = ["taxa_summary.js", "demo_mm.js",
               "species_index.js", "species_state.js", "species_interest.js", "sido.geojson", "sigungu.geojson",
               "env_meta.js", "species_env.js",
