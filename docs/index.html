@@ -2720,6 +2720,8 @@ function setMode(m){
   mapMode=m;
   window.fgTrack&&fgTrack('mode_switch',{mode:m});
   modeA.style.display=m==='A'?'':'none'; modeB.style.display=m==='B'?'':'none';
+  { const d=document.getElementById('dash');                      // 아래 분류군 요약은 모드 A 의 것이다.
+    if(d) d.style.display=m==='A'?'':'none'; }                    // 종별 화면은 그 종 하나에만 집중한다
   syncCellLayer(); applyGapVis(); syncGapBtn();                   // 발견 격자·서식지 후보는 종별 화면에서만
   if(taxonCtrlEl) taxonCtrlEl.style.display=m==='A'?'':'none';   // 종별 검색은 분류군과 무관
   syncTaxonBack();                            // 돌아가는 길은 지도 좌상단 복귀 버튼 하나로 낸다
