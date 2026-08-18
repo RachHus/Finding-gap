@@ -17,7 +17,8 @@ export async function getUser() {
 export function onAuth(cb) {
   if (!sb) { cb(null); return; }
   sb.auth.getSession().then(({ data }) => cb(data.session?.user || null));
-  sb.auth.onAuthStateChange((_e, sess) => cb(sess?.user || null));
+  // 두 번째 인자로 인증 이벤트 이름을 함께 넘긴다 — 새로 로그인한 것과 열어 둔 세션이 살아난 것을 구분해야 하는 쪽이 있다.
+  sb.auth.onAuthStateChange((ev, sess) => cb(sess?.user || null, ev));
 }
 export async function sendMagicLink(email) {
   // 클릭 후 현재 페이지로 복귀(해당 URL 이 Supabase Auth Redirect URLs 에 등록돼 있어야 함)

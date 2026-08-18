@@ -2382,7 +2382,10 @@ function renderTable(){
   const more=rows.length>ROWCAP
     ? `<tr><td colspan="6" style="padding:10px;color:#888;background:#fbfbfa;white-space:normal">상위 ${nf(ROWCAP)}행만 표시 — 전체 ${nf(rows.length)}종은 CSV 다운로드로 확인하세요.</td></tr>`
     : '';
-  tbl.innerHTML=head+'<tbody>'+body+more+'</tbody>';
+  // 하나도 안 걸리면 머리글만 남아, 자료가 없는 건지 조건을 잘못 고른 건지 알 수 없다.
+  const none=rows.length ? ''
+    : `<tr><td colspan="6" style="padding:14px;color:#888;background:#fbfbfa;white-space:normal">${metric==='found'?'이 조건에서 발견된 종이 없습니다.':'이 조건에서 미발견 종이 없습니다.'} 연도 범위나 지역 선택을 바꿔 보세요.</td></tr>`;
+  tbl.innerHTML=head+'<tbody>'+body+none+more+'</tbody>';
   syncSortBar();
 }
 function sortBy(k){ if(sortKey===k)sortDir*=-1; else {sortKey=k;sortDir=(k==='n'||k==='s')?1:-1;} renderTable(); }
@@ -2743,7 +2746,7 @@ function boot(){
   fY0.value=y0; fY1.value=y1;
   const qs=p.get('sido'), qsg=p.get('sigungu');
   if(qsg && /^\d{5}$/.test(qsg)) DEEPLINK.sigungu=qsg;       // 시군구 딥링크: 레이어 로드 후 반영(레벨 전환+선택+확대)
-  else if(qs) selSidos.add(qs);                              // 시도 딥링크(기존)
+  else if(qs && /^\d{2}$/.test(qs)) selSidos.add(qs);        // 시도 딥링크 — 코드 모양이 맞을 때만(엉뚱한 값이 지도를 비우지 않게)
   if(p.get('metric')==='gap'){ metric='gap'; mFound.classList.remove('on'); mGap.classList.add('on'); }
   fTaxon.onchange=()=>{ curTaxon=fTaxon.value; y0=null;y1=null; fillYearSels(); selSidos.clear(); renderSelChips();
     tblCnt.textContent='관측자료 불러오는 중…';
@@ -2781,6 +2784,9 @@ function boot(){
     if(sp){ setMode('B'); if(window.sTaxon){sTaxon.value='';sTax='';} if(window.q){q.value=sp.n||sp.s; doSearch();} showSpecies(sp);
       // 챗 딥링크 액션: ?report=1 → 제보 모달 자동 오픈(해당 종 미리 선택). 처리는 로드 순서상 뒤의 제보 모듈이 담당.
       if(p.get('report')==='1') window.FG_ACTION={sp:spk, act:'report'};
+    } else if(window.sResults){                              // 주소의 종 번호가 목록에 없을 때 — 빈 화면 대신 이유를 알린다
+      setMode('B'); sResults.style.display='';
+      sResults.innerHTML='<div class="r" style="cursor:default;color:#999">주소에 적힌 종을 찾지 못했습니다. 이름으로 찾아보세요.</div>';
     } }
 }
 /* ── 탭 복귀 시 지도 크기 재계산(숨김 중에는 0으로 잡힌다) ── */
@@ -3488,7 +3494,15 @@ async function myPage(user){
 }
 
 renderMissions();                                          // 정적 자산 — Supabase 무관
-if(configured){ onAuth(user=> user ? myPage(user) : loginCard()); renderTrending(); renderFeed(); renderLeaderboard(); }
+// 로그인 성공은 인증 이벤트가 SIGNED_IN 일 때만 센다 — 페이지를 다시 열어 세션이 살아난 것은 로그인이 아니다.
+// 한 화면에서 같은 이벤트가 두 번 올 수 있어 한 번만 보낸다.
+let loginSent=false;
+function trackLogin(u, ev){
+  if(loginSent || !u || ev!=='SIGNED_IN') return;
+  loginSent=true;
+  window.fgTrack&&fgTrack('login_success',{method:(u.app_metadata&&u.app_metadata.provider)||'email'});
+}
+if(configured){ onAuth((user,ev)=>{ trackLogin(user,ev); return user ? myPage(user) : loginCard(); }); renderTrending(); renderFeed(); renderLeaderboard(); }
 </script>
 
 <!-- 머리말 계정·알림 — 로그인 상태를 페이지 전역(비-module 스크립트 포함)에 알리고, 알림을 모아 보여준다.
@@ -3760,7 +3774,11 @@ function decorate(ktsn){
     if(!user){ if(window.fgGoLogin) fgGoLogin('관심 종은 로그인 후 담을 수 있습니다');
       else location.href='index.html#my'; return; }
     b.disabled=true;
-    try{ if(W.has(ktsn)){ await watchRemove(ktsn); W.delete(ktsn); } else { await watchAdd(ktsn); W.add(ktsn); } }
+    const adding=!W.has(ktsn);
+    try{ if(adding){ await watchAdd(ktsn); W.add(ktsn); } else { await watchRemove(ktsn); W.delete(ktsn); }
+      const sp=(window.__SPIDX__||[]).find(x=>x.k===ktsn);
+      window.fgTrack&&fgTrack('interest_toggled',{action:adding?'add':'remove', taxon:(sp&&sp.t)||''});
+    }
     catch(e){ console.warn('관심 종 토글 실패', e); }
     b.disabled=false; decorate(ktsn);
   };
@@ -3999,6 +4017,7 @@ async function doSubmit(){
     const { error } = await submitReport({ ktsn:selSp.k, scientific_name:selSp.s, korean_name:selSp.n, taxon_group:selSp.t,
       url: url || null, photo_path, lat:latlon.lat, lon:latlon.lon, observed_date:date, note });
     if(error) throw error;
+    window.fgTrack&&fgTrack('report_submitted',{taxon:selSp.t, photo:!!photo_path});
     msg.className='rpt-msg ok';
     msg.textContent='제보가 등록되었습니다. 검토 후 반영됩니다. 마이페이지에서 내 제보 이력을 볼 수 있어요.';
     su.textContent='닫기'; su.disabled=false; su.onclick=close;

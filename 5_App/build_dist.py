@@ -76,7 +76,11 @@ def main():
     (DIST / "demo" / "data").mkdir(parents=True, exist_ok=True)
 
     for p in PAGES:
-        shutil.copy2(APP / p, DIST / p)
+        src = APP / p
+        if src.exists():
+            shutil.copy2(src, DIST / p)
+        else:
+            print(f"(경고) 누락: {src.relative_to(BASE)}")
     for f in DATA_FILES:
         src = DATA / f
         if src.exists():
