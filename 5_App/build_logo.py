@@ -1,24 +1,51 @@
 # -*- coding: utf-8 -*-
-"""로고 자산 생성
+"""로고 및 아이콘 자산 생성
 
-1) 헤더 로고 — 4_References/finding_gap_logo.png → 5_App/logo.png
-   원본은 1448×1086 에 흰 여백이 절반 가까이라 그대로 쓰면 870KB 다. 여백을 잘라내고
-   흰 배경을 투명으로 바꿔(페이지 배경이 순백이 아니라 네모가 드러난다) 표시 높이의 2배로 줄인다.
+산출:
+  기본 (옵션 없을 때):
+    - 5_App/logo.png (헤더 로고, 높이 72px 고정)
+    - 5_App/favicon.ico (16/32/48/64px 다중 해상도)
+    - 5_App/apple-touch-icon.png (iOS 홈화면, 180×180px)
+    - 5_App/icon-512.png (Android, 512×512px)
 
-2) 파비콘류 — 같은 원본에서 워드마크 앞의 배지(돋보기+동물 아이콘)만 잘라
-   favicon.ico·apple-touch-icon.png·icon-512.png 생성. 예전엔 sido.geojson 을 저해상도
-   격자로 래스터화한 자체 디자인(5_App/design/gen_brand_icon.py)을 썼는데, 실제 로고가
-   생긴 뒤로는 그걸 그대로 쓰는 게 브랜드 일관성이 맞아 대체한다. 벡터 원본이 없어 SVG
-   파비콘은 생성하지 않는다(ico·png만).
+  --brands 옵션:
+    - logo_nibr.png (NIBR 로고, 온라인 내려받기)
+    - logo_ecobank.png (EcoBank 로고, 온라인 내려받기)
+    - logo_naturing.png (Naturing 로고, 로컬 원본)
+    - logo_report.png (발견제보 로고, 로컬 원본)
+    - logo_quiz.png (종동정퀴즈 로고, 로컬 원본)
 
-3) 제보·상세 링크의 기관 마크 — `--brands` 로 각 사이트에서 내려받아 5_App/logo_*.png 생성.
-   핫링크하지 않는 이유: naturing 은 짧은 시간에 여러 번 요청하면 IP 를 막고,
-   기관 사이트는 리퍼러 검사가 바뀔 수 있다. 링크가 끊기면 버튼이 빈칸이 된다.
+입력:
+  - 4_References/finding_gap_logo.png (헤더/파비콘 원본, 1448×1086)
+  - 4_References/naturing_logo.jfif (제보 기관 마크)
+  - 4_References/발견제보_logo.png (제보 자산 로고)
+  - 4_References/종동정퀴즈_logo.png (퀴즈 자산 로고)
 
-4) 전달받은 원본 마크 — `--brands` 에 함께 딸려 나온다. 내려받은 것과 달리 알파가 없고
-   흰 배경에 얹힌 그림이라, 헤더 로고와 같은 흰색 키잉을 거쳐야 버튼 위에서 네모가 되지 않는다.
+처리:
+1) 헤더 로고 (기본 실행)
+   - 4_References/finding_gap_logo.png 의 흰 여백을 자르고 흰 배경을 투명으로 변환
+   - CSS 표시 높이 72px 에 맞춰 2배 고밀도로 축약 (CSS 1x 픽셀 ≈ 실제 2x 픽셀)
+   - 결과: 최적화된 PNG, 약 10~20KB
 
-사용: python 5_App/build_logo.py [--brands]
+2) 파비콘류
+   - 헤더 로고 중 배지(워드마크 앞의 돋보기+동물 아이콘, 좌상단)만 추출
+   - 정사각형 캔버스에 배치: favicon.ico 64×64, icon-512.png 512×512
+   - apple-touch-icon.png는 iOS 노치 고려해 180×180 투명 배경에 배치
+
+3) 기관 마크 (--brands 옵션)
+   - NIBR, EcoBank: 온라인 로고를 내려받아 최적화
+   - Naturing, 발견제보, 종동정퀴즈: 로컬 원본 파일 사용 (안내 기관 제공)
+   - 모든 로고를 표시 크기 높이 26~30px, 폭 30~116px로 정규화
+   - 흰 배경/반투명 가장자리 처리: KEY_LO/KEY_HI 임계로 투명화
+
+온라인 내려받기 링크가 끊기면 기존 파일 유지 (덮어쓰지 않음).
+로컬 원본 파일이 없으면 해당 로고 건너뜀.
+
+실행:
+  python 5_App/build_logo.py           # 헤더 로고 + 파비콘류만
+  python 5_App/build_logo.py --brands  # 모든 로고 (기관 마크 포함)
+
+배포: build_dist.py 의 PAGES 리스트에 있어 정적 배포본에 포함됨
 """
 import sys
 from io import BytesIO

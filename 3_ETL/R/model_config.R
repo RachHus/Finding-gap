@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
-# model_config.R — 관찰 추천도 모델의 설정 한 벌. env_grid_model.R · model_species.R ·
-# seed_model_store.R 이 함께 source 한다.
+# model_config.R — 관찰 추천도 모델의 공용 설정 한 벌.
 #
-# 한곳에 모은 이유: 이 값들은 cfg 해시로 묶여 "전 종 재적합" 판단에 쓰인다. 두 스크립트가 각자
-# 상수를 들고 있으면 한쪽만 고쳤을 때 해시가 갈라져 8,900종이 이유 없이 다시 돌아간다.
+# 이 파일을 source하는 스크립트(3_ETL/R/):
+#   - env_grid_model.R (run_pipeline.py 단계 9) → env_grid_model.csv (모형 변수 포함 격자)
+#   - model_species.R (run_pipeline.py 단계 11) → model_store/ (종별 maxnet 적합)
+#   - seed_model_store.R (run_pipeline.py 스코프 외, 초기화용) → model_store/
 #
-# SCALE 이 중요하다. 브라우저는 env_grid.js 의 정수 스케일 값을 되돌려 쓰므로, 모델도 같은
-# 정밀도의 값으로 학습해야 학습값과 예측값이 어긋나지 않는다. 그래서 격자를 만들 때부터
-# 배포 정밀도로 반올림한다.
+# 이 파일의 값을 바꾸면 cfg 해시가 갈라져 다음을 다시 실행해야 함:
+#   - run_pipeline.py 단계 9(env_grid_model) 이후 재실행 → 11(model) 전량 재적합 필요
+#   - 특히 V·WVAR·SCALE·CLASSES·N_BG·KFOLD 중 하나라도 바뀌면 전 종(약 8,900종) 재적합
+#     (각 종 5회 CV = 약 10시간 소요)
+#
+# 한곳에 모은 이유: 여러 스크립트가 각자 상수를 들고 있으면 한쪽만 고쳤을 때 해시가 갈라진다.
+# SCALE은 특히 중요하다. 브라우저는 env_grid.js의 정수 스케일 값을 읽으므로,
+# 모델도 같은 정밀도로 학습해야 학습값·예측값이 어긋나지 않는다(격자 생성 단계부터
+# 배포 정밀도로 반올림함).
 V       <- c("dem", "ndvi", "bio01", "bio18", "bio03", "bio14")   # A안(중첩 순서, VIF 최대 4.63)
 WVAR    <- "sord"     # 수생종에만 추가로 배정하는 변수(하천 차수) — 아래 설명
 SCALE   <- c(dem = 1, ndvi = 1000, bio01 = 10, bio18 = 1, bio03 = 10, bio14 = 1, sord = 1)

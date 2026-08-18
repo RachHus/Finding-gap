@@ -2,18 +2,45 @@
 """발견공백 MCP 데이터 빌드 — 1_Data/processed 의 정규 집계를 공개 읽기전용 MCP용
 컴팩트 SQLite(7_MCP/data/fg_mcp.sqlite)로 변환.
 
+입력 파일:
+  1_Data/processed/ktsn_master.csv                      : 종 마스터(40,156종)
+  1_Data/processed/species_service_flags.csv            : 서비스 대상 품목(in_service)
+  1_Data/processed/observation_sigungu.csv              : 관측 집계(2.04M행: ktsn×시군구×연도×출처)
+  1_Data/processed/species_env_stats.csv                : 종별 환경지위 통계
+  1_Data/processed/media_nibr.json, media_inat.json     : 종별 미디어 메타(존재시)
+  5_App/demo/data/sigungu.geojson, sido.geojson         : 시군구/시도 경계 + 코드
+  7_MCP/data/wiki_pageviews.json                        : 한국어 위키 조회수(월갱신, ko+en)
+  7_MCP/data/watch_counts.json                          : 관심종 익명 집계수(사용자 신호)
+  7_MCP/data/community_reports.json                     : 관리자 승인 시민 제보 집계(미존재 시 빈 테이블)
+
 핵심 압축: observation_sigungu.csv(2.04M행: ktsn×시군구×연도×출처)를
 (ktsn, region) 최신연도·관측합으로 롤업 → 발견상태 판정에 필요한 최소치만.
 원시 좌표점(observations.sqlite)은 절대 포함하지 않는다(민감·집계만 공개).
 
 산출 테이블:
-  species        : 서비스 대상 39,972종 마스터(등급·적색목록·상위분류·미디어보유)
+  species        : 서비스 대상 39,972종 마스터(등급·적색목록·상위분류·미디어보유·관심도 신호)
   species_region : (ktsn, region=시군구코드) → maxyear, obs_count (발견/휴면/미발견 판정)
   species_env    : 종별 환경지위(bio01/05/06/12/dem × 통계)
   media          : 종별 미디어 메타(사진·도판 URL·라이선스·출처)
-  region         : 시도/시군구 코드→이름
-  taxa           : 분류군 요약
-  meta           : 생성일·버전·발견정의·라이선스
+  region         : 시도/시군구 코드→이름 + sido_cd 상위링크
+  taxa           : 분류군 요약(종수)
+  community      : 관리자 승인된 시민 제보 익명 집계(종×시군구×신고수) — K-익명(3건 미만 미노출)
+  meta           : 생성일·버전·발견정의·라이선스·관심도 가중치·신호 정의
+
+산출 위치: 7_MCP/data/fg_mcp.sqlite (및 gzip .gz 버전)
+커밋 대상: fg_mcp.sqlite.gz (25MB 초과 시) 또는 sqlite 직접.
+
+실행 순서와 의존:
+  (1) 중간 데이터 수집(별도 자동화): wiki_pageviews.json, watch_counts.json, community_reports.json
+  (2) python build_taxon_names.py → taxon_names.json.gz (chat 백엔드용, 독립)
+  (3) python build_mcp_data.py → fg_mcp.sqlite.gz (이 스크립트)
+
+다시 만들어야 하는 시점:
+  - 종 마스터(ktsn_master.csv) 업데이트 시
+  - 관측 집계(observation_sigungu.csv) 갱신 시
+  - 관심도 신호(wiki_pageviews.json, watch_counts.json) 변경 시
+  - 시민 제보(community_reports.json) 수집 또는 승인 반영 시
+  (보통 월 단위. 개발 중엔 FG_MCP_GEN_DATE 환경변수로 타임스탬프 고정 가능)
 
 사용: python 7_MCP/build_mcp_data.py         (anaconda python — pandas 필요)
 """

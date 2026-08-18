@@ -1,14 +1,28 @@
 #!/usr/bin/env python3
-"""
-iNaturalist media pipeline for Finding gap project.
-Fetches CC0/CC-BY licensed photos from iNaturalist API.
+"""iNaturalist 사진 수집
 
-Usage:
-  python build_media_inat.py [--full] [--subset SIZE]
+산출: 1_Data/processed/media_inat.json
+입력: 5_App/demo/data/species_index.json (서비스 종 목록)
 
-  Default: runs validation set (~25 curated threatened species)
-  --full: runs entire species list (~40k)
-  --subset SIZE: runs specified number of species
+이 파일은 iNaturalist API(https://api.inaturalist.org/v1)에서 한국 지역의
+CC0·CC-BY 라이선스 사진을 종별로 수집한다. 빌드타임에만 실행되며 (자동화 안 함),
+웹 페이지는 이 스크립트를 실행하지 않는다. 수집한 사진은 build_media_index.py
+의 입력으로 쓰인다.
+
+API 제약:
+- 지역: place_id=6891 (한국)
+- 등급: research_grade (사용자 커뮤니티 검증됨)
+- 라이선스: CC0, CC-BY (공개 이미지만)
+- 요청율: 1.1초/요청 (서버 부담 경감)
+- 요청당 최대 30개 결과, 종당 4장씩만 수집
+
+실행:
+  python 5_App/build_media_inat.py              # 검증셋 (위협 종 ~25개)
+  python 5_App/build_media_inat.py --full       # 전체 종 (약 40,000개, 시간 소요)
+  python 5_App/build_media_inat.py --subset 100 # 상위 100종만
+
+이 파일을 다시 실행하면 기존 결과를 유지하고 누락된 종만 추가한다 (재개 가능).
+빌드타임 전용이므로 WebAPI 키나 인증은 필요 없다 (User-Agent만 전달).
 """
 
 import json

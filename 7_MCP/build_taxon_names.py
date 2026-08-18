@@ -2,14 +2,29 @@
 분류 계층(강·목·과·속) 라틴↔한글 이름 매핑 자산 생성 — taxon_names.json.gz
 
 대화형 도우미(Edge Function chat)의 fg_taxon_name 적재용 백엔드 참조 자산.
-- 출처: 1_Data/raw/nibr/ktsn_*.ndjson 의 classKtsnLtnNm/classKtsnKrnNm,
-        orderKtsnLtnNm/orderKtsnKrnNm, fmlyKtsnLtnNm/fmlyKtsnKrnNm,
-        gnusKtsnLtnNm/gnusKtsnKrnNm (라틴명당 최빈 한글명 채택).
-- 프런트 퀴즈용 taxon_ko.js(사진 보유 종 범위 한정)와 달리 KTSN 전체를 담는다.
-- 출력: 7_MCP/data/taxon_names.json.gz
-        → {"class":{la:ko}, "order":{la:ko}, "family":{la:ko}, "genus":{la:ko}}
+입력 자료: 1_Data/raw/nibr/ktsn_*.ndjson (ndjson 형식 KTSN 종 레코드들)
+           각 레코드의 필드: classKtsnLtnNm/classKtsnKrnNm(강),
+                          orderKtsnLtnNm/orderKtsnKrnNm(목),
+                          fmlyKtsnLtnNm/fmlyKtsnKrnNm(과),
+                          gnusKtsnLtnNm/gnusKtsnKrnNm(속)
+매핑 규칙: 라틴명당 최빈 한글명 1개 채택 (Counter 기반).
+산출: 7_MCP/data/taxon_names.json.gz
+      구조: {"class":{라틴명:한글명}, "order":{...}, "family":{...}, "genus":{...}}
+      크기: ~31KB (gzip 압축)
+
+용도 비교:
+  - taxon_names.json.gz: 모든 KTSN 분류군명(~40,156종의 분류 계층)
+  - 5_App/js/taxon_ko.js(quiz용): 사진 보유 종만(scope 축소)
+
+커밋 여부: 예 (git add 7_MCP/data/taxon_names.json.gz)
+
+실행 시점:
+  - KTSN ndjson 파일 갱신 시(분류체계 변경, 종명 수정 등)
+  - build_mcp_data.py보다 선행 필요 없음 (독립적 자산).
+  - 다만 chat 기능이 새로운 종명을 알아야 하면 먼저 실행.
 
 사용:  python 7_MCP/build_taxon_names.py
+반환값: 0(성공) / 1(오류: ndjson 없음 또는 매핑 비어있음)
 """
 import glob
 import gzip

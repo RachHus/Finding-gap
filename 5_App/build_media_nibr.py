@@ -1,21 +1,31 @@
 #!/usr/bin/env python3
-"""
-NIBR (국립생물자원관) 디지털 자료관 미디어 수집 — Finding gap.
-종별(KTSN) 사진/그림(세밀화)/표본/동영상/소리를 디지털콘텐츠 API에서 가져와 계약 스키마로 저장.
+"""NIBR 디지털 자료관 미디어 수집
 
-계약: 2_Planning/media_pipeline_contract.md
-출력: 1_Data/processed/media_nibr.json  =  { "<ktsn>": [ {src,type,thumb,full,by,lic,link} ] }
+산출: 1_Data/processed/media_nibr.json
+입력: 5_App/demo/data/species_index.json (서비스 종 목록),
+      5_App/.env 의 NIBR_DIGITAL_API_KEY (API 인증 키)
 
-사용:
-  python build_media_nibr.py            # 검증셋(위협종 ~25, 식물/어류/곤충 편향)
-  python build_media_nibr.py --subset N # species_index 상위 N종
-  python build_media_nibr.py --full     # 전체(오래 걸림)
+이 파일은 국립생물자원관(NIBR) 디지털자료관에서 종별 사진·세밀화·표본·동영상·소리를
+수집한다. 빌드타임에만 실행되며 (자동화 안 함), 웹 페이지는 이 스크립트를 실행하지 않는다.
+수집한 미디어는 build_media_index.py 의 입력으로 쓰인다.
 
-인증(라이브 프로브로 확정):
-  - GET https://species.nibr.go.kr/gwsvc/openapi/rest/digital/bispconts/search
-  - 쿼리 파라미터: oapiAcsUnqNo(키), schKtsn(KTSN), page, responseType=json
-  - 키 = 5_App/.env 의 NIBR_DIGITAL_API_KEY (절대 출력·커밋 금지). 엔드포인트는 NIBR_DIGITAL_API_URL 로 덮어쓸 수 있음.
-  - 이미지(thmbViewPath/fileViewPath)는 무인증 공개 URL → 핫링크(빌드시 다운로드 불필요).
+API 명세:
+- 엔드포인트: https://species.nibr.go.kr/gwsvc/openapi/rest/digital/bispconts/search (GET)
+- 인증: oapiAcsUnqNo 쿼리 파라미터 (5_App/.env 의 NIBR_DIGITAL_API_KEY)
+- 종 지정: schKtsn (KTSN 코드)
+- 요청율: 1초/요청 (정부 API 예의상)
+- 종당 수집: 최대 6개 항목 (사진/그림/표본/소리/동영상 등 유형 무관)
+
+이미지 URL은 무인증 공개이므로 빌드 시 다운로드할 필요 없음 (핫링크).
+라이선스는 공공누리로 추정 (유형 1~4, 실제 확인 필요).
+
+실행:
+  python 5_App/build_media_nibr.py              # 검증셋 (위협 종 ~25개, 분류군 편향)
+  python 5_App/build_media_nibr.py --full       # 전체 종 (약 40,000개, 오래 소요)
+  python 5_App/build_media_nibr.py --subset 100 # 상위 100종만
+
+이 파일을 다시 실행하면 기존 결과를 유지하고 누락된 종만 추가한다 (재개 가능).
+NIBR_DIGITAL_API_KEY 없으면 401/403 오류로 중단되므로, 키 설정 후 재실행.
 """
 
 import json

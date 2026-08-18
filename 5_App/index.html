@@ -12,6 +12,55 @@
 <meta property="og:image" content="https://rachhus.github.io/Finding-gap/og.png?v=2">
 <meta property="og:url" content="https://rachhus.github.io/Finding-gap/index.html">
 <meta name="twitter:card" content="summary_large_image">
+<!--
+  ══ 이 파일에 대하여 ══════════════════════════════════════════════════════════
+
+  발견공백 조회 화면 전체가 이 한 파일에 들어 있다. 스타일·마크업·스크립트를 나누지
+  않은 것은 의도다 — 서버가 없고 GitHub Pages 가 파일을 그대로 내려 줄 뿐이라,
+  파일이 늘어날수록 첫 화면이 뜨기까지의 왕복이 늘어난다.
+
+  대신 자료는 나눠 두었다. `demo/data/` 아래 자산은 브라우저가 직접 읽고, 조회는
+  전부 브라우저 안에서 끝난다. **조회에는 백엔드가 없다.** 로그인·제보·관심 종·
+  대화형 도우미만 Supabase 를 쓰고, 그쪽이 멈춰도 조회는 그대로 된다.
+
+  ── 파일 안 순서 ────────────────────────────────────────────────────────────
+    <style>            화면 전체의 색·글자·간격 토큰과 규칙 (:root 에 토큰)
+    <body> 마크업       머리말 → 홈 메뉴(.axes) → 세 화면
+                         #view-survey    지도 서비스 — 안에 #modeA(분류군별)·#modeB(종별)
+                         #view-community 시민과학
+                         #view-my        마이페이지
+                       그 뒤로 겹쳐 뜨는 것들 — 제보 모달·첫 로그인 설정·
+                       신뢰 등급 설명·대화형 도우미 패널(#chatDrawer)
+    <style> (둘째)      위 겹침 요소들에만 쓰는 규칙
+    <script src=…>     자산 읽기. config.js 가 먼저고, 나머지는 demo/data/ 의
+                       분류군 요약·종 색인·발견 상태 등. OpenLayers 는 CDN.
+    스크립트 블록들      아래 표 참고
+
+  ── 스크립트 블록 (위에서부터) ──────────────────────────────────────────────
+    1. 지도·조회 엔진        가장 크다. 토큰·상수 → 관측자료 지연 로드 → 지도와
+                            경계 레이어 → 서식지 후보(모형) → 표·차트 → 모드 전환
+                            → 부트. 안쪽은 `/* ── 제목 ── */` 로 구획해 두었다.
+    2. 홈 화면              분류군 대시보드, 홈 메뉴 전환, 화면 사이 이동
+                            (fgShowOnMap·fgShowSpecies·fgGoMy·fgShowRegion)
+    3. 마이페이지           로그인·알림·활동 지역·관심 종·내 제보
+    4. 머리말 계정·알림     로그인 상태를 페이지 전역에 알린다
+    5. 관심 종 버튼         종 카드의 ☆ 버튼 배선
+    6. 발견 제보            사진·EXIF·지도 핀으로 관찰을 올린다
+    7. 대화형 도우미        Edge Function(chat)과 주고받는다
+    3~7 은 `type="module"` 이고 모두 fg_supabase.js 를 통해서만 Supabase 에 닿는다.
+    config.js 에 키가 없으면 `configured` 가 거짓이 되어 스스로 접힌다 —
+    그래서 키 없이 열어도 조회 화면은 멀쩡하다.
+
+  ── 고치기 전에 알아 둘 것 ─────────────────────────────────────────────────
+    · 배포본 `docs/index.html` 은 이 파일의 복사본이다. 그쪽을 고치면 다음 빌드에서
+      지워진다. 이 파일을 고치고 `python 5_App/build_dist.py --osm-only --out docs`.
+    · 적색목록 색은 RL_FILL 이 유일한 출처다. CSS 토큰으로 옮기지 않는다.
+    · 지도 조작 — 맨 휠은 페이지 스크롤, 확대는 Ctrl/⌘+휠이나 두 손가락,
+      중심은 한반도 밖으로 나가지 않는다. 셋 다 일부러 그렇게 한 것이다.
+    · 종별 검색은 분류군과 무관하다. sTaxon 은 빈 값을 유지한다.
+    · 화면에 나가는 글에 작업 과정의 말("대문"·"차트N" 같은)을 쓰지 않는다.
+  ══════════════════════════════════════════════════════════════════════════
+-->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@9.2.4/ol.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
@@ -2758,6 +2807,11 @@ window.fgApplyDeepLink=function(p){
 
 boot();
 </script>
+
+<!-- 홈 화면 — 분류군 대시보드, 홈 메뉴(지도 서비스·시민과학·마이페이지) 전환,
+     그리고 화면끼리 오가는 통로. 대시보드나 알림에서 "지도에서 보기"를 누르면
+     페이지를 새로 열지 않고 위쪽 지도의 상태만 바꾼다(fgShowOnMap·fgShowSpecies·
+     fgShowRegion). 이 함수들은 다른 블록에서도 부르므로 window 에 남는다. -->
 <script>
 /* ── 디자인 토큰(범주색) ── */
 const CAT_ORDER=['EX','EW','RE','CR','EN','VU','NT','LC','DD','NENA'];     // 도넛: 캐노니컬(NE·NA 병합)
@@ -3439,6 +3493,9 @@ if(configured){ onAuth(user=> user ? myPage(user) : loginCard()); renderTrending
      알림용 표를 서버에 따로 두지 않는다. 이미 있는 자료(내 제보·관심 종·공개 피드·시군구 집계)를
      지난번에 적어 둔 기준과 견줘 그때그때 만든다. 기준과 읽음 표시는 이 브라우저·이 계정에만 남는다.
      멸종위기종은 지점이 아니라 시군구까지만 말한다 — 정확한 자리를 알리면 남획의 실마리가 된다. -->
+<!-- 머리말의 계정·알림 — 로그인 상태를 페이지 전역에 알리고, 새 소식을 모아 종을 울린다.
+     알림은 서버에서 밀어 주는 것이 아니라 내 제보·관심 종·이웃의 제보를 읽어 와
+     지난번 확인 시점과 비교해 만든다. 확인 시점은 이 브라우저에만 남는다. -->
 <script type="module">
 import { configured, onAuth, myReports, watchList, communityReports, leaderboard, myDisplayName, readProfile } from './fg_supabase.js';
 window.fgAuthConfigured = configured;
@@ -3683,6 +3740,8 @@ if(configured && bar){
 }
 </script>
 
+<!-- 종 카드의 ☆ 관심 종 버튼. 카드는 지도 블록이 그때그때 다시 그리므로,
+     이 블록은 버튼을 만들지 않고 그려진 버튼을 찾아 배선만 한다. -->
 <script type="module">
 import { configured, onAuth, getUser, watchList, watchAdd, watchRemove } from './fg_supabase.js';
 let user=null; const W=new Set();
@@ -3712,6 +3771,9 @@ if(configured) onAuth(u=>{ user=u; W.clear();
 });
 </script>
 
+<!-- 발견 제보 — 사진·위치·발견일을 받아 올린다. 사진에 찍힘 정보(EXIF)가 남아 있으면
+     좌표와 날짜를 먼저 채워 주고, 사람이 지도 핀으로 고쳐 넣을 수 있다.
+     사진은 올리기 전에 브라우저에서 줄인다(원본은 EXIF 를 읽는 데만 쓴다). -->
 <script type="module">
 import { configured, onAuth, submitReport, uploadReportPhoto } from './fg_supabase.js';
 import exifr from 'https://esm.sh/exifr@7';
@@ -3970,6 +4032,9 @@ if(configured){
 }
 </script>
 
+<!-- 대화형 도우미 — 질문을 Supabase Edge Function(chat)으로 보내고 답을 받는다.
+     어떤 자료를 볼지는 서버가 정하므로 이 화면은 질문과 답만 오간다.
+     config.js 의 CHAT_ENABLED 가 꺼져 있으면 패널이 안내문만 띄운다. -->
 <script type="module">
 import { sb, configured, onAuth, sendMagicLink, signInWithGoogle, signOut } from './fg_supabase.js';
 
