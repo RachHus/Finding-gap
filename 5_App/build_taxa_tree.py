@@ -59,13 +59,14 @@ def build():
 
     STATE_CODE = {"found": "f", "dormant": "d", "none": "n"}
     tree = {}
-    sp_by_group = {}                           # group -> "order|family" -> [[ktsn, korean_name, code], ...]
+    sp_by_group = {}                           # group -> "order|family" -> [[ktsn, korean_name, code, genus_la], ...]
     n_species = n_orders = n_families = 0
     seen_orders, seen_families = set(), set()
-    for ktsn, korean_name, group, order_la, family_la in con.execute(
-            "select ktsn, korean_name, taxon_group, order_la, family_la from species where rank='종'"):
+    for ktsn, korean_name, group, order_la, family_la, genus_la in con.execute(
+            "select ktsn, korean_name, taxon_group, order_la, family_la, genus_la from species where rank='종'"):
         order_la = (order_la or "").strip() or "(미분류)"
         family_la = (family_la or "").strip() or "(미분류)"
+        genus_la = (genus_la or "").strip() or "(미분류)"
         st = _state(maxyear.get(ktsn), cut)
 
         g_node = tree.setdefault(group, {"kor": tx_kor.get(group, group), "n": 0,
@@ -77,8 +78,10 @@ def build():
             node["n"] += 1
             node[st] += 1
 
+        # 속(genus)은 목→과처럼 별도 집계 트리를 만들지 않는다 — 계통수는 과까지만 그리고,
+        # 과를 펼쳤을 때 속 단위 그룹은 이 종 목록(genus_la)에서 브라우저가 즉석에서 묶는다.
         sp_by_group.setdefault(group, {}).setdefault(f"{order_la}|{family_la}", []).append(
-            [ktsn, korean_name or "", STATE_CODE[st]])
+            [ktsn, korean_name or "", STATE_CODE[st], genus_la])
 
         n_species += 1
         seen_orders.add((group, order_la))
