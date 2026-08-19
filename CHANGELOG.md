@@ -13,6 +13,7 @@ Finding gap의 릴리스 단위 변경 이력입니다.
   - `build_gap_reason_snapshot.py`가 `fg_taxon_status_check`(자동)와 `taxon_reference_reports`(승인된 제보)를 합쳐 종당 사유를 하나로 결정 — 우선순위 **reference(전문가 확인) > regionally_extinct > synonym**(사람이 특정 논문으로 확인한 것이 가장 신뢰도 높음).
   - 승인 큐 접근은 별도 역할 없이 기존 `profiles.role='admin'`을 그대로 재사용 — 지금 규모에서 새 권한 체계는 과함.
   - `5_App/supabase/taxon_reference_reports.sql` Supabase 적용 완료(2026-08-19) — 테이블·RLS 정책 4개 실측 확인.
+  - **마이페이지에 "내 분류 이력 제보" 추가.** 제출하고 나면 검토가 어떻게 됐는지 알 방법이 없던 것을 — 시민 제보(`reports`)의 "내 제보 이력"과 같은 패턴(`myReports()`/`#myrep`)으로 그대로 미러링해, 상태(검토 중/승인/반려)를 확인할 수 있게 했다. 반려에는 **관리자가 남긴 사유**가 함께 뜬다 — 사유 없이 "반려됨"만 보이면 전문가 제보자가 다시 제보할 마음이 안 생길 것 같아서, 관리자가 거부를 누르면 사유를 입력받고(`admin_note` 컬럼, `taxon_reference_reports_note.sql`) 제보자 본인 조회에만 노출한다. 수정·삭제는 두지 않았다 — 철회보다 반려로 이력에 남기는 편이 검토 흐름상 맞다.
 
 ## [0.11.0] - 2026-08-19
 

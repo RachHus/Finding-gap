@@ -184,4 +184,15 @@ export async function adminPendingTaxonRefs() {
   if (error) throw error;
   return data || [];
 }
-export async function setTaxonRefStatus(id, status) { return sb.from('taxon_reference_reports').update({ status }).eq('id', id); }
+export async function setTaxonRefStatus(id, status, note) {
+  return sb.from('taxon_reference_reports').update({ status, admin_note: (note && note.trim()) || null }).eq('id', id);
+}
+// 내 분류 이력 제보 이력(본인 행 — RLS). myReports() 와 동일한 패턴.
+export async function myTaxonReferences() {
+  if (!sb) return [];
+  const { data, error } = await sb.from('taxon_reference_reports')
+    .select('id,ktsn,korean_name,scientific_name,to_name,ref_title,ref_authors,ref_year,ref_container,doi,ref_url,note,status,admin_note,created_at')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
