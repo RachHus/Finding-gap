@@ -3,6 +3,8 @@
 --      전량 GROUP BY 대신 종별 사전집계(≈20k행)를 조회하도록 한다. CUTOFF(기준연도)는 앱에서
 --      national_maxyear 로 판정하므로 MV 에는 굽지 않는다(연도 무관).
 --  (2) 지역 한정 경로 커버링 인덱스 — where region/sido=X group by ktsn max(maxyear) 를 index-only 화.
+-- 선행 조건: conversational_service.sql 이 먼저 적용돼 있어야 함(fg_species_region 생성).
+--            conversational_service_taxon_ranks.sql 이후에 적용.
 -- 적용: Supabase SQL Editor 에서 실행(멱등). fg_species_region 재적재 후에는
 --       load_reference.py 가 REFRESH MATERIALIZED VIEW 를 자동 수행한다.
 

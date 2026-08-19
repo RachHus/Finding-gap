@@ -17,7 +17,8 @@ export async function getUser() {
 export function onAuth(cb) {
   if (!sb) { cb(null); return; }
   sb.auth.getSession().then(({ data }) => cb(data.session?.user || null));
-  sb.auth.onAuthStateChange((_e, sess) => cb(sess?.user || null));
+  // 두 번째 인자로 인증 이벤트 이름을 함께 넘긴다 — 새로 로그인한 것과 열어 둔 세션이 살아난 것을 구분해야 하는 쪽이 있다.
+  sb.auth.onAuthStateChange((ev, sess) => cb(sess?.user || null, ev));
 }
 export async function sendMagicLink(email) {
   // 클릭 후 현재 페이지로 복귀(해당 URL 이 Supabase Auth Redirect URLs 에 등록돼 있어야 함)
@@ -53,14 +54,20 @@ export async function watchCounts() {
 // ── 알림 설정(활동 지역) — Auth user_metadata 에 둔다 ──
 // 별도 표를 만들면 마이그레이션과 RLS 정책이 늘어나는데, 이 값은 본인만 읽고 쓰는 설정이라
 // 세션과 함께 실려 오는 user_metadata 로 충분하다. 좌표가 아니라 시군구 코드만 담는다.
+// 활동 지역은 여러 곳을 담을 수 있다. 예전에 한 곳만 고른 사용자는 목록이 없으므로 그 값을 목록으로 읽는다.
 export function readProfile(user) {
   const m = (user && user.user_metadata) || {};
-  return { sgg: m.fg_sgg || '', sggName: m.fg_sgg_name || '', sido: m.fg_sido || '', onboarded: !!m.fg_onboarded };
+  const list = Array.isArray(m.fg_sggs) ? m.fg_sggs.filter(Boolean) : (m.fg_sgg ? [m.fg_sgg] : []);
+  return { sgg: m.fg_sgg || list[0] || '', sggName: m.fg_sgg_name || '', sido: m.fg_sido || '',
+           sggs: list, onboarded: !!m.fg_onboarded };
 }
 export async function saveProfile(p) {
   if (!sb) throw new Error('not configured');
+  const list = Array.isArray(p.sggs) ? p.sggs.filter(Boolean) : (p.sgg ? [p.sgg] : []);
   const { data, error } = await sb.auth.updateUser({ data: {
-    fg_sgg: p.sgg || null, fg_sgg_name: p.sggName || null, fg_sido: p.sido || null, fg_onboarded: true
+    fg_sggs: list,
+    // 목록 첫 곳은 대표 지역으로도 적어 둔다 — 한 곳만 읽던 자리가 그대로 동작한다.
+    fg_sgg: list[0] || null, fg_sgg_name: p.sggName || null, fg_sido: p.sido || null, fg_onboarded: true
   } });
   if (error) throw error;
   return data ? data.user : null;

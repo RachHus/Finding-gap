@@ -174,6 +174,8 @@ def page_html(sido, sido_name, taxon, taxon_kor, total, found_n, gap_n, undiscov
 <meta name="twitter:description" content="{esc(desc)}">
 <meta name="twitter:image" content="{BASE_URL}/og.png?v=2">
 <style>{CSS}</style>
+<script src="../config.js"></script>
+<script src="../fg_analytics.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -243,6 +245,8 @@ def hub_html(sidos, taxa):
 <meta property="og:image" content="{BASE_URL}/og.png?v=2">
 <meta name="twitter:card" content="summary_large_image">
 <style>{CSS}{extra}</style>
+<script src="../config.js"></script>
+<script src="../fg_analytics.js"></script>
 </head>
 <body>
 <div class="wrap">

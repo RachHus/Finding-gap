@@ -465,6 +465,9 @@ def trending_species(taxon_group=None, redlist_category=None, limit=20):
     taxon_group·redlist_category 로 한정."""
     limit = max(1, min(int(limit), 200))
     sw, swp = _species_where(taxon_group, None, redlist_category)
+    # K-익명: watch_count >= MIN_PUBLIC_WATCH(3) 필터
+    # 이유: 1~2명만 담은 종은 "누가 그 종에 관심 있는지"로 그 사람이 드러남.
+    # 익명 집계라도 3명 미만은 조합당 개인식별 가능 → 공개 불가.
     rows = db.rows(
         f"SELECT {_SP_COLS}, watch_count FROM species WHERE watch_count>=?{sw} "
         "ORDER BY watch_count DESC, interest DESC, korean_name LIMIT ?",
@@ -491,6 +494,9 @@ def community_discoveries(region=None, taxon_group=None, limit=50):
     if not db.one("SELECT name FROM sqlite_master WHERE type='table' AND name='community'"):
         return {"level": "community", "count": 0, "records": [],
                 "note": "커뮤니티 제보 테이블 없음(데이터 재빌드 전) — 빈 목록."}
+    # K-익명: count >= MIN_PUBLIC_REPORT(3) 필터
+    # 이유: 1~2건 제보인 (종, 시군구) 조합은 그 지역 제보자가 누구인지 드러남.
+    # 익명이어도 3건 미만 조합은 시공간 좌표의 개인식별 우려 → 공개 불가.
     where, params = "count>=?", [MIN_PUBLIC_REPORT]
     if region:
         code = str(region).strip()

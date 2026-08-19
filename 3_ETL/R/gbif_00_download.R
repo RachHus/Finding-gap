@@ -1,5 +1,10 @@
 # ============================================================
-# gbif_00_download.R
+# gbif_00_download.R  —  현재 기본 경로 아님(gbif_01_all.R 로 대체됨)
+#
+# 이 스크립트는 분류군을 하나씩 손으로 지정해 내려받는 초기 방식이다.
+# 지금은 gbif_01_all.R 이 9개 서비스 분류군을 한 번에 제출·대기·가져오기까지 한다
+# (3_ETL/DATA_PIPELINE.md 관측 ETL 절 참조). 한 분류군만 다시 받거나
+# occ_download 질의가 어떻게 짜였는지 확인할 때를 위해 남겨 둔다.
 # Finding gap — GBIF 점유(occurrence) 다운로드 (관리분류군 class 기준)
 #
 # 목적: 종 마스터(ktsn_master.csv)의 target 관리분류군(1~11) class를 기준으로

@@ -1,13 +1,20 @@
-"""
-과·속 라틴명 → 한글명 룩업 자산 생성 — taxon_ko.js
+"""과·속 라틴명 → 한글명 룩업 자산 생성
 
-퀴즈 범위(과·속) 드롭다운·검색에 한글 분류명을 병기하기 위한 소형 룩업.
-- 대상: media_<T>.js 의 tax맵에 실제로 등장하는 과(family)·속(genus) 라틴명만.
-- 출처: 1_Data/raw/nibr/ktsn_*.ndjson 의 fmlyKtsnLtnNm/fmlyKtsnKrnNm,
-        gnusKtsnLtnNm/gnusKtsnKrnNm (라틴명당 최빈 한글명 채택).
-- 출력: 5_App/demo/data/taxon_ko.js  →  window.__TAXON_KO__={"fam":{la:ko},"gen":{la:ko}};
+산출: 5_App/demo/data/taxon_ko.js
+입력: 5_App/demo/data/media_*.js (실제 등장하는 분류명),
+      1_Data/raw/nibr/ktsn_*.ndjson (NIBR 종 데이터)
 
-사용:  python 5_App/build_taxon_ko.py
+이 파일은 퀴즈 화면의 과·속 드롭다운과 검색에서 라틴명 옆에 한글 분류명(예: "Cerambycidae 하늘소과")을
+병기하기 위한 소형 룩업 자산을 만든다.
+
+처리 흐름:
+1. media_*.js 에서 실제 등장하는 과(family)·속(genus) 라틴명만 수집
+2. ktsn_*.ndjson (NIBR 마스터 데이터)에서 각 라틴명에 대응하는 한글명 찾기
+3. 같은 라틴명이 여러 한글명으로 나타나면 최빈 한글명 채택
+4. window.__TAXON_KO__ = {"fam": {라틴명: 한글명}, "gen": {라틴명: 한글명}} 형식으로 저장
+
+실행: 손으로 따로 실행 (run_pipeline.py 미포함)
+배포: build_dist.py 의 DATA_FILES 리스트에 있어 정적 배포본에 포함됨
 """
 import glob
 import json

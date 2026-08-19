@@ -3,27 +3,109 @@
 로그인 사용자의 질문을 Gemini(함수호출)로 처리하고, 도구는 `fg_*` 참조 테이블만 조회한다.
 원시 좌표·개인정보는 노출하지 않으며, 하루 사용 횟수를 제한한다.
 
-## 활성화 순서
+## 초기 구성 순서 (처음부터)
 
-1. **스키마** — `5_App/supabase/conversational_service.sql` 적용(마이그레이션 `conversational_service_reference`로 이미 반영), 이어서 `5_App/supabase/conversational_service_taxon.sql`(강·목·과·속 질의 — `fg_species.class_la/order_la/family_la/genus_la` + `fg_taxon_name`), 그리고 `5_App/supabase/conversational_service_taxon_ranks.sql`(강·목까지 CHECK 확대 + 한글명 퍼지매칭 `pg_trgm`), 마지막으로 `5_App/supabase/conversational_service_perf.sql`(전국 롤업 MV `fg_species_national` + 지역 경로 커버링 인덱스) 적용.
+### 1. 스키마 생성
 
-2. **데이터 적재** — `.env`에 `SUPABASE_DB_URL` 추가 후 실행:
-   - 값: Supabase Dashboard → Project Settings → Database → Connection string → URI.
-     **Direct connection 또는 Session pooler** URI 사용(포트 6543 Transaction pooler는 COPY 불가).
-   - `python 7_MCP/build_taxon_names.py`로 `7_MCP/data/taxon_names.json.gz`(강·목·과·속 전체 KTSN 한글명) 생성(커밋본 있으면 생략 가능).
-   - `python 5_App/supabase/load_reference.py` → `fg_species`·`fg_species_region`·`fg_region`·`fg_taxa`·`fg_taxon_name` 적재. `fg_species_region` 재적재 시 전국 롤업 MV 를 자동 refresh.
-   - 일부만 갱신할 땐 `--only`: 예) `python 5_App/supabase/load_reference.py --only fg_taxon_name,fg_species`(590k행 재적재 생략).
+Supabase SQL Editor에서 다음 순서로 실행:
 
-3. **Gemini 키** — 함수 비밀키 설정:
-   - `supabase secrets set GEMINI_API_KEY=...` (필수)
-   - 선택: `GEMINI_MODEL`(기본 `gemini-flash-lite-latest`), `CHAT_ABUSE_CAP`(기본 300)
-   - ⚠ 무료 tier 한도는 모델별 하루 요청수(RPD)로 매우 낮다: `gemini-flash-latest`(=gemini-3.6-flash)는 **20/일**(실측). 질문 1개당 2~4요청이라 기본값을 별도 할당량이 있는 `gemini-flash-lite-latest`로 둔다(함수호출 정상). 실사용 규모라면 Gemini 종량제 결제 권장.
-   - `SUPABASE_URL`·`SUPABASE_ANON_KEY`·`SUPABASE_DB_URL`은 Supabase가 자동 주입.
+```
+5_App/supabase/conversational_service.sql
+  ↓ (fg_species, fg_species_region, fg_region, fg_taxa, chat_usage 생성)
+5_App/supabase/conversational_service_taxon.sql
+  ↓ (fg_species 칼럼 확대, fg_taxon_name 생성)
+5_App/supabase/conversational_service_taxon_ranks.sql
+  ↓ (fg_taxon_name 제약 확대, pg_trgm 인덱스)
+5_App/supabase/conversational_service_perf.sql
+  ↓ (fg_species_national MV, 커버링 인덱스)
+```
 
-4. **배포** — `supabase functions deploy chat`.
+상세는 `5_App/supabase/README.md`의 "스키마 구성 파일" 표 참조.
 
-5. **프런트 노출** — `.env`에 `CHAT_ENABLED=1` 추가 → `python 5_App/build_dist.py --osm-only --out docs` 재빌드 → 커밋·푸시.
-   플래그가 off면 `chat.html`은 "곧 제공" 안내만 표시하고, 홈 진입점은 숨겨진다.
+### 2. 참조 데이터 적재
+
+`.env`에 `SUPABASE_DB_URL` 추가 후:
+
+```bash
+# 강·목·과·속 한글명 사전 생성(필요 시)
+python 7_MCP/build_taxon_names.py
+
+# 데이터 적재
+python 5_App/supabase/load_reference.py
+```
+
+이 스크립트가 `fg_species`, `fg_species_region`, `fg_region`, `fg_taxa`, `fg_taxon_name`을 적재하고, `fg_species_region` 재적재 시 자동으로 `fg_species_national` MV를 REFRESH합니다. 부분 재적재는 `--only fg_taxon_name,fg_species` 등으로 가능.
+
+### 3. Gemini 키 설정
+
+```bash
+supabase secrets set GEMINI_API_KEY=...
+```
+
+선택 사항:
+- `GEMINI_MODEL` — 기본 `gemini-flash-lite-latest`
+- `CHAT_ABUSE_CAP` — 기본 300 (자동화 남용 방지용, 사용자는 닿지 않는 값)
+
+주의: 무료 tier는 매우 제한적(`gemini-flash-latest`는 20/일). 실사용은 종량제 권장.
+
+### 4. Edge Function 배포
+
+```bash
+supabase functions deploy chat
+```
+
+### 5. 프런트 노출
+
+`.env`에 `CHAT_ENABLED=1` 추가 후:
+
+```bash
+python 5_App/build_dist.py --osm-only --out docs
+```
+
+커밋·푸시. 플래그가 off면 `chat.html`은 "곧 제공" 안내만 표시.
+
+## 변경 시 재적용
+
+### 스키마만 바뀐 경우
+
+테이블 칼럼·인덱스·함수 정의를 추가/수정했을 때:
+
+1. 해당 SQL 파일을 Supabase SQL Editor에서 재실행
+2. Edge Function은 재배포 불필요 (코드 변경 없음)
+3. 새로운 데이터가 필요한 경우만 `load_reference.py` 실행
+
+**예**: `conversational_service.sql`에 테이블 칼럼을 추가한 경우, 파일을 다시 실행하면 `ALTER TABLE`로 추가되고 기존 행은 유지됨. `load_reference.py`는 필수 아님.
+
+### 참조 데이터가 바뀐 경우
+
+MCP SQLite(`7_MCP/data/fg_mcp.sqlite`)가 갱신되었을 때:
+
+```bash
+python 5_App/supabase/load_reference.py
+```
+
+또는 특정 테이블만:
+
+```bash
+python 5_App/supabase/load_reference.py --only fg_species,fg_species_region
+```
+
+- `fg_species_region` 재적재 시 `fg_species_national` MV 자동 REFRESH
+- `fg_taxon_name`만 갱신하려면 `build_taxon_names.py` 선행 (별도 커밋본이 있으면 생략 가능)
+- Edge Function 재배포 불필요
+
+### 함수 코드만 바뀐 경우
+
+`index.ts` 로직을 수정했을 때:
+
+```bash
+supabase functions deploy chat
+```
+
+- 스키마·데이터 재적용 불필요 (도구 로직 변경만)
+- **단, 새로운 스키마 칼럼을 읽으려면 먼저 SQL 파일로 칼럼 추가 필요**
+
+**예**: `index.ts`에서 `fg_species`의 새 칼럼을 읽도록 수정했으면, 먼저 해당 SQL 파일(`conversational_service_taxon.sql` 등)에 칼럼을 추가한 뒤 함수를 배포해야 함.
 
 ## 요청/응답
 

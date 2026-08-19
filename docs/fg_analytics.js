@@ -20,7 +20,9 @@
   function gtag() { dataLayer.push(arguments); }
   window.gtag = gtag;
   gtag('js', new Date());
-  gtag('config', id, { anonymize_ip: true });          // IP 익명화(개인정보 최소화)
+  // anonymize_ip 는 넣지 않는다. GA4 는 IP 를 저장하지 않아 기본으로 익명화되고, 이 이름은
+  // 인식되지 않는 옵션이라 모든 이벤트에 ep.anonymize_ip=true 로 실려 나가기만 한다.
+  gtag('config', id);
   window.fgTrack = function (name, params) {
     try { gtag('event', name, params || {}); } catch (e) {}
   };

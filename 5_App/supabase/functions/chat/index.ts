@@ -2,6 +2,21 @@
 // 로그인 사용자의 질문을 Gemini(함수호출)로 처리하고, 도구는 fg_* 참조 테이블(DB 직결)만 조회한다.
 // 배포: supabase functions deploy chat   ·   비밀키: supabase secrets set GEMINI_API_KEY=...
 // 기본 주입 비밀(SUPABASE_URL/ANON_KEY/DB_URL)은 Supabase가 제공. 원시 좌표·개인정보는 노출하지 않는다.
+//
+// 요청 → 응답 처리 흐름:
+// (1) 인증: Bearer 토큰을 Supabase에서 검증. 로그인하지 않은 요청은 거절.
+// (2) 요청 파싱: 사용자 메시지 배열 + 대화 이력(최대 12개).
+// (3) Gemini 호출: 시스템 프롬프트 + 도구 정의 9개 + 메시지 내용을 모델에 전달.
+// (4) 도구 선택 루프 (최대 4회): 모델이 필요한 도구를 선택 → 로컬 SQL 조회 (fg_* 참조 테이블에서만)
+//     → 결과를 모델에 돌려줌 → 모델이 답변 생성 또는 추가 도구 호출.
+// (5) 응답 반환: 생성된 답변 텍스트 + 사용된 도구 목록 + 지도 딥링크 힌트(해당하면).
+//
+// 파일 구조:
+// - 상수·정규화 함수 (26-51줄): 발견 상태 기준, 분류군 코드 매핑, 지역 필드 선택
+// - 도구 함수 9개 (55-374줄): 각 함수는 특정 질문에 대한 DB 조회 담당
+// - TOOLS 맵 & 도구 선언 (376-420줄): 도구 이름과 Gemini 함수 서명
+// - Gemini 호출 함수 (440-466줄): 모델 API 요청 및 타임아웃 처리
+// - HTTP 핸들러 (468-560줄): 요청 검증, 인증, 사용량 기록, 루프 조율
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import postgres from "https://deno.land/x/postgresjs@v3.4.5/mod.js";
 
@@ -52,6 +67,9 @@ const resolveTaxon = (v: unknown): string | null => {
 
 // ─────────────────────────── 도구(fg_* 조회) ───────────────────────────
 
+// 도구 1: findRegion — 사용자가 입력한 지역 이름으로 행정구역 코드를 찾는다.
+// 반환: 시도/시군구 코드(2자리 또는 5자리), 명칭, 행정 레벨.
+// 주로 다른 도구에서 region 인자로 쓸 코드를 미리 확인할 때 호출.
 async function findRegion(a: Record<string, unknown>) {
   const name = String(a.name ?? "").trim();
   if (!name) return { error: "지역 이름이 필요합니다." };
@@ -62,6 +80,9 @@ async function findRegion(a: Record<string, unknown>) {
   return { regions: rows, note: rows.length ? "code 를 다른 도구의 region 인자로 사용하세요." : "일치하는 지역이 없습니다." };
 }
 
+// 도구 2: regionDiscoverySummary — 특정 지역에서 발견/휴면/미발견 종 개수를 요약으로 반환.
+// 반환: 지역 내 총 종 수, 발견(최근 10년 기록)·휴면(10년 이상 미보고)·미발견(기록 0) 각 개수.
+// 지역 현황을 빠르게 파악할 때 사용(목록이 아닌 규모 파악).
 async function regionDiscoverySummary(a: Record<string, unknown>) {
   const code = String(a.region ?? "").trim();
   if (code.length !== 2 && code.length !== 5) return { error: "region 은 시도(2자리) 또는 시군구(5자리) 코드여야 합니다. find_region 으로 코드를 찾으세요." };
@@ -82,6 +103,9 @@ async function regionDiscoverySummary(a: Record<string, unknown>) {
   };
 }
 
+// 도구 3: undiscoveredPrioritySpecies — 지정한 지역에서 아직 발견되지 않은 종 중 관심도가 높은 종 목록.
+// 반환: 종 코드(ktsn), 국명, 학명, 멸종위기등급, 적색목록 범주, 관심도 점수.
+// 발견공백 조사 우선순위를 정할 때 사용(실제 조사는 서식·계절 정보가 별도로 필요).
 async function undiscoveredPrioritySpecies(a: Record<string, unknown>) {
   const code = String(a.region ?? "").trim();
   if (code.length !== 2 && code.length !== 5) return { error: "region 은 시도(2자리) 또는 시군구(5자리) 코드여야 합니다. find_region 으로 코드를 찾으세요." };
@@ -107,6 +131,9 @@ async function undiscoveredPrioritySpecies(a: Record<string, unknown>) {
   };
 }
 
+// 도구 4: searchSpecies — 특정 국명 또는 학명을 검색해 종을 찾고 종 코드(ktsn) 반환.
+// 반환: 종 코드, 국명, 학명, 분류군, 멸종위기등급, 적색목록 범주, 관심도.
+// 종 이름을 알고 있을 때 호출. speciesDetail 과 함께 쓰여서 종의 전국 상세 정보를 조회.
 async function searchSpecies(a: Record<string, unknown>) {
   const q = String(a.query ?? "").trim().toLowerCase();
   if (!q) return { error: "검색어가 필요합니다." };
@@ -123,6 +150,9 @@ async function searchSpecies(a: Record<string, unknown>) {
   return { count: rows.length, species: rows };
 }
 
+// 도구 5: speciesDetail — 종의 전국 발견 상태(발견/휴면/미발견) 및 기록 지역 수.
+// 반환: 종 기본 정보 + 발견 상태 판정, 최근 기록 연도, 기록된 지역 수, 관측 누적.
+// 개별 종의 발견 현황을 파악할 때 사용.
 async function speciesDetail(a: Record<string, unknown>) {
   const ktsn = String(a.ktsn ?? "").trim();
   const sp = (await sql`
@@ -136,12 +166,17 @@ async function speciesDetail(a: Record<string, unknown>) {
     from fg_species_region where ktsn = ${ktsn}`)[0];
   const my = agg.maxyear as number | null;
   const state = !my ? "undiscovered" : my >= CUTOFF ? "found" : "dormant";
+  // recorded_regions/found_regions/total_observations 는 모두 fg_species_region 에서의 집계(종별 지역 수, 누적).
+  // 개별 관측점 좌표(원시 데이터)는 절대 반환되지 않음.
   return {
     ...sp, reference_year: CUTOFF + 10, national_discovery_state: state, national_max_year: my,
     recorded_regions: agg.n_regions, found_regions: agg.found_regions, total_observations: Number(agg.obs),
   };
 }
 
+// 도구 6: listProtectedSpecies — 멸종위기종 또는 국가 적색목록 종 목록.
+// 반환: 종 기본 정보(위 도구들과 동일 컬럼). region·state 지정 시 그 지역의 발견 상태로 필터.
+// 보호 필요 종의 현황을 전국 또는 지역별로 조회할 때 사용.
 async function listProtectedSpecies(a: Record<string, unknown>) {
   const grade = normGrade(a.endangered_grade);
   const rl = normRedlist(a.redlist_category);
@@ -184,6 +219,9 @@ async function listProtectedSpecies(a: Record<string, unknown>) {
 const TAXON_RANK_COL: Record<string, string> = { class: "class_la", order: "order_la", family: "family_la", genus: "genus_la" };
 const TAXON_RANK_KOR: Record<string, string> = { class: "강", order: "목", family: "과", genus: "속" };
 
+// 도구 7: listSpeciesByTaxon — 특정 강(class)·목(order)·과(family)·속(genus)에 속한 종 목록과 발견 상태.
+// 한글 분류명(예: 사슴벌레과, 딱정벌레목) 또는 라틴 학명 모두 지원. 모호하면 suggestions 후보 반환.
+// 반환: 종 목록 + 요청 범위 내 전체 종 수(count) + 각 상태별 종 개수 + 근사 판정 여부.
 async function listSpeciesByTaxon(a: Record<string, unknown>) {
   const rank = String(a.rank ?? "").trim().toLowerCase();
   const col = TAXON_RANK_COL[rank];
@@ -296,6 +334,8 @@ async function listSpeciesByTaxon(a: Record<string, unknown>) {
   };
 }
 
+// 도구 8: taxaSummary — 9개 분류군(곤충류·무척추동물·식물·어류·선태류·조류·포유류·파충류·양서류) 각각의
+// 총 종 수, 전국 기록된 종, 발견/휴면 종 수를 요약. 도구 인자 없음(전국 고정).
 async function taxaSummary() {
   const rows = await sql`
     select t.taxon_group, t.taxon_group_kor, t.n_species,
@@ -318,7 +358,9 @@ async function taxaSummary() {
   };
 }
 
-// 과·속 단위 발견공백 순위: 어느 분류군이 미발견·미보고가 많은가(전국/지역·분류군 한정).
+// 도구 9: taxonGapRanking — 과(family) 또는 속(genus) 단위에서 발견공백(최근 10년 미발견)이 많은 순위.
+// taxon_group·region 으로 범위 한정 가능. only_zero_found=true 면 기록 0인 분류군만(완전 미발견).
+// 반환: 분류군 라틴명, 한글명(해당하면), 전체 종 수, 발견/휴면/미발견 개수, 발견공백 비율.
 async function taxonGapRanking(a: Record<string, unknown>) {
   const rank = String(a.rank ?? "family").trim().toLowerCase();
   const col = TAXON_RANK_COL[rank];
@@ -373,6 +415,8 @@ async function taxonGapRanking(a: Record<string, unknown>) {
   };
 }
 
+// 도구 함수들이 반환하는 모든 데이터는 종·지역 마스터 데이터와 그들의 집계(count, max year, sum obs)만이다.
+// 개별 관측점 좌표, 위치 정보, 사용자 개인정보는 절대 포함되지 않음.
 const TOOLS: Record<string, (a: Record<string, unknown>) => Promise<unknown>> = {
   find_region: findRegion,
   region_discovery_summary: regionDiscoverySummary,
@@ -484,7 +528,8 @@ Deno.serve(async (req) => {
   const history = (body.messages ?? []).filter((m) => m && typeof m.content === "string" && m.content.trim());
   if (!history.length || history[history.length - 1].role !== "user") return json({ error: "메시지가 필요합니다." }, 400);
 
-  // 사용량 기록: 원자적 증가. 평상시 쓰기를 막지 않고, 자동화된 남용만 걸러내는 상한만 둔다.
+  // 사용량 기록: 원자적 증가. user.id 는 오직 chat_usage 에만 기록되고, 도구 호출이나 모델 응답에는 전달되지 않는다.
+  // 평상시 쓰기를 막지 않고, 자동화된 남용만 걸러내는 상한만 둔다.
   try {
     const cap = await sql`
       insert into chat_usage (user_id, day, count) values (${user.id}, current_date, 1)

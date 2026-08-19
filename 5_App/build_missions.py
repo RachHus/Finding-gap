@@ -1,12 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-유망 공백 미션보드 자산 — Feature B P3.
-MCP sqlite(단일 소스)에서 '시도별 고관심 미발견 종'을 뽑아 window.__MISSIONS__ 로 export.
-미션 = 그 시도에서 최근 10년 미발견이지만 전국적으로는 기록이 있고 관심도 높은 종
-       (= 발견공백 × 관심도를 지역 미션으로 표면화; discovery_priorities 의 정적 축약).
+"""유망 공백 미션보드 자산 생성
 
-출력: 5_App/demo/data/missions.js  (window.__MISSIONS__=[{region,region_name,ktsn,name,sci,taxon,grade,interest}])
-사용: python 5_App/build_missions.py
+산출: 5_App/demo/data/missions.js
+입력: 7_MCP/data/fg_mcp.sqlite
+
+이 파일은 시민과학 기여 화면(Feature B)의 미션보드를 만든다. 각 시도별로
+"그 시도에서는 미발견이지만 전국 어딘가에는 있고 보전 가치(멸종 등급·관심도)가 높은 종"을
+추출해서 사용자에게 찾아달라고 제안한다. 즉, 발견공백과 종의 중요도를 결합해
+지역별로 의미 있는 미션으로 만드는 것이다.
+
+선정 규칙:
+- 시도별 상위 2종만 노출 (PER_SIDO = 2)
+- 관심도 0.55 이상만 포함 (주목할 만한 종만)
+- 보전 우선순위: 멸종위기 I > II > 일반, 같은 등급 내에서 관심도 높은 순
+- 최종 정렬: 관심도 높은 종부터 노출 (지역 상관없이 전국 기준)
+
+실행: 손으로 따로 실행 (run_pipeline.py 미포함)
+배포: build_dist.py 의 DATA_FILES 리스트에 있어 정적 배포본에 포함됨
 """
 import sqlite3, json
 from pathlib import Path

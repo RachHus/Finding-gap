@@ -5,23 +5,32 @@ Finding gap 데이터 파이프라인 오케스트레이터 — 재빌드 체인
 목적: 6개월 갱신·부분 재빌드를 한 커맨드로. 각 단계는 이름으로 선택 실행 가능(--only/--from/--skip).
 R 실행의 Windows 함정(공백경로·인용)은 subprocess 리스트 + `-e source()` 로 회피한다.
 
-현재 구현(환경적합 후보 하위체인 — 검증 완료):
+이 파이프라인의 범위: 환경·모형 자산 체인(관측 ETL은 스크립트 밖 — DATA_PIPELINE.md 3-A 참조).
+각 단계:
   sentinel  : NDVI/NDWI zip → 평문 .tif 로컬 캐시 추출(**.ovr 제외** — 손상 오버뷰가 heap 크래시 유발)
-  env_layers: 3_ETL/R/env_layers.R  → species_env_stats·env_national·env_grid
-  ndwi_sp   : python/build_ndwi_species.py → ndwi_species.csv(어류+저서무척추 = NDWI 적용 종)
+  env_layers: 3_ETL/R/env_layers.R  → species_env_stats·env_national·env_grid·PNG
+  species_cells: 3_ETL/R/species_cells.R → species_cells.csv (종별 1km 점유, cid=env_grid 일치)
+  cell_sigungu: python/build_cell_sigungu.py → cell_sigungu.csv (셀→시군구, 비율표 분모)
+  ndwi_sp   : python/build_ndwi_species.py → ndwi_species.csv (어류+저서무척추)
+  cell_water: python/build_cell_water.py → cell_water.csv (수계 격자 마스크)
   env_data  : 5_App/build_env_data.py → species_env.js·env_meta.js
-  dist      : 5_App/build_dist.py --osm-only --out docs → docs/ 정적 배포본(vworld 키 미주입)
+  gap_data  : 5_App/build_gap_data.py → env_grid.js·cells_<T>.js·gap_meta.js
+  env_grid_model: 3_ETL/R/env_grid_model.R → env_grid_model.csv (모형용 격자 + bio변수)
+  season    : python/build_season.py → species_season.csv (조사노력 보정)
+  model     : 3_ETL/R/model_species.R → model_store/ (종별 maxnet 적합)
+  model_data: 5_App/build_model_data.py → env_model.js·model_<T>.js·season_<T>.js
+  dist      : 5_App/build_dist.py --osm-only --out docs → docs/ 정적 배포본
 
-전체 6개월 갱신 체인(수동 스텝은 아래 주석 참조 — DATA_PIPELINE.md):
-  etl_observation/etl_national_park/etl_gbif → build_points_db → build_sigungu_agg
-  → (R)bioclim_points·env_layers → build_demo_data·build_env_data → build_dist
+전체 6개월 갱신 체인(관측 ETL은 DATA_PIPELINE.md 3-A 참조):
+  관측 ETL(etl_observation·etl_national_park·etl_gbif·build_points_db·build_sigungu_agg)
+  → build_demo_data → 이 파이프라인(위 12단계) → build_dist
 
 사용:
   python 3_ETL/run_pipeline.py --list
-  python 3_ETL/run_pipeline.py                     # 기본 세트(sentinel..env_data) 순서 실행
+  python 3_ETL/run_pipeline.py                     # 기본 12단계 모두 실행(sentinel ~ model_data)
   python 3_ETL/run_pipeline.py --only env_layers
   python 3_ETL/run_pipeline.py --from ndwi_sp
-  python 3_ETL/run_pipeline.py --only dist         # 배포본만
+  python 3_ETL/run_pipeline.py --only dist         # 배포본만(기본 목록 밖)
 """
 import argparse, os, subprocess, sys, time, zipfile
 from pathlib import Path
