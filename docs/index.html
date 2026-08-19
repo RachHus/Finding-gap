@@ -4271,6 +4271,8 @@ if(configured){
      채운다 — 자체 서식을 발명하지 않고 학술 인프라 표준에 기댄다. -->
 <script type="module">
 import { configured, onAuth, submitTaxonReference } from './fg_supabase.js';
+import * as pdfjsLib from 'https://esm.sh/pdfjs-dist@4/build/pdf.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://esm.sh/pdfjs-dist@4/build/pdf.worker.min.mjs';
 const SPIDX2 = window.__SPIDX__ || [];
 const refOverlay = document.getElementById('refOverlay');
 const refBody = document.getElementById('refBody');
@@ -4310,6 +4312,9 @@ function renderRef(){
   refBody.innerHTML =
     '<div class="rpt-f" id="refSpWrap"></div>'+
     '<div class="rpt-f"><label>변경 후 학명 <span class="req">*</span></label><input type="text" id="refToName" placeholder="예: Lycodon rufozonatus"></div>'+
+    '<div class="rpt-f"><label>논문 PDF(있으면 DOI 자동 인식)</label>'+
+      '<input type="file" id="refPdf" accept="application/pdf">'+
+      '<div class="rpt-hint" id="refPdfHint" style="margin-top:6px"></div></div>'+
     '<div class="rpt-f"><label>DOI(있으면 자동 조회)</label>'+
       '<div style="display:flex;gap:6px"><input type="text" id="refDoi" placeholder="예: 10.1670/17-045" style="flex:1">'+
       '<button class="btn sm" id="refDoiLookup" type="button">조회</button></div>'+
@@ -4324,6 +4329,7 @@ function renderRef(){
     '<div class="rpt-msg" id="refMsg"></div>';
   renderRefSp();
   document.getElementById('refDoiLookup').onclick=doiLookup;
+  document.getElementById('refPdf').addEventListener('change', onPdfChange);
   document.getElementById('refSubmit').onclick=doRefSubmit;
   ['refToName','refPaperTitle'].forEach(id=>document.getElementById(id).addEventListener('input',updateRefSubmit));
   updateRefSubmit();
@@ -4360,6 +4366,41 @@ function renderRefSp(){
 }
 
 // Crossref works API — DOI → 제목/저자/연도/저널. 무료·키 불필요·CORS 허용(실측 확인).
+// PDF에서 텍스트만 뽑아 DOI 패턴을 찾는다(첫 2쪽 — DOI는 거의 항상 첫 쪽이나 참고문헌 머리에 있다).
+// "무엇이 무엇으로 바뀌었다"는 판단 자체는 사람이 직접 입력하게 남겨둔다 — 서지정보만 기계가 돕는다.
+const DOI_RE = /10\.\d{4,9}\/[-._;()\/:A-Z0-9]+/i;
+async function extractDoiFromPdf(file){
+  const buf = await file.arrayBuffer();
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+  let text = '';
+  const pages = Math.min(2, doc.numPages);
+  for(let i=1;i<=pages;i++){
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it=>it.str).join(' ') + '\n';
+  }
+  const m = text.match(DOI_RE);
+  return m ? m[0].replace(/[.,;]+$/,'') : null;  // 문장부호가 DOI 끝에 붙어 오는 경우 정리
+}
+async function onPdfChange(e){
+  const f=e.target.files[0];
+  const hint=document.getElementById('refPdfHint');
+  if(!f){ hint.textContent=''; return; }
+  hint.textContent='PDF에서 DOI 찾는 중…';
+  try{
+    const doi = await extractDoiFromPdf(f);
+    if(doi){
+      document.getElementById('refDoi').value = doi;
+      hint.textContent = `DOI를 찾았습니다(${doi}) — 서지정보를 자동으로 채웁니다.`;
+      await doiLookup();
+    } else {
+      hint.textContent = 'PDF에서 DOI를 찾지 못했습니다. 아래 DOI 칸에 직접 입력하거나, 제목·저자 등을 손으로 채워 주세요.';
+    }
+  }catch(err){
+    console.warn('PDF DOI 추출 실패', err);
+    hint.textContent = 'PDF를 읽지 못했습니다. DOI를 알고 있다면 아래 칸에 직접 입력하세요.';
+  }
+}
 async function doiLookup(){
   const doi=document.getElementById('refDoi').value.trim().replace(/^https?:\/\/doi\.org\//i,'');
   const hint=document.getElementById('refDoiHint');
