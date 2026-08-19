@@ -1098,6 +1098,9 @@
   .rpt-photo-prev button{border:1px solid #d7ded9;background:#fff;border-radius:7px;padding:6px 10px;font-size:12px;cursor:pointer}
   .rpt-url-toggle{display:inline-block;margin-top:6px;font-size:12px;color:var(--faint);cursor:pointer;text-decoration:underline}
   .report-lk{cursor:pointer}
+  .taxatree{width:100%;max-width:320px;height:auto;display:block;margin:0 auto}
+  .ttleaf,.ttnode{cursor:pointer}
+  .ttleaf:hover,.ttnode:hover{stroke:var(--ink);stroke-width:1.5}
   @media(max-width:880px){ .rpt-overlay{padding:0;align-items:flex-end} .rpt-modal{max-width:none;max-height:94vh;border-radius:14px 14px 0 0} }
 
   /* 근거의 세기 설명 — 읽는 글이라 본문보다 넓게 두고 줄간을 늘린다 */
@@ -1174,6 +1177,7 @@
 <script src="demo/data/env_meta.js"></script>
 <script src="demo/data/missions.js" onerror="window.__MISSIONS__=window.__MISSIONS__||[]"></script>
 <script src="demo/data/region_gaps.js" onerror="window.__REGGAP__=window.__REGGAP__||null"></script>
+<script src="demo/data/taxa_tree.js" onerror="window.__TAXATREE__=window.__TAXATREE__||null"></script>
 <script>
 /* ── 토큰·상수 ── */
 const RL_FILL={EX:'#000',EW:'#3D2645',RE:'#6B4E71',CR:'#D81E05',EN:'#FC7F3F',VU:'#F2DC00',NT:'#C3D838',LC:'#5CB85C',DD:'#CFCFC4',NENA:'#E6E6DE'};
@@ -3039,8 +3043,15 @@ function renderDash(group){
       <span><i class="g out"></i>미발견</span>
     </div>
     <div class="donuts">${donutHTML}</div>
+  </div>
+
+  <div class="dashpanel">
+    <h3>분류 계통수 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이 분류군의 목→과 분류 체계를 나무로 그립니다. 잎(과)의 색이 붉을수록 그 과에 속한 종 중 조사자료에 아직 기록이 없는 비율(발견공백)이 높다는 뜻입니다. 잎을 누르면 상세 수치가 뜹니다.">?</button></h3>
+    <div id="taxaTreeHost"></div>
+    <div id="taxaTreeInfo" class="muted2" style="margin-top:8px;font-size:12.5px"></div>
   </div>`;
   document.getElementById('dash').innerHTML=html;
+  if(window.renderTaxaTree) window.renderTaxaTree(group, 'taxaTreeHost', 'taxaTreeInfo');
 }
 
 /* ── 렌더: 비-MM 분류군 요약 + 지도 서비스 안내 ── */
@@ -4507,6 +4518,76 @@ if(configured){
   refreshTaxonRefCardBtn();
   onAuth(u=>{ refUser=u; refreshTaxonRefCardBtn(); if(!refOverlay.hidden) renderRef(); });
 }
+</script>
+
+<!-- 분류군별 계통수(방사형 cladogram) — 목→과 분류 체계를 발견률로 색칠해 보여준다.
+     부채꼴(도넛) 비례 계산은 손으로 짜도 되는 산수지만, 가지가 안 겹치게 뻗는 진짜 나무
+     레이아웃은 별개 문제라 이번만 예외적으로 d3-hierarchy(레이아웃)·d3-shape(휘어진 가지 path)를
+     CDN으로 가져다 쓴다(exifr·pdfjs-dist와 같은 "직접 짜기엔 아까운 문제" 기준). 실제 SVG 조립은
+     기존 donutSVG처럼 손으로 조립 — 새 렌더러 자체를 통째로 들여오지 않는다. -->
+<script type="module">
+import { hierarchy, cluster } from 'https://esm.sh/d3-hierarchy@3';
+import { linkRadial } from 'https://esm.sh/d3-shape@3';
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// 발견 상태 배지와 같은 색(index.html 다른 곳과 통일) — 미발견 비율로 두 색을 선형 보간.
+const FOUND_RGB=[0x01,0x55,0x43], GAP_RGB=[0xb5,0x48,0x2f];
+function gapColor(pctNone){
+  const t=Math.max(0,Math.min(1,pctNone));
+  const rgb=FOUND_RGB.map((c,i)=>Math.round(c+(GAP_RGB[i]-c)*t));
+  return `rgb(${rgb.join(',')})`;
+}
+// linkRadial() 의 각도 원점(위쪽 0시 방향)과 맞춘 극좌표→직교좌표 변환.
+function pointRadial(angle,radius){
+  const a=angle-Math.PI/2;
+  return [radius*Math.cos(a), radius*Math.sin(a)];
+}
+function toChildren(node){                                 // {n,found,dormant,none,orders/families:{}} → d3.hierarchy 입력
+  const kids=node.orders||node.families;
+  if(!kids) return {n:node.n,found:node.found,dormant:node.dormant,none:node.none};
+  return {n:node.n, found:node.found, dormant:node.dormant, none:node.none,
+    children: Object.entries(kids).map(([name,v])=>({name, ...toChildren(v)}))};
+}
+
+const R=130;                                                // 잎(과) 반지름
+function renderTaxaTree(group, hostId, infoId){
+  const host=document.getElementById(hostId); if(!host) return;
+  const info=document.getElementById(infoId);
+  const g=((window.__TAXATREE__||{}).tree||{})[group];
+  if(!g || !Object.keys(g.orders||{}).length){ host.innerHTML='<div class="muted2">계통수 자료가 아직 없습니다.</div>'; return; }
+
+  const root=hierarchy({name:g.kor, ...toChildren(g)});
+  cluster().size([2*Math.PI, R])(root);
+  const linkGen=linkRadial().angle(d=>d.x).radius(d=>d.y);
+
+  const links=root.links().map(l=>`<path class="ttlink" d="${linkGen(l)}" fill="none" stroke="#d8ddd6" stroke-width="1.2"/>`).join('');
+  const nodes=root.descendants().map(n=>{
+    const [x,y]=pointRadial(n.x,n.y);
+    if(n.depth===0) return '';                              // 중심(분류군) 자체는 점을 안 찍는다 — 가지 시작점일 뿐
+    const total=n.data.n||0, pctNone=total?n.data.none/total:0;
+    const isLeaf=!n.children;
+    const r=n.depth===1?3.2:2.4;
+    const fill=n.depth===1?'#8a9a90':gapColor(pctNone);
+    const cls=isLeaf?'ttleaf':'ttnode';
+    const title=`${esc(n.data.name)} · ${nf2(total)}종 · 발견 ${nf2(n.data.found)}·휴면 ${nf2(n.data.dormant)}·미발견 ${nf2(n.data.none)}`;
+    return `<circle class="${cls}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r}" fill="${fill}" `+
+      `data-name="${esc(n.data.name)}" data-total="${total}" data-found="${n.data.found}" data-dormant="${n.data.dormant}" data-none="${n.data.none}" `+
+      `data-depth="${n.depth}"><title>${title}</title></circle>`;
+  }).join('');
+
+  host.innerHTML=`<svg viewBox="-${R+20} -${R+20} ${2*(R+20)} ${2*(R+20)}" class="taxatree" role="img" aria-label="${esc(g.kor)} 목→과 계통수">${links}${nodes}</svg>`;
+  if(info) info.textContent='잎(과)에 마우스를 올리거나 눌러 보세요 — 색이 붉을수록 그 과의 발견공백 비율이 높습니다.';
+  host.querySelectorAll('.ttleaf,.ttnode').forEach(el=>el.addEventListener('click',()=>{
+    if(!info) return;
+    const d=el.dataset, rank=d.depth==='1'?'목':'과';
+    info.innerHTML=`<b>${esc(d.name)}</b>(${rank}) — 총 ${nf2(+d.total)}종 · `+
+      `<span style="color:#015543">발견 ${nf2(+d.found)}</span> · <span style="color:#9a7b2f">휴면 ${nf2(+d.dormant)}</span> · `+
+      `<span style="color:#b5482f">미발견 ${nf2(+d.none)}</span>`;
+  }));
+}
+function nf2(n){ return (n||0).toLocaleString('ko-KR'); }
+window.renderTaxaTree=renderTaxaTree;
 </script>
 
 <!-- 대화형 도우미 — 질문을 Supabase Edge Function(chat)으로 보내고 답을 받는다.
