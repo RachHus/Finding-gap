@@ -6,6 +6,19 @@ Finding gap의 릴리스 단위 변경 이력입니다.
 
 ## [Unreleased]
 
+### 기능
+- **발견공백 사유 태깅(이명·지역절멸) — 종 상세 배지 반영.** "미발견"이라는 판정 하나에 성격이 다른 현상이 섞여 있다 — 진짜 조사부족일 수도 있지만, KTSN 학명이 GBIF Backbone Taxonomy 기준 이미 이명(synonym) 처리된 분류학적 잔재이거나, 국가적색목록상 이미 국내에서 지역절멸(RE) 판정된 종이라 애초에 찾을 대상이 아닐 수도 있다. 종 상세 화면에 "이명 가능성"/"국내 지역절멸 기준종" 배지를 추가해 이를 구분해서 보여준다(발견공백 집계 자체를 바꾸지는 않음 — 정보성 표시). 전종 체크 결과 **이명 가능성 2,605종·지역절멸 12종**.
+  - 판정 근거는 자체 라벨이 아니라 **Darwin Core `taxonomicStatus` 어휘**(ACCEPTED/SYNONYM/HOMOTYPIC_SYNONYM/…)를 그대로 저장 — GBIF·Catalogue of Life 등 해외 생물종 DB와 같은 언어를 쓴다.
+  - 신규 Supabase 테이블 `fg_taxon_status_check`(append-only, `5_App/supabase/taxon_status_check.sql`) — GBIF/COL이 이름을 지우지 않고 이력을 쌓듯, 판정을 UPDATE하지 않고 매 체크마다 새 행을 쌓는다. "현재 상태"는 `(ktsn, source)`별 최신 `checked_at` 행으로 조회 — 나중에 GBIF 백본이 갱신돼 판정이 바뀌어도 예전 판정이 지워지지 않고 이력으로 남는다.
+  - `7_MCP/check_gbif_synonyms.py --push`로 전종(38,622건) 체크 + Supabase 적재 완료(분류군 단위 `--taxon-group` 실행·지역절멸 `--redlist` 포함).
+  - `7_MCP/build_gap_reason_snapshot.py`(Supabase → `gap_reason.json`) → `5_App/build_gap_reason_asset.py`가 분류군별 지연 로드 자산(`gapreason_<T>.js`, 기존 `model_<T>.js`와 동일 관례)으로 쪼개 프런트에 전달 — 종 상세 배지는 이미 반영·배포 가능한 상태.
+  - `build_mcp_data.py`의 `species.gap_reason`/`gap_reason_note` 적재(MCP 도구 `get_species` 등에 노출하는 부분)는 **아직 미반영** — `1_Data/processed` 전체 파이프라인이 있는 환경(성수형)에서 다음 정기 빌드 때 재실행 필요. 그전까지 챗봇·MCP 응답에는 사유가 안 뜨고, 종 상세 화면 배지만 뜬다.
+  - **이번 범위에서 하지 않음**: 지역/분류군 발견공백 총계(대시보드·`region_gaps.js`) 재계산, 조사자 편향 정량화(별도 진행 중인 P0), 오동정/오기록 플래그, 오탐 수동 정정 UI.
+
+### 배포 전 확인
+- `5_App/supabase/taxon_status_check.sql` Supabase 적용 · `check_gbif_synonyms.py --push`/`--redlist --push` 전종 실행 · `build_gap_reason_snapshot.py` · `build_gap_reason_asset.py` **모두 완료됨**(2026-08-18). `demo/data/gapreason_*.js`는 이미 커밋 대상에 포함.
+- **잔여**: `build_mcp_data.py` 재실행(`1_Data/processed` 필요 — 성수형 환경) → `fg_mcp.sqlite.gz` 재커밋해야 MCP/챗봇에도 사유가 노출됨.
+
 ## [0.10.0] - 2026-08-17
 
 ### 개편

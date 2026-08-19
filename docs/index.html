@@ -1096,6 +1096,14 @@ function badges(g,r){
   if(rc) h+=`<span class="badge" style="background:${RL_FILL[rc]};color:${RL_FG[rc]}">${r==='NE'||r==='NA'?'NE/NA':r}</span>`;
   return h;
 }
+/* 발견공백 사유 배지 — '미발견'이 조사부족이 아니라 분류학적 이명 잔재·지역절멸일 수 있음을 알린다.
+   gapreason_<T>.js(분류군별 지연 로드, loadGapReason)가 아직 안 왔으면 빈 문자열(로드 후 다시 채움). */
+function gapReasonBadge(sp){
+  const g=((window.__GAPREASON__||{})[sp.t]||{})[sp.k]; if(!g) return '';
+  if(g.r==='synonym') return ` <span class="badge" style="background:#f5eede;color:#9a7b2f" title="GBIF 국제 분류 데이터베이스 기준 이명(synonym) — 현재 인정 학명은 ${esc(g.n||'')}. '미발견'이 조사부족이 아니라 학명이 바뀐 것일 수 있습니다.">이명 가능성</span>`;
+  if(g.r==='regionally_extinct') return ` <span class="badge" style="background:#eceef0;color:#6b7280" title="국가적색목록 지역절멸(RE) — 국내에서 이미 절멸로 평가된 종입니다. '미발견'이 조사부족이 아니라 이미 사라졌기 때문일 수 있습니다.">국내 지역절멸 기준종</span>`;
+  return '';
+}
 /* 분리 배지(테이블 전용): 멸종위기종 / 국가적색목록 별도 컬럼 */
 function egBadge(g){
   if(!g) return '<span class="muted">—</span>';
@@ -1240,6 +1248,15 @@ function loadRep(t, cb){                                  // 분류군별 대표
   _repCbs[t]=[cb];
   const done=()=>{ const cbs=_repCbs[t]; _repCbs[t]=null; cbs.forEach(f=>f&&f()); };
   _loadScript(`demo/data/rep_${_txfile(t)}.js`, done);
+}
+const _gapReasonCbs={};
+function gapReasonReady(t){ return !t || !!((window.__GAPREASON__||{})[t]); }
+function loadGapReason(t, cb){                            // 분류군별 발견공백 사유(이명·지역절멸) 배지
+  if(gapReasonReady(t)){ cb&&cb(); return; }
+  if(_gapReasonCbs[t]){ _gapReasonCbs[t].push(cb); return; }
+  _gapReasonCbs[t]=[cb];
+  const done=()=>{ const cbs=_gapReasonCbs[t]; _gapReasonCbs[t]=null; cbs.forEach(f=>f&&f()); };
+  _loadScript(`demo/data/gapreason_${_txfile(t)}.js`, done);
 }
 // rep_<T>.js 는 자리를 아끼려고 접두어를 떼고 촬영자·라이선스를 표 색인으로 담았다 — 여기서 되돌린다.
 const REP_PREFIX='https://species.nibr.go.kr/gwsvc/digital/api/v1/minio/view?filePath=';
@@ -2274,7 +2291,7 @@ function renderSpecies(sp){
       <div style="min-width:0"><h3>${sp.n||sp.s}</h3><div class="sci">${sp.s}</div></div>
       <button class="watchbtn" data-k="${sp.k}" style="margin-left:auto" hidden>☆ 관심 종</button>
     </div>
-    <div style="margin-top:8px">${badges(sp.g,sp.r)||'<span class="muted">일반종</span>'} <span class="badge" style="background:#eef3f1;color:var(--accent)">${TAXON_KOR[sp.t]||sp.t}</span></div>
+    <div style="margin-top:8px">${badges(sp.g,sp.r)||'<span class="muted">일반종</span>'} <span class="badge" style="background:#eef3f1;color:var(--accent)">${TAXON_KOR[sp.t]||sp.t}</span><span id="gapReasonBadge">${gapReasonBadge(sp)}</span></div>
     <div style="margin-top:8px;display:flex;align-items:center;gap:8px" title="같은 분류군·희귀도 그룹 안에서 이 종에 대한 대중 관심(관측 기록·한국어 위키 조회 기반)의 상대 위치">
       <span class="muted" style="font-size:12px;white-space:nowrap">관심도</span>
       <span style="flex:1;max-width:150px;height:6px;background:#eef1f0;border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(interestOf(sp.k)*100)}%;background:#6a9a86"></span></span>
@@ -2301,6 +2318,9 @@ function renderSpecies(sp){
   if(window.fgReport) window.fgReport.decorateCard(sp); // 발견 제보 버튼(Supabase 설정 시 노출)
   clearRepShot();                                       // 앞 종의 사진이 남아 있지 않게 먼저 비운다
   loadRep(sp.t, ()=>renderRepShot(sp));                 // 지도 아래 대표 사진(분류군별 지연 로드)
+  loadGapReason(sp.t, ()=>{                             // 발견공백 사유 배지(이명·지역절멸, 분류군별 지연 로드)
+    const el=document.getElementById('gapReasonBadge'); if(el) el.innerHTML=gapReasonBadge(sp);
+  });
   if(window.innerWidth<=880) sCard.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function quizOn(sp){ return (((window.__SPMEDIA_META__||{}).taxa||{})[sp.t]||0)>=4; }

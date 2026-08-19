@@ -1,0 +1,1 @@
+(window.__GAPREASON__=window.__GAPREASON__||{})["MM"]={"120000053291":{"r":"regionally_extinct"},"120000053451":{"r":"synonym","n":"Myodes regulus"},"120000053452":{"r":"synonym","n":"Myodes rufocanus"},"120000209288":{"r":"synonym","n":"Mogera wogura robusta"},"120000225561":{"r":"synonym","n":"Tamias sibiricus"}};

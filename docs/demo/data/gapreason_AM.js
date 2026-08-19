@@ -1,0 +1,1 @@
+(window.__GAPREASON__=window.__GAPREASON__||{})["AM"]={"120000001377":{"r":"synonym","n":"Strauchbufo raddei"},"120000474038":{"r":"synonym","n":"Dryophytes immaculatus"}};

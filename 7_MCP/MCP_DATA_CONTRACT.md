@@ -11,7 +11,9 @@
 `national_redlist_category`(CR/EN/VU/NT/LC/DD/…) · `has_media`(0/1) ·
 `interest`(0~1) · `interest_occ` · `interest_wiki`(nullable) · `interest_user` · `stratum_n` · `interest_fallback`(0/1) ·
 `wiki_ko`(한국어 위키 12개월 조회수·정수) · `wiki_en`(영어 위키 조회수·참고용·점수 미반영) ·
-`watch_count`(관심종 익명 집계수·정수; 개인식별 불가·`interest_user`·`trending_species` 원천)
+`watch_count`(관심종 익명 집계수·정수; 개인식별 불가·`interest_user`·`trending_species` 원천) ·
+`gap_reason`(''/'synonym'/'regionally_extinct' — '미발견'이 조사부족이 아닐 수 있음을 알리는 정보성 플래그. 발견공백 집계에서 제외하지는 않음) ·
+`gap_reason_note`(synonym일 때 GBIF 인정 현재 학명, 그 외 '')
 - 서비스 제외: 해양포유류·미삭동물(species_service_flags 기준).
 
 ### `species_region` — (종 × 지역) 발견 집계 (590,179)
@@ -68,5 +70,6 @@
 ## 갱신
 1. `build_wiki_interest.py` — 한국어 위키 조회수 재수집(`wiki_pageviews.json`, 최근 12개월 창). **월 1회 권장**(조회수는 가벼워 6개월 ETL과 별개로 최신화).
 2. (선택) `build_watch_snapshot.py` — 관심종 익명 집계(`watch_counts.json`). Supabase RPC **`species_watch_counts()`**(SECURITY DEFINER; 원시 watchlist RLS 유지·집계 카운트만) 를 publishable 키로 호출. 마이그레이션 `5_App/supabase/species_watch_counts.sql`. 집계 있으면 `interest_user_active=1`. 로컬 검증: `--synthetic N`(임의 유저 시뮬 — 공개 커밋 전 실 스냅샷으로 되돌릴 것).
-3. `build_mcp_data.py` 재실행 → `fg_mcp.sqlite.gz` 커밋. `meta.generated`·`data_max_year`·`interest_wiki_species`·`interest_user_active` 확인.
-관측·환경 ETL은 6개월 주기, 위키 조회수는 월 주기, 관심종 집계는 수시(사용자 증가 시).
+3. (선택) `check_gbif_synonyms.py --push`(분류군 단위로 나눠 실행 가능) + `--redlist --push` → `fg_taxon_status_check`(append-only) 적재 → `build_gap_reason_snapshot.py` — 최신 판정만 `gap_reason.json`으로 스냅샷(`SUPABASE_DB_URL` 직결 필요, RLS로 잠긴 참조 테이블이라 publishable 키로는 조회 불가). GBIF 백본은 수시 갱신되므로 재실행해도 기존 판정을 지우지 않고 새 행만 쌓임 — 판정이 바뀌면 이력으로 남아 추적 가능.
+4. `build_mcp_data.py` 재실행 → `fg_mcp.sqlite.gz` 커밋. `meta.generated`·`data_max_year`·`interest_wiki_species`·`interest_user_active`·`gap_reason_species` 확인.
+관측·환경 ETL은 6개월 주기, 위키 조회수는 월 주기, 관심종 집계는 수시(사용자 증가 시), 발견공백 사유 체크는 분기 권장(GBIF 백본 갱신 주기 고려).
