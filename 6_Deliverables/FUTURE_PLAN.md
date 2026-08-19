@@ -12,13 +12,14 @@
 | 발견 제보 (사진 + EXIF) | 구현됨 | v0.10.0에서 사진 업로드 추가 |
 | 대화형 도우미 (Chat) | 구현됨 | v0.10.0에서 라이브, 강·목·과·속 질의 지원 |
 | Open MCP 서버 | 운영 중 | 7_MCP/ 에서 공개 읽기전용 서버 운영 |
-| 관리자 페이지 | 계획 중 | 미발견, 아래 Phase 2 참고 |
+| 방문·행동 측정 (GA4 + Search Console) | 운영 중 | 2026-08-18부터 수집 시작, 그 이전은 자료 없음 |
+| 관리자 페이지 | 계획 중 | 미구현 — 아래 Phase 1 참고 |
 
 ## 채택된 아키텍처
 
 | 평면 | 서비스 | 상태 |
 |------|--------|------|
-| 정적 조회 | **정적 호스팅** (Cloudflare Pages / GitHub Pages) | 운영 중 |
+| 정적 조회 | **GitHub Pages** (`docs/` 를 그대로 서빙) | 운영 중 |
 | 로그인 + 사용자 기능 | **Supabase Auth + Postgres(RLS)** | 운영 중 |
 | 대화형 도우미 | **Supabase Edge Function(chat) + Gemini** | 운영 중 |
 | 공개 읽기 MCP | **7_MCP (로컬 Python + FastMCP)** | 운영 중 |
@@ -52,7 +53,10 @@
 
 다음 항목들의 테이블·API는 이미 설계됐으며, 필요 시 `service.html` 종 검색(Mode B) 종 카드에 UI 추가만 하면 된다.
 
-### 즐겨찾기 `favorite_species`
+### 메모를 붙인 즐겨찾기 `favorite_species`
+
+이미 운영 중인 관심종(`watchlist`)과 다른 표다 — 관심종은 종을 담아 두기만 하고, 이쪽은 종마다 메모를 남긴다.
+
 | 항목 | 타입 | 필수 | 검증 |
 |---|---|---|---|
 | 메모 | TEXT | N | 0~500자 |
@@ -82,22 +86,21 @@
 ### 상태
 - v0.10.0부터 라이브.
 - 저장소: `7_MCP/` (Python + FastMCP).
-- 공개 읽기전용, 인증 불필요 (일부 도구만 로그인 필수).
+- 공개 읽기전용, 인증 불필요 — 로그인이 필요한 도구도, 자료를 고치는 도구도 없다.
 - 원시 좌표·개인정보는 노출하지 않음 (공개 하한 K-익명 3 적용).
 
-### 노출 도구
+### 노출 도구 (15개)
 
-| 도구 | 입력 | 출력 | 인증 |
-|---|---|---|---|
-| search_species | query, limit | 종 기본정보 + IUCN 등급 + NIBR 링크 | 공개 |
-| get_species_status | ktsn | 발견현황(시도·연도), 적색목록 등급, 출처 | 공개 |
-| find_undiscovered_species | taxon_group?, sido?, year? | 미발견종 목록 | 공개 |
-| list_red_list | category?, taxon_group? | 적색목록 종 + 관측 여부 | 공개 |
-| region_gap_summary | sido, taxon_group? | 시도별 공백 현황 | 공개 |
-| list_species_by_taxon | taxon(강·목·과·속), region? | 분류군 내 종 목록 + 발견상태 | 공개 |
-| taxon_gap_ranking | taxon_group?, sido? | 과·속 단위 발견공백 순위 | 공개 |
-| get_user_contributions | user_id | 유저 기여(평가·의견·관심종) | 로그인 |
-| submit_rarity_assessment | (평가 스키마) | 제출 결과 | 로그인 |
+도구 이름·인자·설명의 단일 출처는 [`7_MCP/README.md`](../7_MCP/README.md) 다. 여기에는 무엇을 할 수 있는지만 갈래로 적는다.
+
+| 갈래 | 도구 |
+|---|---|
+| 종 찾기·들여다보기 | `search_species` · `get_species` · `get_species_bioclim` · `get_species_media` |
+| 지역의 발견공백 | `find_gap_by_region` · `discovery_priorities` · `region_profile` · `region_comparison` · `find_region` |
+| 위협받는 종·분류군 전체 | `list_protected_species` · `taxa_summary` |
+| 사람들의 관심 | `get_interest` · `interest_ranking` · `trending_species` · `community_discoveries` |
+
+사용자 관심종과 시민 제보에서 나오는 집계(`trending_species`·`community_discoveries`)는 **3건 미만이면 내보내지 않는다**(공개 하한 K=3).
 
 원출처(sources[]) 동봉 원칙 유지.
 
@@ -105,7 +108,7 @@
 
 ### Phase 1 — 완료
 - Supabase Auth + Google OAuth
-- 관심종 저장 (`favorite_species` + RLS)
+- 관심종 저장 (`watchlist` + RLS)
 - 로그인 UI 통합
 
 ### Phase 2 — 부분 완료
@@ -115,7 +118,7 @@
 
 ### Phase 3 (MCP) — 완료
 - 7_MCP 서버 운영 중
-- 9개 도구 지원
+- 15개 도구 지원
 - 공개 읽기전용, K-익명 보호
 
 ## 유지 및 위험 요소
@@ -129,7 +132,7 @@
 - 탈퇴 시: 이메일·닉네임 익명화
 - 이용약관·처리방침 필수
 
-### 데이터 정신성
+### 데이터 정합성
 - ETL 갱신: GitHub Actions cron + 멱등 upsert
 - MCP 데이터셋: 생성일 자동 기록
 
