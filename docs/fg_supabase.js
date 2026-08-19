@@ -156,3 +156,32 @@ export async function adminPendingReports() {
   return data || [];
 }
 export async function setReportStatus(id, status) { return sb.from('reports').update({ status }).eq('id', id); }
+
+// ── 분류 이력 전문가 제보(taxon_reference_reports) — 논문 근거(DOI) 기반. reports 와 완전히 같은 패턴 ──
+// r = { ktsn, korean_name, scientific_name, to_name, ref_title, ref_authors?, ref_year?, ref_container?, doi?, ref_url?, note? }
+export async function submitTaxonReference(r) {
+  if (!sb) throw new Error('not configured');
+  return sb.from('taxon_reference_reports').insert({
+    ktsn: r.ktsn,
+    korean_name: r.korean_name || null,
+    scientific_name: r.scientific_name || null,
+    to_name: r.to_name,
+    ref_title: r.ref_title,
+    ref_authors: r.ref_authors || null,
+    ref_year: r.ref_year || null,
+    ref_container: r.ref_container || null,
+    doi: r.doi || null,
+    ref_url: r.ref_url || null,
+    note: (r.note && r.note.trim()) || null
+  });
+}
+// 관리자 전용 — RLS(role='admin')로 비관리자는 빈 결과. 검토 대기 제보 목록.
+export async function adminPendingTaxonRefs() {
+  if (!sb) return [];
+  const { data, error } = await sb.from('taxon_reference_reports')
+    .select('id,ktsn,korean_name,scientific_name,to_name,ref_title,ref_authors,ref_year,ref_container,doi,ref_url,note,status,created_at')
+    .eq('status', 'pending').order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+export async function setTaxonRefStatus(id, status) { return sb.from('taxon_reference_reports').update({ status }).eq('id', id); }

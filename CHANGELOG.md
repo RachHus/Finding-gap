@@ -6,6 +6,15 @@ Finding gap의 릴리스 단위 변경 이력입니다.
 
 ## [Unreleased]
 
+### 기능
+- **분류 이력 전문가 제보 — 논문 근거(DOI) 기반.** GBIF 자동 체크(v0.11.0)는 국제 백본에만 의존해 국내 학술지 전용 분류 개정을 못 잡는다. 로그인 사용자가 종 상세에서 "학명이 이 논문 때문에 바뀌었다"를 제보하면 관리자 검수 후 "이명 확인됨" 배지(GBIF 자동 매치인 "이명 가능성"보다 진한 색으로 신뢰도 차이를 구분)로 반영된다. 시민 제보(`reports`) 기능을 구조 그대로 복제 — 새 테이블 `taxon_reference_reports`(본인 행 RLS + 관리자 승인), 새 모달(`#refOverlay`)과 마이페이지 관리자 검토 큐(기존 `#adminCard` 옆에 병렬 추가).
+  - DOI를 입력하면 **Crossref API**(무료·키 불필요·CORS 허용, 실측 확인)로 제목·저자·연도·저널을 자동으로 끌어와 채운다 — 서지 정보도 자체 포맷을 만들지 않고 학술 인프라 표준(DOI/Crossref)에 기대는, GBIF taxonomicStatus 어휘를 그대로 쓴 것과 같은 원칙.
+  - `build_gap_reason_snapshot.py`가 `fg_taxon_status_check`(자동)와 `taxon_reference_reports`(승인된 제보)를 합쳐 종당 사유를 하나로 결정 — 우선순위 **reference(전문가 확인) > regionally_extinct > synonym**(사람이 특정 논문으로 확인한 것이 가장 신뢰도 높음).
+  - 승인 큐 접근은 별도 역할 없이 기존 `profiles.role='admin'`을 그대로 재사용 — 지금 규모에서 새 권한 체계는 과함.
+
+### 배포 전 확인
+- `5_App/supabase/taxon_reference_reports.sql`을 Supabase SQL Editor에서 적용해야 분류 이력 제보 기능이 동작함(아직 미적용).
+
 ## [0.11.0] - 2026-08-19
 
 ### 수정

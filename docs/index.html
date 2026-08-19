@@ -988,6 +988,14 @@
   </div>
 </div>
 
+<!-- 분류 이력 전문가 제보 — 논문 근거(DOI)로 학명 변경을 제보. #rptOverlay 와 같은 껍데기 재사용 -->
+<div class="rpt-overlay" id="refOverlay" hidden>
+  <div class="rpt-modal" role="dialog" aria-modal="true" aria-labelledby="refTitle">
+    <div class="rpt-hd"><h3 id="refTitle">분류 이력 제보</h3><button class="x" id="refClose" type="button" aria-label="닫기">&times;</button></div>
+    <div class="rpt-bd" id="refBody"></div>
+  </div>
+</div>
+
 <!-- 첫 로그인 설정 — 알림은 '어디를 다니며 무엇을 보는 사람인가'를 알아야 만들 수 있다.
      활동 지역(시군구)과 관심 종을 받기 전에는 닫지 않는다. 나가는 길은 저장 또는 로그아웃뿐이다. -->
 <div class="rpt-overlay" id="obOverlay" hidden>
@@ -1241,6 +1249,7 @@ function badges(g,r){
 const _escGap=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function gapReasonBadge(sp){
   const g=((window.__GAPREASON__||{})[sp.t]||{})[sp.k]; if(!g) return '';
+  if(g.r==='reference') return ` <span class="badge" style="background:#e3efe9;color:#1f6b4a" title="전문가 제보(논문 근거)로 확인된 이명 — 현재 인정 학명은 ${_escGap(g.n||'')}.${g.c?' 근거: '+_escGap(g.c)+'.':''} '미발견'이 조사부족이 아니라 학명이 바뀐 것일 수 있습니다.">이명 확인됨</span>`;
   if(g.r==='synonym') return ` <span class="badge" style="background:#f5eede;color:#9a7b2f" title="GBIF 국제 분류 데이터베이스 기준 이명(synonym) — 현재 인정 학명은 ${_escGap(g.n||'')}. '미발견'이 조사부족이 아니라 학명이 바뀐 것일 수 있습니다.">이명 가능성</span>`;
   if(g.r==='regionally_extinct') return ` <span class="badge" style="background:#eceef0;color:#6b7280" title="국가적색목록 지역절멸(RE) — 국내에서 이미 절멸로 평가된 종입니다. '미발견'이 조사부족이 아니라 이미 사라졌기 때문일 수 있습니다.">국내 지역절멸 기준종</span>`;
   return '';
@@ -2715,11 +2724,17 @@ function renderSpecies(sp){
         ${reportLink}
       </div>
     </div>
+    <div class="row"><div class="k">분류 이력</div>
+      <div class="links">
+        <a class="lk taxonref-lk" data-k="${sp.k}" role="button" tabindex="0" hidden><span class="t">논문 근거로 학명 변경 제보하기</span></a>
+      </div>
+    </div>
   </div>`;
   syncGapBtn();                                          // 종을 골랐으니 지도 안 서식지 후보 토글을 쓸 수 있다
   renderSpView();                                        // 우측 표(+ 후보를 켰으면 적합지 비율)
   if(window.fgWatch) window.fgWatch.decorate(sp.k);     // 관심 종 ☆ 버튼(로그인 시 활성)
   if(window.fgReport) window.fgReport.decorateCard(sp); // 발견 제보 버튼(Supabase 설정 시 노출)
+  if(window.fgTaxonRef) window.fgTaxonRef.decorateCard(sp); // 분류 이력 제보 버튼(Supabase 설정 시 노출)
   clearRepShot();                                       // 앞 종의 사진이 남아 있지 않게 먼저 비운다
   loadRep(sp.t, ()=>renderRepShot(sp));                 // 지도 아래 대표 사진(분류군별 지연 로드)
   loadGapReason(sp.t, ()=>{                             // 발견공백 사유 배지(이명·지역절멸, 분류군별 지연 로드)
@@ -3199,7 +3214,7 @@ else Promise.all([
 
 <!-- 마이페이지(로그인·알림·활동 지역·관심 종·내 제보) — Supabase 설정(config.js)이 있을 때만 활성, 없으면 정적 안내 유지 -->
 <script type="module">
-import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile } from './fg_supabase.js';
+import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, adminPendingTaxonRefs, setTaxonRefStatus } from './fg_supabase.js';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const view=document.getElementById('view-my');
 const spName=k=>{ const sp=(window.__SPIDX__||[]).find(x=>x.k===k); return sp?{n:sp.n||sp.s,s:sp.s||'',t:sp.t||''}:{n:k,s:'',t:''}; };
@@ -3243,6 +3258,17 @@ function reportLine(r,mine){
   const photo=photoUrl?`<div class="fphoto"><img src="${esc(photoUrl)}" alt="" loading="lazy"></div>`:'';
   return `<span class="nm">${esc(nm)}</span> ${sci} ${statusBadge(r.status)}${gap}`+
     `<span class="fmeta">${esc(r.observed_date||'')}${who}</span>${link}${del}${photo}${note}`;
+}
+function taxonRefLine(r){                                  // 분류 이력 제보 한 줄(관리자 검토 큐 전용)
+  const nm=r.korean_name||r.scientific_name||r.ktsn;
+  const sci=(r.scientific_name&&r.scientific_name!==nm)?`<span class="sci">${esc(r.scientific_name)}</span>`:'';
+  const change=`<div class="fnote">${esc(r.scientific_name||'?')} → <b>${esc(r.to_name)}</b></div>`;
+  const cite=[r.ref_authors,r.ref_year,r.ref_title,r.ref_container].filter(Boolean).map(esc).join(' · ');
+  const link=r.doi?`<a class="muted2" href="https://doi.org/${esc(r.doi)}" target="_blank" rel="noopener nofollow ugc" style="margin-left:8px">DOI →</a>`
+    :(/^https?:\/\//i.test(r.ref_url||'')?`<a class="muted2" href="${esc(r.ref_url)}" target="_blank" rel="noopener nofollow ugc" style="margin-left:8px">근거 →</a>`:'');
+  const note=r.note?`<div class="fnote">${esc(r.note)}</div>`:'';
+  return `<span class="nm">${esc(nm)}</span> ${sci}${link}${change}`+
+    (cite?`<div class="fnote">근거: ${cite}</div>`:'')+note;
 }
 async function renderFeed(){
   const host=document.getElementById('feedList'); if(!host) return;
@@ -3477,6 +3503,11 @@ async function myPage(user){
     <h3 style="margin:0 0 4px">관리자 · 제보 검토</h3>
     <p class="muted2" style="margin:0 0 12px">검토 대기 제보를 승인/거부합니다. 승인 제보는 다음 재빌드에 <b>시민 재발견</b>으로 반영됩니다.</p>
     <ul class="wl feedlist" id="adminList"><li class="muted2">불러오는 중…</li></ul>
+  </div>
+  <div class="authcard" id="taxonRefAdminCard" style="max-width:none;display:none;margin-top:14px">
+    <h3 style="margin:0 0 4px">관리자 · 분류 이력 제보 검토</h3>
+    <p class="muted2" style="margin:0 0 12px">논문 근거로 들어온 학명 변경 제보를 승인/거부합니다. 승인 시 종 상세에 "이명 확인됨" 배지로 반영됩니다.</p>
+    <ul class="wl feedlist" id="taxonRefAdminList"><li class="muted2">불러오는 중…</li></ul>
   </div>`;
   view.querySelector('#logoutBtn').onclick=async()=>{ await signOut(); };
   paintMyNotif();
@@ -3554,6 +3585,25 @@ async function myPage(user){
           `<span class="admbtns"><button class="btn sm" data-a="approved">승인</button><button class="btn sm rej" data-a="rejected">거부</button></span>`;
         li.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{ b.disabled=true;
           try{ const {error}=await setReportStatus(r.id,b.dataset.a); if(error) throw error; li.remove();
+            if(!al.children.length) al.innerHTML='<li class="muted2">검토 대기 제보가 없습니다.</li>'; }
+          catch(e){ b.disabled=false; alert('처리 실패: '+(e.message||e)); } });
+        al.appendChild(li); });
+    }catch(err){ al.innerHTML=`<li class="authmsg err">검토 목록 로드 실패: ${esc(err.message||String(err))}</li>`; }
+  })();
+  (async()=>{                                              // 분류 이력 제보 검토 큐(role='admin'만 — RLS 로 비관리자는 빈 결과)
+    let role=null; try{ role=await myRole(); }catch(_){}
+    if(role!=='admin') return;
+    const card=view.querySelector('#taxonRefAdminCard'), al=view.querySelector('#taxonRefAdminList'); if(!card) return;
+    card.style.display='';
+    try{
+      const rows=await adminPendingTaxonRefs();
+      if(!rows.length){ al.innerHTML='<li class="muted2">검토 대기 제보가 없습니다.</li>'; return; }
+      al.innerHTML='';
+      rows.forEach(r=>{ const li=document.createElement('li');
+        li.innerHTML=taxonRefLine(r)+
+          `<span class="admbtns"><button class="btn sm" data-a="approved">승인</button><button class="btn sm rej" data-a="rejected">거부</button></span>`;
+        li.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{ b.disabled=true;
+          try{ const {error}=await setTaxonRefStatus(r.id,b.dataset.a); if(error) throw error; li.remove();
             if(!al.children.length) al.innerHTML='<li class="muted2">검토 대기 제보가 없습니다.</li>'; }
           catch(e){ b.disabled=false; alert('처리 실패: '+(e.message||e)); } });
         al.appendChild(li); });
@@ -4212,6 +4262,176 @@ if(configured){
   // 챗 딥링크 ?sp=..&report=1 → 해당 종 미리 선택해 제보 모달 자동 오픈(로그인 여부는 render가 게이트)
   const act=window.FG_ACTION;
   if(act && act.act==='report'){ const sp=SPIDX.find(s=>s.k===act.sp); if(sp) open(sp); }
+}
+</script>
+
+<!-- 분류 이력 전문가 제보 — 논문 근거(DOI)로 학명 변경을 제보. #rptOverlay 모듈과 같은 구조(로그인 게이트·
+     검증 후 활성화되는 제출 버튼·성공/실패 메시지), 지도·사진 없이 서지 정보만 받는다는 점만 다르다.
+     DOI가 있으면 Crossref(api.crossref.org, 무료·키 불필요·CORS 열림)로 제목·저자·연도·저널을 끌어와
+     채운다 — 자체 서식을 발명하지 않고 학술 인프라 표준에 기댄다. -->
+<script type="module">
+import { configured, onAuth, submitTaxonReference } from './fg_supabase.js';
+const SPIDX2 = window.__SPIDX__ || [];
+const refOverlay = document.getElementById('refOverlay');
+const refBody = document.getElementById('refBody');
+let refUser = null, refSelSp = null;
+
+function escRef(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function decorateTaxonRefCard(sp){
+  const b=document.querySelector('.taxonref-lk[data-k="'+(window.CSS&&CSS.escape?CSS.escape(sp.k):sp.k)+'"]');
+  if(!b) return;
+  if(!configured){ b.hidden=true; return; }
+  b.hidden=false;
+  b.onclick=()=>openRef(sp);
+  b.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openRef(sp); } };
+}
+
+function openRef(prefill){
+  refSelSp = prefill ? {k:prefill.k,n:prefill.n,s:prefill.s,t:prefill.t} : null;
+  refOverlay.hidden = false;
+  document.body.style.overflow='hidden';
+  renderRef();
+}
+function closeRef(){
+  refOverlay.hidden = true;
+  document.body.style.overflow='';
+}
+
+function renderRef(){
+  if(!configured){ refBody.innerHTML='<div class="rpt-gate"><p>제보 기능이 아직 활성화되지 않았습니다.</p></div>'; return; }
+  if(!refUser){
+    refBody.innerHTML='<div class="rpt-gate"><p>분류 이력 제보는 로그인 후 이용할 수 있습니다.</p>'+
+      '<a class="go" href="#" id="refGoLogin">로그인하러 가기</a></div>';
+    const go=refBody.querySelector('#refGoLogin');
+    if(go) go.onclick=(e)=>{ e.preventDefault(); closeRef(); if(window.fgGoLogin) fgGoLogin(); };
+    return;
+  }
+  refBody.innerHTML =
+    '<div class="rpt-f" id="refSpWrap"></div>'+
+    '<div class="rpt-f"><label>변경 후 학명 <span class="req">*</span></label><input type="text" id="refToName" placeholder="예: Lycodon rufozonatus"></div>'+
+    '<div class="rpt-f"><label>DOI(있으면 자동 조회)</label>'+
+      '<div style="display:flex;gap:6px"><input type="text" id="refDoi" placeholder="예: 10.1670/17-045" style="flex:1">'+
+      '<button class="btn sm" id="refDoiLookup" type="button">조회</button></div>'+
+      '<div class="rpt-hint" id="refDoiHint" style="margin-top:6px"></div></div>'+
+    '<div class="rpt-f"><label>논문 제목 <span class="req">*</span></label><input type="text" id="refPaperTitle"></div>'+
+    '<div class="rpt-f"><label>저자</label><input type="text" id="refAuthors" placeholder="Piwowar HA, Day RS"></div>'+
+    '<div class="rpt-f"><label>연도</label><input type="number" id="refYear" min="1700" max="'+new Date().getFullYear()+'"></div>'+
+    '<div class="rpt-f"><label>저널·출처</label><input type="text" id="refContainer"></div>'+
+    '<div class="rpt-f"><label>URL(DOI 없는 문헌의 대체 링크)</label><input type="url" id="refUrl" placeholder="https://..."></div>'+
+    '<div class="rpt-f"><label>메모 (선택)</label><textarea id="refNote"></textarea></div>'+
+    '<button class="rpt-submit" id="refSubmit" type="button">제보 등록</button>'+
+    '<div class="rpt-msg" id="refMsg"></div>';
+  renderRefSp();
+  document.getElementById('refDoiLookup').onclick=doiLookup;
+  document.getElementById('refSubmit').onclick=doRefSubmit;
+  ['refToName','refPaperTitle'].forEach(id=>document.getElementById(id).addEventListener('input',updateRefSubmit));
+  updateRefSubmit();
+}
+
+function renderRefSp(){
+  const w=document.getElementById('refSpWrap'); if(!w) return;
+  if(refSelSp){
+    w.innerHTML='<label>대상 종</label><div class="rpt-sp"><div style="min-width:0">'+
+      '<span class="nm">'+escRef(refSelSp.n||refSelSp.s)+'</span> <span class="sci">'+escRef(refSelSp.s)+'</span></div>'+
+      '<button class="chg" type="button">변경</button></div>';
+    w.querySelector('.chg').onclick=()=>{ refSelSp=null; renderRefSp(); updateRefSubmit(); };
+  } else {
+    w.innerHTML='<label>종 <span class="req">*</span></label>'+
+      '<input type="search" id="refSpSearch" placeholder="국명·학명 검색(예: 수달, Lutra)" autocomplete="off">'+
+      '<div class="rpt-srlist" id="refSpList" hidden></div>';
+    const inp=document.getElementById('refSpSearch'), list=document.getElementById('refSpList');
+    inp.addEventListener('input',()=>{
+      const qq=inp.value.trim().toLowerCase();
+      if(qq.length<1){ list.hidden=true; list.innerHTML=''; return; }
+      const hits=[];
+      for(let i=0;i<SPIDX2.length && hits.length<8;i++){ const x=SPIDX2[i];
+        if((x.n&&x.n.toLowerCase().includes(qq))||(x.s&&x.s.toLowerCase().includes(qq))) hits.push(x); }
+      if(!hits.length){ list.hidden=true; list.innerHTML=''; return; }
+      list.innerHTML=hits.map(x=>'<div class="it" data-k="'+escRef(x.k)+'">'+escRef(x.n||x.s)+'<span class="sci">'+escRef(x.s)+'</span></div>').join('');
+      list.hidden=false;
+      list.querySelectorAll('.it').forEach(it=>it.onclick=()=>{
+        const x=SPIDX2.find(s=>s.k===it.dataset.k);
+        if(x){ refSelSp={k:x.k,n:x.n,s:x.s,t:x.t}; renderRefSp(); updateRefSubmit(); }
+      });
+    });
+    inp.focus();
+  }
+}
+
+// Crossref works API — DOI → 제목/저자/연도/저널. 무료·키 불필요·CORS 허용(실측 확인).
+async function doiLookup(){
+  const doi=document.getElementById('refDoi').value.trim().replace(/^https?:\/\/doi\.org\//i,'');
+  const hint=document.getElementById('refDoiHint');
+  if(!doi){ hint.textContent='DOI를 입력하세요.'; return; }
+  hint.textContent='조회 중…';
+  try{
+    const r=await fetch('https://api.crossref.org/works/'+encodeURIComponent(doi));
+    if(!r.ok) throw new Error(r.status===404?'해당 DOI를 찾을 수 없습니다':'조회 실패('+r.status+')');
+    const d=(await r.json()).message;
+    const title=(d.title&&d.title[0])||'';
+    const authors=(d.author||[]).map(a=>[a.family,a.given].filter(Boolean).join(' ')).join(', ');
+    const dp=(d.published&&d.published['date-parts']&&d.published['date-parts'][0])||[];
+    const year=dp[0]||'';
+    const container=(d['container-title']&&d['container-title'][0])||'';
+    if(title) document.getElementById('refPaperTitle').value=title;
+    if(authors) document.getElementById('refAuthors').value=authors;
+    if(year) document.getElementById('refYear').value=year;
+    if(container) document.getElementById('refContainer').value=container;
+    hint.textContent='자동으로 채웠습니다 — 필요하면 아래에서 고쳐도 됩니다.';
+    updateRefSubmit();
+  }catch(e){
+    hint.textContent=(e&&e.message)||'조회 실패 — 아래 칸에 직접 입력하세요.';
+  }
+}
+
+function updateRefSubmit(){
+  const su=document.getElementById('refSubmit'); if(!su) return;
+  const toName=(document.getElementById('refToName')||{}).value||'';
+  const title=(document.getElementById('refPaperTitle')||{}).value||'';
+  su.disabled = !(refSelSp && toName.trim() && title.trim());
+}
+async function doRefSubmit(){
+  const su=document.getElementById('refSubmit'), msg=document.getElementById('refMsg');
+  const toName=document.getElementById('refToName').value.trim();
+  const title=document.getElementById('refPaperTitle').value.trim();
+  msg.className='rpt-msg';
+  if(!(refSelSp && toName && title)){ msg.className='rpt-msg err'; msg.textContent='종·변경 후 학명·논문 제목을 모두 입력하세요.'; return; }
+  su.disabled=true; su.textContent='등록 중…';
+  try{
+    const { error } = await submitTaxonReference({
+      ktsn:refSelSp.k, korean_name:refSelSp.n, scientific_name:refSelSp.s, to_name:toName, ref_title:title,
+      ref_authors: document.getElementById('refAuthors').value.trim() || null,
+      ref_year: (()=>{ const y=+document.getElementById('refYear').value; return y?y:null; })(),
+      ref_container: document.getElementById('refContainer').value.trim() || null,
+      doi: document.getElementById('refDoi').value.trim() || null,
+      ref_url: document.getElementById('refUrl').value.trim() || null,
+      note: document.getElementById('refNote').value
+    });
+    if(error) throw error;
+    msg.className='rpt-msg ok';
+    msg.textContent='제보가 등록되었습니다. 관리자 검토 후 반영됩니다.';
+    su.textContent='닫기'; su.disabled=false; su.onclick=closeRef;
+  }catch(e){
+    console.warn('분류 이력 제보 실패', e);
+    msg.className='rpt-msg err';
+    msg.textContent='등록에 실패했습니다: '+((e&&e.message)||'알 수 없는 오류')+' — 잠시 후 다시 시도하세요.';
+    su.textContent='제보 등록'; su.disabled=false; su.onclick=doRefSubmit;
+  }
+}
+
+document.getElementById('refClose').onclick=closeRef;
+refOverlay.addEventListener('click',(e)=>{ if(e.target===refOverlay) closeRef(); });
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape'&&!refOverlay.hidden) closeRef(); });
+
+function refreshTaxonRefCardBtn(){
+  const b=document.querySelector('.taxonref-lk[data-k]'); if(!b) return;
+  const x=SPIDX2.find(s=>s.k===b.dataset.k); if(x) decorateTaxonRefCard(x);
+}
+window.fgTaxonRef={ configured, decorateCard:decorateTaxonRefCard, open:openRef };
+if(configured){
+  refreshTaxonRefCardBtn();
+  onAuth(u=>{ refUser=u; refreshTaxonRefCardBtn(); if(!refOverlay.hidden) renderRef(); });
 }
 </script>
 

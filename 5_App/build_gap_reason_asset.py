@@ -33,6 +33,26 @@ def _ktsn_taxon_map():
         con.close()
 
 
+def _format_citation(citation):
+    """전문가 제보(reference)의 서지 정보를 짧은 인용문 하나로 — 풀 CSL 렌더링은 이번 범위 밖."""
+    if not citation:
+        return ""
+    parts = []
+    who = (citation.get("authors") or "").strip()
+    year = citation.get("year")
+    if who:
+        parts.append(f"{who} ({year})" if year else who)
+    elif year:
+        parts.append(str(year))
+    title = (citation.get("title") or "").strip()
+    if title:
+        parts.append(title)
+    container = (citation.get("container") or "").strip()
+    if container:
+        parts.append(container)
+    return ". ".join(parts)
+
+
 def main():
     if not GAP_REASON_JSON.exists():
         print(f"(정보) {GAP_REASON_JSON.relative_to(BASE)} 없음 — build_gap_reason_snapshot.py 먼저 실행. 자산 생성 생략.")
@@ -50,10 +70,18 @@ def main():
         if not t:
             unmapped += 1
             continue
+        detail = r.get("detail") or {}
         entry = {"r": r["reason"]}
-        note = (r.get("detail") or {}).get("matched_name")
-        if note:
-            entry["n"] = note
+        if r["reason"] == "reference":
+            if detail.get("to_name"):
+                entry["n"] = detail["to_name"]
+            cite = _format_citation(detail.get("citation"))
+            if cite:
+                entry["c"] = cite
+        else:
+            note = detail.get("matched_name")
+            if note:
+                entry["n"] = note
         by_group.setdefault(t, {})[ktsn] = entry
 
     OUT.mkdir(parents=True, exist_ok=True)
