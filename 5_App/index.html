@@ -1102,8 +1102,8 @@
   .ttleaf,.ttnode{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .12s ease,stroke-width .12s ease}
   .ttleaf:hover,.ttnode:hover{stroke:var(--ink);stroke-width:1.5;transform:scale(2.4)}
   .ttleaf-open{stroke:var(--ink);stroke-width:1.6}
-  .ttspleaf{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .12s ease}
-  .ttspleaf:hover{stroke:var(--ink);stroke-width:1.2;transform:scale(2.6)}
+  .ttspleaf,.ttgenusleaf{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .12s ease}
+  .ttspleaf:hover,.ttgenusleaf:hover{stroke:var(--ink);stroke-width:1.2;transform:scale(2.6)}
   .ttlink,.ttsplink{pointer-events:none}
   @media(max-width:880px){ .rpt-overlay{padding:0;align-items:flex-end} .rpt-modal{max-width:none;max-height:94vh;border-radius:14px 14px 0 0} }
 
@@ -4555,7 +4555,7 @@ function toChildren(node){                                 // {n,found,dormant,n
 }
 
 const R=200;                                                // 잎(과) 반지름
-const SP_CAP=100;                                           // 과 하나를 펼칠 때 보여줄 종 수 상한(곤충류 일부 과는 종 1,000+)
+const R_GENUS=R+24, R_SP=R+56;                              // 속·종 펼침 고리 반지름
 const STATE_COLOR={f:'#015543', d:'#9a7b2f', n:'#b5482f'};
 const STATE_LABEL={f:'발견', d:'휴면', n:'미발견'};
 const _txfile=t=>t.replace(/[^A-Za-z0-9]/g,'_');
@@ -4600,50 +4600,99 @@ function renderTaxaTree(group, hostId, infoId){
       `data-depth="${n.depth}"${extra}><title>${title}</title></circle>`;
   }).join('');
 
-  host.innerHTML=`<svg viewBox="-${R+50} -${R+50} ${2*(R+50)} ${2*(R+50)}" class="taxatree" role="img" aria-label="${esc(g.kor)} 목→과 계통수">`+
-    `<g class="ttlinks">${links}</g><g class="ttnodes">${nodes}</g><g class="ttsp"></g></svg>`;
-  if(info) info.textContent='잎(과)에 마우스를 올리거나 눌러 보세요 — 색이 붉을수록 그 과의 발견공백 비율이 높습니다. 과를 누르면 그 안의 종이 펼쳐집니다.';
+  host.innerHTML=`<svg viewBox="-${R+80} -${R+80} ${2*(R+80)} ${2*(R+80)}" class="taxatree" role="img" aria-label="${esc(g.kor)} 목→과 계통수">`+
+    `<g class="ttlinks">${links}</g><g class="ttnodes">${nodes}</g><g class="ttgenus"></g><g class="ttspecies"></g></svg>`;
+  if(info) info.textContent='잎(과)에 마우스를 올리거나 눌러 보세요 — 색이 붉을수록 그 과의 발견공백 비율이 높습니다. 과를 누르면 속이, 속을 누르면 종이 차례로 펼쳐집니다.';
 
   const svg=host.querySelector('svg');
-  const spLayer=svg.querySelector('.ttsp');
-  let expanded=null;                                        // 현재 펼쳐진 과의 circle — 한 번에 하나만 펼친다
+  const genusLayer=svg.querySelector('.ttgenus'), spLayer=svg.querySelector('.ttspecies');
+  let expandedFamily=null, expandedGenus=null;              // 한 번에 과 하나·그 안에서 속 하나만 펼친다
 
-  function collapseExpanded(){
+  function collapseSpecies(){
     spLayer.innerHTML='';
-    if(expanded) expanded.classList.remove('ttleaf-open');
-    expanded=null;
+    if(expandedGenus) expandedGenus.classList.remove('ttleaf-open');
+    expandedGenus=null;
+  }
+  function collapseFamily(){
+    collapseSpecies();
+    genusLayer.innerHTML='';
+    if(expandedFamily) expandedFamily.classList.remove('ttleaf-open');
+    expandedFamily=null;
+  }
+
+  const SVGNS='http://www.w3.org/2000/svg';
+  // 부채꼴로 점을 펼쳐 그리는 공통 로직 — 과→속, 속→종에서 그대로 재사용.
+  // radius·item마다 el(실제 circle 엘리먼트)·angle(다음 단계 펼침의 기준각)을 바로 돌려줘 재조회가 필요 없다.
+  function fanOut(layer, cx, cy, baseAngle, radius, items, r, colorOf, titleOf){
+    const spread=Math.min(1.3, 0.15+items.length*0.012);     // 항목 수에 비례한 부채꼴 폭(상한만 둬 과도한 회전은 막음)
+    return items.map((it,i)=>{
+      const t=items.length>1 ? i/(items.length-1) : 0.5;
+      const angle=baseAngle-spread/2+spread*t;
+      const [sx,sy]=pointRadial(angle,radius);
+      const link=document.createElementNS(SVGNS,'path');
+      link.setAttribute('class','ttsplink');
+      link.setAttribute('d',`M${cx.toFixed(2)},${cy.toFixed(2)} L${sx.toFixed(2)},${sy.toFixed(2)}`);
+      link.setAttribute('stroke','#e3e6e1'); link.setAttribute('stroke-width','1');
+      layer.appendChild(link);
+      const el=document.createElementNS(SVGNS,'circle');
+      el.setAttribute('cx',sx.toFixed(2)); el.setAttribute('cy',sy.toFixed(2)); el.setAttribute('r',r);
+      el.setAttribute('fill',colorOf(it));
+      const title=document.createElementNS(SVGNS,'title'); title.textContent=titleOf(it); el.appendChild(title);
+      layer.appendChild(el);
+      return {it, el, sx, sy, angle};
+    });
   }
 
   function expandFamily(el){
     const d=el.dataset;
     const spAll=(((window.__TAXATREE_SP__||{})[group]||{})[`${d.order}|${d.name}`])||[];
-    const sp=spAll.slice(0,SP_CAP);
     const cx=+el.getAttribute('cx'), cy=+el.getAttribute('cy'), baseAngle=+d.angle;
-    const spread=Math.min(0.9, 0.15+sp.length*0.012);        // 종수에 비례한 부채꼴 폭(대형 과는 상한으로 눌러줌)
-    const r2=R+34;
-    const html=sp.map((s,i)=>{
-      const t=sp.length>1 ? i/(sp.length-1) : 0.5;
-      const [sx,sy]=pointRadial(baseAngle-spread/2+spread*t, r2);
-      const color=STATE_COLOR[s[2]]||'#8a9a90';
-      return `<path class="ttsplink" d="M${cx.toFixed(2)},${cy.toFixed(2)} L${sx.toFixed(2)},${sy.toFixed(2)}" stroke="#e3e6e1" stroke-width="1"/>`+
-        `<circle class="ttspleaf" cx="${sx.toFixed(2)}" cy="${sy.toFixed(2)}" r="2.4" fill="${color}" `+
-        `data-name="${esc(s[1])}" data-code="${s[2]}"><title>${esc(s[1])} · ${STATE_LABEL[s[2]]||''}</title></circle>`;
-    }).join('');
-    spLayer.innerHTML=html;
-    spLayer.querySelectorAll('.ttspleaf').forEach(sel=>{
-      sel.addEventListener('mouseenter',()=>sel.parentNode.appendChild(sel));
-      sel.addEventListener('click',()=>{
-        if(!info) return;
-        const sd=sel.dataset;
-        info.innerHTML=`<b>${esc(sd.name)}</b>(종) — <span style="color:${STATE_COLOR[sd.code]||'#333'}">${STATE_LABEL[sd.code]||''}</span>`;
+
+    // 속 단위로 묶기 — 서버는 종 목록만 내려주고, 속 집계는 이미 받아 둔 이 목록에서 즉석에서 계산한다.
+    const byGenus=new Map();
+    for(const s of spAll){
+      const gname=s[3]||'(미분류)';
+      if(!byGenus.has(gname)) byGenus.set(gname,[]);
+      byGenus.get(gname).push(s);
+    }
+    const genera=[...byGenus.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+
+    const placed=fanOut(genusLayer, cx, cy, baseAngle, R_GENUS, genera, 2.6,
+      ([,list])=>{ let n=0; for(const s of list) if(s[2]==='n') n++; return gapColor(list.length? n/list.length : 0); },
+      ([gname,list])=>`${gname} · ${list.length}종`);
+
+    placed.forEach(({it:[gname,list], el:gEl, sx, sy, angle})=>{
+      const c={f:0,d:0,n:0}; for(const s of list) c[s[2]]++;
+      gEl.classList.add('ttgenusleaf');
+      gEl.addEventListener('mouseenter',()=>gEl.parentNode.appendChild(gEl));
+      gEl.addEventListener('click',()=>{
+        if(info) info.innerHTML=`<b>${esc(gname)}</b>(속) — 총 ${nf2(list.length)}종 · `+
+          `<span style="color:#015543">발견 ${nf2(c.f)}</span> · <span style="color:#9a7b2f">휴면 ${nf2(c.d)}</span> · `+
+          `<span style="color:#b5482f">미발견 ${nf2(c.n)}</span>`;
+        if(expandedGenus===gEl){ collapseSpecies(); return; }
+        collapseSpecies();
+        expandGenus(gEl, sx, sy, angle, list);
       });
     });
-    if(info){
-      const more=spAll.length>SP_CAP?` · 화면엔 ${SP_CAP}종만 표시(전체 ${nf2(spAll.length)}종)`:'';
-      info.innerHTML=`<b>${esc(d.name)}</b>(과) 펼침 — 총 ${nf2(spAll.length)}종${more}. 종 점을 눌러 이름을 확인하세요.`;
-    }
+
+    if(info) info.innerHTML=`<b>${esc(d.name)}</b>(과) 펼침 — 속 ${nf2(genera.length)}개 · 총 ${nf2(spAll.length)}종. 속을 눌러 보세요.`;
     el.classList.add('ttleaf-open');
-    expanded=el;
+    expandedFamily=el;
+  }
+
+  function expandGenus(gEl, gx, gy, gAngle, list){
+    const placed=fanOut(spLayer, gx, gy, gAngle, R_SP, list, 2,
+      s=>STATE_COLOR[s[2]]||'#8a9a90', s=>`${s[1]} · ${STATE_LABEL[s[2]]||''}`);
+    placed.forEach(({it:s, el:sEl})=>{
+      sEl.classList.add('ttspleaf');
+      sEl.addEventListener('mouseenter',()=>sEl.parentNode.appendChild(sEl));
+      sEl.addEventListener('click',()=>{
+        if(!info) return;
+        info.innerHTML=`<b>${esc(s[1])}</b>(종) — <span style="color:${STATE_COLOR[s[2]]||'#333'}">${STATE_LABEL[s[2]]||''}</span>`;
+      });
+    });
+    gEl.classList.add('ttleaf-open');
+    expandedGenus=gEl;
   }
 
   host.querySelectorAll('.ttleaf,.ttnode').forEach(el=>{
@@ -4655,9 +4704,9 @@ function renderTaxaTree(group, hostId, infoId){
           `<span style="color:#015543">발견 ${nf2(+d.found)}</span> · <span style="color:#9a7b2f">휴면 ${nf2(+d.dormant)}</span> · `+
           `<span style="color:#b5482f">미발견 ${nf2(+d.none)}</span>`;
       }
-      if(el.dataset.depth!=='2') return;                    // 종 펼치기는 과(잎)에서만
-      if(expanded===el){ collapseExpanded(); return; }
-      collapseExpanded();
+      if(el.dataset.depth!=='2') return;                    // 속·종 펼치기는 과(잎)에서만 시작
+      if(expandedFamily===el){ collapseFamily(); return; }
+      collapseFamily();
       loadTaxaTreeSp(group, ()=>expandFamily(el));
     });
   });
