@@ -1235,10 +1235,13 @@ function badges(g,r){
   return h;
 }
 /* 발견공백 사유 배지 — '미발견'이 조사부족이 아니라 분류학적 이명 잔재·지역절멸일 수 있음을 알린다.
-   gapreason_<T>.js(분류군별 지연 로드, loadGapReason)가 아직 안 왔으면 빈 문자열(로드 후 다시 채움). */
+   gapreason_<T>.js(분류군별 지연 로드, loadGapReason)가 아직 안 왔으면 빈 문자열(로드 후 다시 채움).
+   이 스크립트 블록(비-module)엔 공용 esc() 가 없다 — esc() 는 대화형 도우미 등 type="module" 블록에만
+   있어 스코프가 안 넘어온다(실측: "esc is not defined" — module 의 top-level 선언은 window 에 안 실린다). */
+const _escGap=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function gapReasonBadge(sp){
   const g=((window.__GAPREASON__||{})[sp.t]||{})[sp.k]; if(!g) return '';
-  if(g.r==='synonym') return ` <span class="badge" style="background:#f5eede;color:#9a7b2f" title="GBIF 국제 분류 데이터베이스 기준 이명(synonym) — 현재 인정 학명은 ${esc(g.n||'')}. '미발견'이 조사부족이 아니라 학명이 바뀐 것일 수 있습니다.">이명 가능성</span>`;
+  if(g.r==='synonym') return ` <span class="badge" style="background:#f5eede;color:#9a7b2f" title="GBIF 국제 분류 데이터베이스 기준 이명(synonym) — 현재 인정 학명은 ${_escGap(g.n||'')}. '미발견'이 조사부족이 아니라 학명이 바뀐 것일 수 있습니다.">이명 가능성</span>`;
   if(g.r==='regionally_extinct') return ` <span class="badge" style="background:#eceef0;color:#6b7280" title="국가적색목록 지역절멸(RE) — 국내에서 이미 절멸로 평가된 종입니다. '미발견'이 조사부족이 아니라 이미 사라졌기 때문일 수 있습니다.">국내 지역절멸 기준종</span>`;
   return '';
 }
