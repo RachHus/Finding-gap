@@ -3214,7 +3214,7 @@ else Promise.all([
 
 <!-- 마이페이지(로그인·알림·활동 지역·관심 종·내 제보) — Supabase 설정(config.js)이 있을 때만 활성, 없으면 정적 안내 유지 -->
 <script type="module">
-import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, adminPendingTaxonRefs, setTaxonRefStatus } from './fg_supabase.js';
+import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, adminPendingTaxonRefs, setTaxonRefStatus, myTaxonReferences } from './fg_supabase.js';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const view=document.getElementById('view-my');
 const spName=k=>{ const sp=(window.__SPIDX__||[]).find(x=>x.k===k); return sp?{n:sp.n||sp.s,s:sp.s||'',t:sp.t||''}:{n:k,s:'',t:''}; };
@@ -3269,6 +3269,24 @@ function taxonRefLine(r){                                  // 분류 이력 제�
   const note=r.note?`<div class="fnote">${esc(r.note)}</div>`:'';
   return `<span class="nm">${esc(nm)}</span> ${sci}${link}${change}`+
     (cite?`<div class="fnote">근거: ${cite}</div>`:'')+note;
+}
+// reports 의 _RSTATUS/statusBadge 는 'rejected' 를 모르고 'pending' 으로 접혀 보인다(기존 동작, 여긴 안 건드림) —
+// 반려 사유를 보여줘야 하는 이 목록에서는 셋을 정확히 구분해야 해서 별도 배지를 쓴다.
+function taxonRefStatusBadge(s){
+  const m = s==='approved' ? ['승인','#015543','#e7f1ee']
+    : s==='rejected' ? ['반려','#b5482f','#f7e7e2']
+    : ['검토 중','#9a7b2f','#f5eede'];
+  return `<span class="dbadge" style="background:${m[2]};color:${m[1]}">${m[0]}</span>`;
+}
+function taxonRefMineLine(r){                               // 분류 이력 제보 한 줄("내 제보" 전용 — 상태·반려사유 표시)
+  const nm=r.korean_name||r.scientific_name||r.ktsn;
+  const sci=(r.scientific_name&&r.scientific_name!==nm)?`<span class="sci">${esc(r.scientific_name)}</span>`:'';
+  const change=`<div class="fnote">${esc(r.scientific_name||'?')} → <b>${esc(r.to_name)}</b></div>`;
+  const cite=[r.ref_authors,r.ref_year,r.ref_title,r.ref_container].filter(Boolean).map(esc).join(' · ');
+  const rejectNote=(r.status==='rejected'&&r.admin_note)?`<div class="fnote">반려 사유: ${esc(r.admin_note)}</div>`:'';
+  return `<span class="nm">${esc(nm)}</span> ${sci} ${taxonRefStatusBadge(r.status)}`+
+    `<span class="fmeta">${esc((r.created_at||'').slice(0,10))}</span>`+
+    change + (cite?`<div class="fnote">근거: ${cite}</div>`:'') + rejectNote;
 }
 async function renderFeed(){
   const host=document.getElementById('feedList'); if(!host) return;
@@ -3498,6 +3516,8 @@ async function myPage(user){
       <a class="btn cta sm" href="#report" style="margin-left:auto">＋ 발견 제보하기</a>
     </div>
     <ul class="wl feedlist" id="myrep" style="margin-top:10px"><li class="muted2">불러오는 중…</li></ul>
+    <h3 style="margin:18px 0 0">내 분류 이력 제보</h3>
+    <ul class="wl feedlist" id="myTaxonRef" style="margin-top:10px"><li class="muted2">불러오는 중…</li></ul>
   </div>
   <div class="authcard" id="adminCard" style="max-width:none;display:none;margin-top:14px">
     <h3 style="margin:0 0 4px">관리자 · 제보 검토</h3>
@@ -3602,8 +3622,12 @@ async function myPage(user){
       rows.forEach(r=>{ const li=document.createElement('li');
         li.innerHTML=taxonRefLine(r)+
           `<span class="admbtns"><button class="btn sm" data-a="approved">승인</button><button class="btn sm rej" data-a="rejected">거부</button></span>`;
-        li.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{ b.disabled=true;
-          try{ const {error}=await setTaxonRefStatus(r.id,b.dataset.a); if(error) throw error; li.remove();
+        li.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{
+          // 반려는 이유를 남겨야 제보자가 마이페이지에서 왜인지 알 수 있다 — 취소하면 아무 것도 안 한다.
+          let note=null;
+          if(b.dataset.a==='rejected'){ note=prompt('반려 사유(제보자에게 보입니다):',''); if(note===null) return; }
+          b.disabled=true;
+          try{ const {error}=await setTaxonRefStatus(r.id,b.dataset.a,note); if(error) throw error; li.remove();
             if(!al.children.length) al.innerHTML='<li class="muted2">검토 대기 제보가 없습니다.</li>'; }
           catch(e){ b.disabled=false; alert('처리 실패: '+(e.message||e)); } });
         al.appendChild(li); });
@@ -3624,6 +3648,15 @@ async function myPage(user){
           catch(e){ d.disabled=false; alert('삭제 실패: '+(e.message||e)); } };
         mr.appendChild(li); });
     }catch(err){ mr.innerHTML=`<li class="authmsg err">내 제보 로드 실패: ${esc(err.message||String(err))}</li>`; }
+  })();
+  (async()=>{                                              // 내 분류 이력 제보(본인 RLS) — 수정·삭제 없음(반려 사유로 남김)
+    const mt=view.querySelector('#myTaxonRef'); if(!mt) return;
+    try{
+      const rows=await myTaxonReferences();
+      if(!rows.length){ mt.innerHTML='<li class="muted2">아직 제보한 분류 이력이 없습니다.</li>'; return; }
+      mt.innerHTML='';
+      rows.forEach(r=>{ const li=document.createElement('li'); li.innerHTML=taxonRefMineLine(r); mt.appendChild(li); });
+    }catch(err){ mt.innerHTML=`<li class="authmsg err">내 분류 이력 제보 로드 실패: ${esc(err.message||String(err))}</li>`; }
   })();
   const wlist=view.querySelector('#wlList'), summ=view.querySelector('#wlSummary'),
         wfil=view.querySelector('#wlFilter'), wpanel=view.querySelector('#wlPanel'),
