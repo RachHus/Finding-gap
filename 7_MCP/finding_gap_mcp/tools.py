@@ -16,7 +16,8 @@ MIN_PUBLIC_WATCH = 3
 # 그 지역에서 그 종을 제보한 사람이 누구인지로 좁혀진다.
 MIN_PUBLIC_REPORT = 3
 _SP_COLS = ("ktsn,korean_name,scientific_name,taxon_group,taxon_group_kor,"
-            "endangered_grade,national_redlist_category,has_media,interest")
+            "endangered_grade,national_redlist_category,has_media,interest,"
+            "gap_reason,gap_reason_note")
 
 
 def _ref_year():

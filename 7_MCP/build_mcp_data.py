@@ -12,13 +12,14 @@
   7_MCP/data/wiki_pageviews.json                        : 한국어 위키 조회수(월갱신, ko+en)
   7_MCP/data/watch_counts.json                          : 관심종 익명 집계수(사용자 신호)
   7_MCP/data/community_reports.json                     : 관리자 승인 시민 제보 집계(미존재 시 빈 테이블)
+  7_MCP/data/gap_reason.json                            : 발견공백 사유(이명·지역절멸, build_gap_reason_snapshot.py 산출, 미존재 시 전종 해당없음)
 
 핵심 압축: observation_sigungu.csv(2.04M행: ktsn×시군구×연도×출처)를
 (ktsn, region) 최신연도·관측합으로 롤업 → 발견상태 판정에 필요한 최소치만.
 원시 좌표점(observations.sqlite)은 절대 포함하지 않는다(민감·집계만 공개).
 
 산출 테이블:
-  species        : 서비스 대상 39,972종 마스터(등급·적색목록·상위분류·미디어보유·관심도 신호)
+  species        : 서비스 대상 39,972종 마스터(등급·적색목록·상위분류·미디어보유·관심도 신호·발견공백 사유)
   species_region : (ktsn, region=시군구코드) → maxyear, obs_count (발견/휴면/미발견 판정)
   species_env    : 종별 환경지위(bio01/05/06/12/dem × 통계)
   media          : 종별 미디어 메타(사진·도판 URL·라이선스·출처)
@@ -174,6 +175,14 @@ def main():
     sp["wiki_has"] = sp["ktsn"].isin(ko_article)
     watch = _load_json(OUT / "watch_counts.json")
     sp["watch_count"] = sp["ktsn"].map({k: int(v) for k, v in watch.items()}).fillna(0).astype("int64")  # 익명 집계(트렌딩·user신호)
+
+    # 발견공백 사유(gap_reason.json = build_gap_reason_snapshot.py) — '미발견'이 진짜 조사부족이
+    # 아니라 GBIF 이명 잔재('synonym')거나 국가적색목록 지역절멸('regionally_extinct')인 경우 표시.
+    # 미수집이면 전종 빈 문자열(집계 없음과 '해당없음'을 구분하지 않음 — 배지가 안 뜨는 것으로 충분).
+    gapr = _load_json(OUT / "gap_reason.json")
+    sp["gap_reason"] = sp["ktsn"].map({k: v.get("reason", "") for k, v in gapr.items()}).fillna("")
+    sp["gap_reason_note"] = sp["ktsn"].map(
+        {k: (v.get("detail") or {}).get("matched_name", "") or "" for k, v in gapr.items()}).fillna("")
     # user 신호는 표본이 쌓인 뒤에만 켠다. 켜지는 순간 재정규화 분모 Z 가 바뀌어 모든 종의 interest 가
     # 위키 문서 보유 여부에 따라 서로 다른 배율(0.7/1.0 vs 0.5/0.8)로 재조정된다 — 즉 관심종 한두 건이
     # 두 집단의 상대순위까지 뒤집는다. 합계·종수를 함께 요구해야 층 내 백분위가 의미를 갖는다.
@@ -257,6 +266,10 @@ def main():
         ("interest_user_active", "1" if user_active else "0"),
         ("community_reports", str(len(comm_rows))),
         ("community_source", "관리자 승인된 시민 제보(익명 집계, 시군구 단위, source='community'). 정확좌표·개인정보 미포함. 미승인·미검증 제보는 미노출."),
+        ("gap_reason_definition", "species.gap_reason: ''=해당없음, 'synonym'=GBIF 기준 이명(gap_reason_note=인정 현재명), "
+                                   "'regionally_extinct'=국가적색목록 지역절멸(RE). '미발견'이 조사부족이 아닐 수 있다는 정보성 표시일 뿐, "
+                                   "발견공백 집계 자체에서 제외하지는 않음."),
+        ("gap_reason_species", str(int((sp["gap_reason"] != "").sum()))),
     ], columns=["key", "value"])
     meta.to_sql("meta", con, index=False)
 
