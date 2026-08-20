@@ -3194,14 +3194,11 @@ function fgGoLogin(why){
 }
 window.fgGoMy=fgGoMy; window.fgGoLogin=fgGoLogin;
 
-/* ── 로고 → 첫 화면(지도 서비스 탭, 종 목록 화면) — 검색·필터는 지우지 않고 화면만 되돌린다 ── */
-function fgGoHome(){
-  switchAxis('survey');
-  setMode('A');
-  window.scrollTo({top:0, behavior:'smooth'});
-}
+/* ── 로고 → 첫 화면. 분류군·연도·지역·검색어까지 전부 처음 그대로 되돌린다 — 상태를 하나씩
+   되돌리다 빠뜨리는 것보다, 딥링크 없는 깨끗한 주소로 다시 열어 boot() 가 계산하는 진짜
+   기본값을 그대로 믿는다(homeLink 는 href="." 라 JS 없이도 이 결과와 같다). ── */
+function fgGoHome(){ location.href=location.pathname; }
 window.fgGoHome=fgGoHome;
-{ const hl=document.getElementById('homeLink'); if(hl) hl.onclick=e=>{ e.preventDefault(); fgGoHome(); }; }
 
 /* ── 알림·마이페이지에서 지도의 지역 화면으로 ── */
 function fgShowRegion(code,taxon,metric){
