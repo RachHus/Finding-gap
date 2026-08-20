@@ -1183,6 +1183,8 @@
   .ttlabels text{font-size:10px;fill:#fff;font-weight:600;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:2.4px;stroke-linejoin:round}
   .ttfocus circle{stroke:var(--ink);stroke-width:1.6}
   .ttfocus text{font-size:11px;fill:var(--ink);pointer-events:none;text-anchor:middle}
+  .ttfocus.clickable{cursor:pointer}
+  .ttfocus.clickable:hover circle{stroke-width:2.6}
   .ttoverview{border-left:1px solid var(--line);padding-left:16px}
   .ttoverview h4{margin:0 0 6px;font-size:11.5px;font-weight:600;color:var(--muted)}
   .ttsearch{position:relative;margin:10px 0 14px}
@@ -4985,18 +4987,29 @@ function renderTaxaTree(group, hostId, infoId){
     const fitScale=Math.min(1, (diagHost.clientWidth||native)/native, CAP_H/native);
     svg.style.width=(native*fitScale).toFixed(1)+'px';
     svg.style.height=(native*fitScale).toFixed(1)+'px';
+    // 확대 기준점을 중심이 아니라 12시(링의 중간 반지름) 쪽으로 — 중심 기준으로 키우면 정작 보고 싶은
+    // 링(중심에서 먼 쪽)이 오히려 화면 밖으로 밀려난다. 회전으로 원하는 웨지를 12시로 가져온 다음 휠로
+    // 그 자리를 확대하는 조합 — 이 기준점은 회전과 무관하게 화면상 항상 같은 자리(링 반지름 기준)다.
+    const anchorPct=((half-(rI+rO)/2)/(2*half)*100).toFixed(1);
+    svg.style.transformOrigin=`50% ${anchorPct}%`;
 
     const fTotal=entry.stats.n||0, fPct=fTotal?entry.stats.none/fTotal:0;
     const fc=document.createElementNS(SVGNS,'circle');
     fc.setAttribute('r',fr); fc.setAttribute('fill',gapColor(fPct));
     const ftitle=document.createElementNS(SVGNS,'title');
-    ftitle.textContent=`${entry.label} · ${nf2(fTotal)}종 · 발견 ${nf2(entry.stats.found)}·휴면 ${nf2(entry.stats.dormant)}·미발견 ${nf2(entry.stats.none)}`;
+    ftitle.textContent=`${entry.label} · ${nf2(fTotal)}종 · 발견 ${nf2(entry.stats.found)}·휴면 ${nf2(entry.stats.dormant)}·미발견 ${nf2(entry.stats.none)}`+
+      (path.length>1? ' · 눌러서 상위 분류로 이동':'');
     fc.appendChild(ftitle);
     focusLayer.appendChild(fc);
     const flabel=document.createElementNS(SVGNS,'text');
     flabel.setAttribute('y', fr+13);
     flabel.textContent=entry.label;
     focusLayer.appendChild(flabel);
+    // 가운데(초점)를 눌러 위로도 갈 수 있게 — 자식 웨지를 눌러 내려가는 것의 반대 동작.
+    if(path.length>1){
+      focusLayer.classList.add('clickable');
+      focusLayer.addEventListener('click',()=>{ path.pop(); renderFocus(); });
+    }
 
     // 링을 통째로 다시 그린다 — 각도 배분에 ringRotation(회전 오프셋)을 그대로 넣으므로, 회전 중에도
     // 라벨 위/아래 뒤집힘 판정(drawWedgeRing 안, 실제 화면 각도 기준)이 매번 다시 맞게 계산된다.
@@ -5042,6 +5055,30 @@ function renderTaxaTree(group, hostId, infoId){
     }
     drawRing();
 
+    let zoomLevel=1;
+    const applyZoom=()=>{ svg.style.transform=zoomLevel>1? `scale(${zoomLevel.toFixed(3)})` : ''; };
+
+    // ── 확대 중엔 드래그를 놓으면 가장 가까운 웨지를 12시로 딱 맞춰준다(돌림판이 실제로 걸리는 느낌).
+    // 확대 안 한 기본 상태에선 링 전체가 다 보이므로 굳이 안 맞춘다.
+    const angDiff=(a,b)=>{ let d=(a-b)%(2*Math.PI); if(d>Math.PI) d-=2*Math.PI; if(d<-Math.PI) d+=2*Math.PI; return d; };
+    function snapToNearestWedge(){
+      if(!counts.length) return;
+      const localMids=wedgeAngles(childRank, counts, 2*Math.PI, 0).map(([a0,a1])=>(a0+a1)/2);
+      let best=0, bestDist=Infinity;
+      localMids.forEach((m,i)=>{
+        const dist=Math.abs(angDiff(0, ringRotation+m));
+        if(dist<bestDist){ bestDist=dist; best=i; }
+      });
+      const target=ringRotation + angDiff(-localMids[best], ringRotation);
+      const from=ringRotation, delta=target-from, t0=performance.now(), dur=220;
+      (function step(t){
+        const k=Math.min(1,(t-t0)/dur), ease=1-Math.pow(1-k,3);
+        ringRotation=from+delta*ease;
+        drawRing();
+        if(k<1) requestAnimationFrame(step);
+      })(t0);
+    }
+
     // ── 드래그로 회전(돌림판) — 화면 좌표만으로 중심 기준 각도차를 구하므로 확대 배율과 무관하게 동작한다.
     // 클릭과 구분하려고 일정 거리(6px) 넘게 움직여야 회전으로 인정한다(그 전엔 웨지 클릭이 정상 동작).
     const angleAt=(cx,cy)=>{ const r=svg.getBoundingClientRect(); return Math.atan2(cy-(r.top+r.height/2), cx-(r.left+r.width/2)); };
@@ -5061,16 +5098,19 @@ function renderTaxaTree(group, hostId, infoId){
       ringRotation=angleAt(e.clientX,e.clientY)-dragBase;
       if(!rafId) rafId=requestAnimationFrame(()=>{ rafId=0; drawRing(); });
     });
-    const endDrag=()=>{ dragArmed=false; dragging=false; svg.classList.remove('grabbing'); };
+    const endDrag=()=>{
+      const wasDragging=dragging;
+      dragArmed=false; dragging=false; svg.classList.remove('grabbing');
+      if(wasDragging && zoomLevel>1) snapToNearestWedge();
+    };
     svg.addEventListener('pointerup', endDrag);
     svg.addEventListener('pointercancel', endDrag);
 
     // ── 휠로 확대 — 기본은 컨테이너에 맞춰 축소된 상태(CSS max-width:100%, 확대는 안 함)라 여기서만 키운다.
-    let zoomLevel=1;
     svg.addEventListener('wheel', e=>{
       e.preventDefault();
       zoomLevel=Math.min(6, Math.max(1, zoomLevel*(e.deltaY<0?1.12:1/1.12)));
-      svg.style.transform=zoomLevel>1? `scale(${zoomLevel.toFixed(3)})` : '';
+      applyZoom();
     }, {passive:false});
 
     renderCrumbs();
