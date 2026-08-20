@@ -1179,6 +1179,7 @@
     border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.16);
     pointer-events:none;display:flex;align-items:center;gap:6px;z-index:5}
   .ttcallout-box i{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+  .ttcallout-img{width:44px;height:44px;border-radius:8px;object-fit:cover;flex:none;display:block;border:1px solid var(--line)}
   /* 자식이 많은 링(목 259개 등)은 기본은 이 상자 폭·최대 높이에 맞춰 축소돼 보이고(JS가 픽셀로 직접 계산 —
      둘 다 정사각형이라 폭만 보는 CSS max-width/height:auto 로는 세로가 안 잘려서 부족함), 휠로 확대·드래그로
      회전(돌림판처럼)해서 원하는 부분을 크게/편한 자리로 볼 수 있다. */
@@ -4851,7 +4852,10 @@ function genusStatsOf(list){ const c=countStates(list); return {n:list.length,fo
 // showCallout/hideCallout(선택) — 웨지를 호버하면 밖으로 줄이 그어지며 크게 뜨는 콜아웃으로 이름·개수를
 // 보여준다. 안쪽 라벨이 있든 없든 전부 적용(통일) — 네이티브 title 툴팁은 작고 늦게 떠서 잘 안 보인다는
 // 불만이 있었는데, 처음엔 라벨 없는 웨지에만 달았다가 라벨 있는 쪽도 똑같이 해 달라는 요청으로 넓혔다.
-function drawWedgeRing(wedgeLayer, labelLayer, items, angleSpans, rI, rO, colorOf, titleOf, wantLabel, labelText, showCallout, hideCallout){
+// photoOf(key,val)(선택) — 그 무리를 대표하는 종 사진(repOf 결과)을 콜아웃에 같이 보여준다. 곤충처럼
+// 큰 분류군은 "이게 어느 목·과에 속하는지" 조차 막막하다는 사용자 얘기 — 웨지를 하나씩 훑으며 사진으로
+// 먼저 눈에 익혀 보고 들어가라는 취지(들어가서 보는 것 → 들어가기 전에 비교하는 것으로).
+function drawWedgeRing(wedgeLayer, labelLayer, items, angleSpans, rI, rO, colorOf, titleOf, wantLabel, labelText, showCallout, hideCallout, photoOf){
   return items.map(([key,val],i)=>{
     const [ga0,ga1]=insetGap(angleSpans[i][0], angleSpans[i][1]);
     const mid=(ga0+ga1)/2;
@@ -4886,7 +4890,7 @@ function drawWedgeRing(wedgeLayer, labelLayer, items, angleSpans, rI, rO, colorO
       }
     }
     if(wantLabel && showCallout && hideCallout){
-      el.addEventListener('pointerenter', ()=>showCallout(el, mid, rO, titleText, fill));
+      el.addEventListener('pointerenter', ()=>showCallout(el, mid, rO, titleText, fill, photoOf&&photoOf(key,val)));
       el.addEventListener('pointerleave', hideCallout);
     }
     return {key, val, el, mid, labeled};
@@ -4915,6 +4919,25 @@ function renderTaxaTree(group, hostId, infoId){
       return {childRank:'genus', items:[...byGenus.entries()].sort((a,b)=>a[0].localeCompare(b[0]))};
     }
     return {childRank:'species', items:entry.list.map(s=>[s[0],s])};             // entry.rank==='genus'
+  }
+
+  // 콜아웃에 얹을 대표 사진 — 그 무리(목/과/속) 안에서 사진(repOf) 있는 아무 종이나 첫 번째. 목·과는
+  // 종 목록이 이 노드에 없어(taxa_tree.js는 개수만 집계) taxatree_sp_<T>.js 에서 과 단위로 끌어와야 한다.
+  function repFromSpeciesList(list){
+    if(!window.repOf) return null;
+    for(const s of list){ const r=window.repOf({t:group, k:s[0]}); if(r) return r; }
+    return null;
+  }
+  function repFromFamilies(orderKey, familyNames){
+    const spData=(window.__TAXATREE_SP__||{})[group];
+    if(!spData) return null;
+    for(const fam of familyNames){
+      const list=spData[`${orderKey}|${fam}`];
+      if(!list) continue;
+      const r=repFromSpeciesList(list);
+      if(r) return r;
+    }
+    return null;
   }
 
   function renderCrumbs(){
@@ -5006,7 +5029,7 @@ function renderTaxaTree(group, hostId, infoId){
     const calloutLine=diagHost.querySelector('.ttcallout-line'), calloutBox=diagHost.querySelector('.ttcallout-box');
     // 라벨 없는(너무 얇은) 웨지를 호버하면 밖으로 줄을 그어 이름·개수를 크게 보여준다 — SVG 밖(HTML)이라
     // svg의 viewBox 여백에 안 갇히고, 확대·회전과도 무관하게 항상 화면(.ttdiagram) 기준으로 뜬다.
-    function showCallout(el, mid, r, text, color){
+    function showCallout(el, mid, r, text, color, photo){
       const dRect=diagHost.getBoundingClientRect();
       const ctm=svg.getScreenCTM(); if(!ctm) return;
       const toDiag=(sx,sy)=>{ const p=svg.createSVGPoint(); p.x=sx; p.y=sy; const s=p.matrixTransform(ctm); return {x:s.x-dRect.left, y:s.y-dRect.top}; };
@@ -5018,7 +5041,10 @@ function renderTaxaTree(group, hostId, infoId){
       // 말풍선이 컨테이너 밖으로 나가면(가장자리 웨지) 잘려 보였다 — 먼저 띄워서 실제 크기를 재고,
       // 그 크기만큼은 항상 안에 들어오게 자리를 당긴다. 링·확대·최대 높이 자체를 안 건드리는 게
       // 가장자리가 아닌 웨지들의 여백 낭비를 안 만들면서, 필요한 경우에만 자연스럽게 자리를 옮긴다.
-      calloutBox.innerHTML=`<i style="background:${color}"></i>${esc(text)}`;
+      // 사진은 그 무리 안에서 사진 있는 아무 종이나 하나(대표) — 없으면 글자만(점진적으로 채워질 자료).
+      const photoHTML=photo? `<img class="ttcallout-img" src="${esc(photo.url)}" alt="" loading="lazy" `+
+        `title="${esc(['© '+(photo.by||'국립생물자원관'), photo.lic].filter(Boolean).join(' · '))}" onerror="this.remove()">` : '';
+      calloutBox.innerHTML=`${photoHTML}<i style="background:${color}"></i>${esc(text)}`;
       calloutBox.style.display='flex';
       const bw=calloutBox.offsetWidth, bh=calloutBox.offsetHeight, pad=8;
       if(dRect.width>bw+pad*2) Px=Math.min(Math.max(Px, bw/2+pad), dRect.width-bw/2-pad);
@@ -5073,7 +5099,8 @@ function renderTaxaTree(group, hostId, infoId){
       if(childRank==='species'){
         const placed=drawWedgeRing(ringLayer, labelLayer, items, angleSpans, rI, rO,
           val=>STATE_COLOR[val[2]]||'#8a9a90', (key,val)=>`${val[1]} · ${STATE_LABEL[val[2]]||''}`,
-          true, (key,val)=>val[1], showCallout, hideCallout);
+          true, (key,val)=>val[1], showCallout, hideCallout,
+          (key,val)=>window.repOf&&window.repOf({t:group,k:val[0]}));
         placed.forEach(({val,el})=>{
           el.classList.add('clickable');
           el.addEventListener('click',()=>{
@@ -5085,7 +5112,10 @@ function renderTaxaTree(group, hostId, infoId){
         const statsOf = childRank==='genus' ? genusStatsOf : (v)=>v;    // order·family는 이미 {n,found,dormant,none,...} 형태
         const colorOf=val=>{ const st=statsOf(val); return gapColor(st.n? st.none/st.n : 0); };
         const titleOf=(key,val)=>{ const st=statsOf(val); return `${key} · ${nf2(st.n)}종`; };
-        const placed=drawWedgeRing(ringLayer, labelLayer, items, angleSpans, rI, rO, colorOf, titleOf, true, (key)=>key, showCallout, hideCallout);
+        const photoOf = childRank==='genus' ? (key,val)=>repFromSpeciesList(val)
+          : childRank==='family' ? (key,val)=>repFromFamilies(entry.key,[key])
+          : (key,val)=>repFromFamilies(key, Object.keys(val.families));            // childRank==='order'
+        const placed=drawWedgeRing(ringLayer, labelLayer, items, angleSpans, rI, rO, colorOf, titleOf, true, (key)=>key, showCallout, hideCallout, photoOf);
         placed.forEach(({key,val,el})=>{
           el.classList.add('clickable');
           el.addEventListener('click',()=>{
@@ -5222,6 +5252,8 @@ function renderTaxaTree(group, hostId, infoId){
   renderFocus();
   buildSearchIndex();
   loadTaxaTreeSp(group, buildSearchIndex);   // 속·종 데이터가 나중에 도착하면 색인에 더한다(이미 있으면 즉시 콜백)
+  if(window.loadRep) window.loadRep(group);  // 콜아웃 대표 사진용(종 상세 화면과 같은 자료) — 미리 당겨 둔다
+
 
   // ── 검색창 배선 ──
   const searchInput=document.getElementById('taxaSearchInput'), searchResults=document.getElementById('taxaSearchResults');
