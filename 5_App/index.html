@@ -5008,15 +5008,23 @@ function renderTaxaTree(group, hostId, infoId){
       const [ex,ey]=pointRadial(mid, r), [fx,fy]=pointRadial(mid, r+20);
       const P0=toDiag(ex,ey), P1=toDiag(fx,fy);
       const dx=P1.x-P0.x, dy=P1.y-P0.y, len=Math.hypot(dx,dy)||1, ux=dx/len, uy=dy/len, LEADER=54;
-      const Px=P0.x+ux*LEADER, Py=P0.y+uy*LEADER;
+      let Px=P0.x+ux*LEADER, Py=P0.y+uy*LEADER;
+
+      // 말풍선이 컨테이너 밖으로 나가면(가장자리 웨지) 잘려 보였다 — 먼저 띄워서 실제 크기를 재고,
+      // 그 크기만큼은 항상 안에 들어오게 자리를 당긴다. 링·확대·최대 높이 자체를 안 건드리는 게
+      // 가장자리가 아닌 웨지들의 여백 낭비를 안 만들면서, 필요한 경우에만 자연스럽게 자리를 옮긴다.
+      calloutBox.innerHTML=`<i style="background:${color}"></i>${esc(text)}`;
+      calloutBox.style.display='flex';
+      const bw=calloutBox.offsetWidth, bh=calloutBox.offsetHeight, pad=8;
+      if(dRect.width>bw+pad*2) Px=Math.min(Math.max(Px, bw/2+pad), dRect.width-bw/2-pad);
+      if(dRect.height>bh+pad*2) Py=Math.min(Math.max(Py, bh/2+pad), dRect.height-bh/2-pad);
+
       calloutLine.style.left=P0.x.toFixed(1)+'px'; calloutLine.style.top=P0.y.toFixed(1)+'px';
       calloutLine.style.width=Math.hypot(Px-P0.x,Py-P0.y).toFixed(1)+'px';
       calloutLine.style.transform=`rotate(${(Math.atan2(Py-P0.y,Px-P0.x)*180/Math.PI).toFixed(1)}deg)`;
       calloutLine.style.background=color;
       calloutLine.style.display='block';
-      calloutBox.innerHTML=`<i style="background:${color}"></i>${esc(text)}`;
       calloutBox.style.left=Px.toFixed(1)+'px'; calloutBox.style.top=Py.toFixed(1)+'px';
-      calloutBox.style.display='flex';
     }
     function hideCallout(){ calloutLine.style.display='none'; calloutBox.style.display='none'; }
 
