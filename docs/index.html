@@ -822,7 +822,7 @@
 <body>
 <div class="wrap">
   <header>
-    <h1><img src="logo.png" width="177" height="72" alt="Finding gap · 국가 생물종 발견공백"></h1>
+    <h1><a href="." id="homeLink" aria-label="Finding gap 첫 화면으로"><img src="logo.png" width="177" height="72" alt="Finding gap · 국가 생물종 발견공백"></a></h1>
     <p class="sub">국가생물종목록(KTSN)을 기준으로, 국내 조사자료에서 <b>아직 발견되지 않은 종</b>을 분류군·지역·시기로 조회합니다.</p>
     <!-- 계정 · 알림 — 어느 화면에 있든 같은 자리에서 로그인 상태를 보고 오갈 수 있게 상단에 둔다 -->
     <div class="acct" id="acct" hidden>
@@ -3193,6 +3193,15 @@ function fgGoLogin(why){
   setTimeout(()=>{ const el=document.getElementById('authEmail'); if(el) el.focus({preventScroll:true}); }, 380);
 }
 window.fgGoMy=fgGoMy; window.fgGoLogin=fgGoLogin;
+
+/* ── 로고 → 첫 화면(지도 서비스 탭, 종 목록 화면) — 검색·필터는 지우지 않고 화면만 되돌린다 ── */
+function fgGoHome(){
+  switchAxis('survey');
+  setMode('A');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+window.fgGoHome=fgGoHome;
+{ const hl=document.getElementById('homeLink'); if(hl) hl.onclick=e=>{ e.preventDefault(); fgGoHome(); }; }
 
 /* ── 알림·마이페이지에서 지도의 지역 화면으로 ── */
 function fgShowRegion(code,taxon,metric){
