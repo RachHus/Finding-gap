@@ -1098,13 +1098,22 @@
   .rpt-photo-prev button{border:1px solid #d7ded9;background:#fff;border-radius:7px;padding:6px 10px;font-size:12px;cursor:pointer}
   .rpt-url-toggle{display:inline-block;margin-top:6px;font-size:12px;color:var(--faint);cursor:pointer;text-decoration:underline}
   .report-lk{cursor:pointer}
-  .taxatree{width:100%;max-width:560px;height:auto;display:block;margin:0 auto}
-  .ttleaf,.ttnode{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .12s ease,stroke-width .12s ease}
-  .ttleaf:hover,.ttnode:hover{stroke:var(--ink);stroke-width:1.5;transform:scale(2.4)}
-  .ttleaf-open{stroke:var(--ink);stroke-width:1.6}
-  .ttspleaf,.ttgenusleaf{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .12s ease}
-  .ttspleaf:hover,.ttgenusleaf:hover{stroke:var(--ink);stroke-width:1.2;transform:scale(2.6)}
-  .ttlink,.ttsplink{pointer-events:none}
+  .ttlayout{display:grid;grid-template-columns:180px 1fr;gap:16px;align-items:start}
+  .ttcrumbs{display:flex;flex-direction:column;gap:6px}
+  .ttcrumb{display:flex;align-items:center;gap:7px;border:1px solid #d7e3df;background:#eef3f1;
+    border-radius:999px;padding:5px 10px 5px 8px;font:inherit;font-size:12.5px;cursor:pointer;
+    text-align:left;color:var(--ink)}
+  .ttcrumb:hover{border-color:#9ec3b2;background:#e3ede8}
+  .ttcrumb.on{background:var(--accent);border-color:var(--accent);color:#fff;cursor:default}
+  .ttcrumb .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .ttdiagram{overflow:auto}
+  .taxatree{display:block;margin:0 auto}
+  .ttring-link{pointer-events:none;stroke:#e3e6e1;stroke-width:1}
+  .ttchild{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .12s ease,stroke-width .12s ease}
+  .ttchild:hover{stroke:var(--ink);stroke-width:1.4;transform:scale(1.5)}
+  .ttfocus circle{stroke:var(--ink);stroke-width:1.6}
+  .ttfocus text{font-size:11px;fill:var(--ink);pointer-events:none;text-anchor:middle}
+  @media(max-width:880px){ .ttlayout{grid-template-columns:1fr} .ttcrumbs{flex-direction:row;flex-wrap:wrap} }
   @media(max-width:880px){ .rpt-overlay{padding:0;align-items:flex-end} .rpt-modal{max-width:none;max-height:94vh;border-radius:14px 14px 0 0} }
 
   /* 근거의 세기 설명 — 읽는 글이라 본문보다 넓게 두고 줄간을 늘린다 */
@@ -3050,7 +3059,7 @@ function renderDash(group){
   </div>
 
   <div class="dashpanel">
-    <h3>분류 계통수 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이 분류군의 목→과 분류 체계를 나무로 그립니다. 잎(과)의 색이 붉을수록 그 과에 속한 종 중 조사자료에 아직 기록이 없는 비율(발견공백)이 높다는 뜻입니다. 잎을 누르면 상세 수치가 뜹니다.">?</button></h3>
+    <h3>분류 계통수 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이 분류군의 목→과→속→종 분류 체계를 나무로 그립니다. 색이 붉을수록 그 무리에 속한 종 중 조사자료에 아직 기록이 없는 비율(발견공백)이 높다는 뜻입니다. 노드를 누르면 그 하위 분류로 들어갑니다 — 왼쪽 경로를 눌러 이전 단계로 돌아갈 수 있습니다.">?</button></h3>
     <div id="taxaTreeHost"></div>
     <div id="taxaTreeInfo" class="muted2" style="margin-top:8px;font-size:12.5px"></div>
   </div>`;
@@ -4524,15 +4533,13 @@ if(configured){
 }
 </script>
 
-<!-- 분류군별 계통수(방사형 cladogram) — 목→과 분류 체계를 발견률로 색칠해 보여준다.
-     부채꼴(도넛) 비례 계산은 손으로 짜도 되는 산수지만, 가지가 안 겹치게 뻗는 진짜 나무
-     레이아웃은 별개 문제라 이번만 예외적으로 d3-hierarchy(레이아웃)·d3-shape(휘어진 가지 path)를
-     CDN으로 가져다 쓴다(exifr·pdfjs-dist와 같은 "직접 짜기엔 아까운 문제" 기준). 실제 SVG 조립은
-     기존 donutSVG처럼 손으로 조립 — 새 렌더러 자체를 통째로 들여오지 않는다. -->
+<!-- 분류 계통수 — 분류군을 고르면 목→과→속→종을 드릴다운(재중심) 방식으로 보여준다.
+     노드를 누르면 그 노드가 중심이 되고 자식들만 원 하나에 다시 배치된다 — 형제들끼리만 화면을 나눠 쓰므로
+     곤충류처럼 큰 분류군(예: 딱정벌레목 아래 과 113개, Ichneumonidae 아래 속 328개)도 항상 클릭 가능한
+     밀도를 유지한다(예전엔 목→과 전체를 한 원에 동시에 펼쳐 큰 분류군에서 잎이 안 눌리는 문제가 있었음).
+     지나온 경로는 왼쪽 breadcrumb. 매 순간 한 세대만 그리므로 손으로 계산한 삼각함수(pointRadial)만으로
+     충분 — d3 레이아웃 라이브러리 없이 기존 donutSVG와 같은 방식으로 손으로 조립한다. -->
 <script type="module">
-import { hierarchy, cluster } from 'https://esm.sh/d3-hierarchy@3';
-import { linkRadial } from 'https://esm.sh/d3-shape@3';
-
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 // 발견 상태 배지와 같은 색(index.html 다른 곳과 통일) — 미발견 비율로 두 색을 선형 보간.
@@ -4542,24 +4549,30 @@ function gapColor(pctNone){
   const rgb=FOUND_RGB.map((c,i)=>Math.round(c+(GAP_RGB[i]-c)*t));
   return `rgb(${rgb.join(',')})`;
 }
-// linkRadial() 의 각도 원점(위쪽 0시 방향)과 맞춘 극좌표→직교좌표 변환.
+// 위쪽 0시 방향을 각도 원점으로 하는 극좌표→직교좌표 변환.
 function pointRadial(angle,radius){
   const a=angle-Math.PI/2;
   return [radius*Math.cos(a), radius*Math.sin(a)];
 }
-function toChildren(node){                                 // {n,found,dormant,none,orders/families:{}} → d3.hierarchy 입력
-  const kids=node.orders||node.families;
-  if(!kids) return {n:node.n,found:node.found,dormant:node.dormant,none:node.none};
-  return {n:node.n, found:node.found, dormant:node.dormant, none:node.none,
-    children: Object.entries(kids).map(([name,v])=>({name, ...toChildren(v)}))};
-}
 
-const R=200;                                                // 잎(과) 반지름
-const R_GENUS=R+24, R_SP=R+56;                              // 속·종 펼침 고리 반지름
 const STATE_COLOR={f:'#015543', d:'#9a7b2f', n:'#b5482f'};
 const STATE_LABEL={f:'발견', d:'휴면', n:'미발견'};
+const RANK_LABEL={group:'분류군', order:'목', family:'과', genus:'속'};
+
+// 계급별 노드 크기 — 상위 계급일수록 크게. 초점으로 그릴 땐 ×FOCUS_SCALE.
+const BASE_R={group:8, order:6.6, family:5, genus:3.8, species:2.6};
+const FOCUS_SCALE=1.8;
+const RING_MARGIN=1.35;                                     // 자식 원끼리 겹치지 않을 최소 간격 배수
+const MIN_RING_R={order:72, family:60, genus:50, species:42};
+const PAD=36;                                               // 뷰박스 여백(초점 라벨·호버 확대 여유)
+function ringRadius(childRank,n){
+  const dia=BASE_R[childRank]*2;
+  const need=n>1 ? (n*RING_MARGIN*dia)/(2*Math.PI) : 0;
+  return Math.max(MIN_RING_R[childRank], need);
+}
+
 const _txfile=t=>t.replace(/[^A-Za-z0-9]/g,'_');
-// taxatree_sp_<T>.js 지연 로드 — 계통수의 과(잎)를 처음 펼칠 때만 그 분류군 파일을 가져온다.
+// taxatree_sp_<T>.js 지연 로드 — 과를 처음 펼칠 때만 그 분류군의 종 목록(genus_la 포함)을 가져온다.
 // index.html 의 classic-script _loadScript() 는 이 <script type="module"> 블록에서 안 보여서(스코프 분리) 따로 둔다.
 const _spCbs={};
 function loadTaxaTreeSp(t, cb){
@@ -4573,143 +4586,130 @@ function loadTaxaTreeSp(t, cb){
   document.head.appendChild(s);
 }
 
+const SVGNS='http://www.w3.org/2000/svg';
+function countStates(list){ const c={f:0,d:0,n:0}; for(const s of list) c[s[2]]++; return c; }
+
+// 자식들을 항상 360도 균등 분할로 배치 — 매 순간 형제들끼리만 원 하나를 나눠 쓰므로 부채꼴로 각도를 아낄 이유가 없다.
+function drawRing(ringLayer, linksLayer, items, radius, r, colorOf, titleOf){
+  return items.map(([key,val],i)=>{
+    const angle=items.length>1 ? (2*Math.PI*i/items.length) : 0;
+    const [x,y]=pointRadial(angle,radius);
+    const link=document.createElementNS(SVGNS,'path');
+    link.setAttribute('class','ttring-link');
+    link.setAttribute('d',`M0,0 L${x.toFixed(2)},${y.toFixed(2)}`);
+    linksLayer.appendChild(link);
+    const el=document.createElementNS(SVGNS,'circle');
+    el.setAttribute('cx',x.toFixed(2)); el.setAttribute('cy',y.toFixed(2)); el.setAttribute('r',r);
+    el.setAttribute('fill',colorOf(val));
+    const title=document.createElementNS(SVGNS,'title'); title.textContent=titleOf(key,val); el.appendChild(title);
+    ringLayer.appendChild(el);
+    return {key, val, el};
+  });
+}
+
 function renderTaxaTree(group, hostId, infoId){
   const host=document.getElementById(hostId); if(!host) return;
   const info=document.getElementById(infoId);
   const g=((window.__TAXATREE__||{}).tree||{})[group];
   if(!g || !Object.keys(g.orders||{}).length){ host.innerHTML='<div class="muted2">계통수 자료가 아직 없습니다.</div>'; return; }
 
-  const root=hierarchy({name:g.kor, ...toChildren(g)});
-  cluster().size([2*Math.PI, R])(root);
-  const linkGen=linkRadial().angle(d=>d.x).radius(d=>d.y);
+  host.innerHTML=`<div class="ttlayout"><div class="ttcrumbs"></div><div class="ttdiagram"></div></div>`;
+  const crumbHost=host.querySelector('.ttcrumbs'), diagHost=host.querySelector('.ttdiagram');
 
-  const links=root.links().map(l=>`<path class="ttlink" d="${linkGen(l)}" fill="none" stroke="#d8ddd6" stroke-width="1.2"/>`).join('');
-  const nodes=root.descendants().map(n=>{
-    const [x,y]=pointRadial(n.x,n.y);
-    if(n.depth===0) return '';                              // 중심(분류군) 자체는 점을 안 찍는다 — 가지 시작점일 뿐
-    const total=n.data.n||0, pctNone=total?n.data.none/total:0;
-    const isLeaf=!n.children;
-    const r=n.depth===1?4.4:3.2;
-    const fill=n.depth===1?'#8a9a90':gapColor(pctNone);
-    const cls=isLeaf?'ttleaf':'ttnode';
-    const title=`${esc(n.data.name)} · ${nf2(total)}종 · 발견 ${nf2(n.data.found)}·휴면 ${nf2(n.data.dormant)}·미발견 ${nf2(n.data.none)}`;
-    // 과(depth 2)는 종 펼치기에 쓸 소속 목 이름·극각을 함께 담아 둔다.
-    const extra=isLeaf?` data-order="${esc((n.parent&&n.parent.data.name)||'')}" data-angle="${n.x.toFixed(4)}"`:'';
-    return `<circle class="${cls}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r}" fill="${fill}" `+
-      `data-name="${esc(n.data.name)}" data-total="${total}" data-found="${n.data.found}" data-dormant="${n.data.dormant}" data-none="${n.data.none}" `+
-      `data-depth="${n.depth}"${extra}><title>${title}</title></circle>`;
-  }).join('');
+  let path=[{rank:'group', key:group, label:g.kor, stats:{n:g.n,found:g.found,dormant:g.dormant,none:g.none}}];
 
-  host.innerHTML=`<svg viewBox="-${R+80} -${R+80} ${2*(R+80)} ${2*(R+80)}" class="taxatree" role="img" aria-label="${esc(g.kor)} 목→과 계통수">`+
-    `<g class="ttlinks">${links}</g><g class="ttnodes">${nodes}</g><g class="ttgenus"></g><g class="ttspecies"></g></svg>`;
-  if(info) info.textContent='잎(과)에 마우스를 올리거나 눌러 보세요 — 색이 붉을수록 그 과의 발견공백 비율이 높습니다. 과를 누르면 속이, 속을 누르면 종이 차례로 펼쳐집니다.';
-
-  const svg=host.querySelector('svg');
-  const genusLayer=svg.querySelector('.ttgenus'), spLayer=svg.querySelector('.ttspecies');
-  let expandedFamily=null, expandedGenus=null;              // 한 번에 과 하나·그 안에서 속 하나만 펼친다
-
-  function collapseSpecies(){
-    spLayer.innerHTML='';
-    if(expandedGenus) expandedGenus.classList.remove('ttleaf-open');
-    expandedGenus=null;
-  }
-  function collapseFamily(){
-    collapseSpecies();
-    genusLayer.innerHTML='';
-    if(expandedFamily) expandedFamily.classList.remove('ttleaf-open');
-    expandedFamily=null;
-  }
-
-  const SVGNS='http://www.w3.org/2000/svg';
-  // 부채꼴로 점을 펼쳐 그리는 공통 로직 — 과→속, 속→종에서 그대로 재사용.
-  // radius·item마다 el(실제 circle 엘리먼트)·angle(다음 단계 펼침의 기준각)을 바로 돌려줘 재조회가 필요 없다.
-  function fanOut(layer, cx, cy, baseAngle, radius, items, r, colorOf, titleOf){
-    const spread=Math.min(1.3, 0.15+items.length*0.012);     // 항목 수에 비례한 부채꼴 폭(상한만 둬 과도한 회전은 막음)
-    return items.map((it,i)=>{
-      const t=items.length>1 ? i/(items.length-1) : 0.5;
-      const angle=baseAngle-spread/2+spread*t;
-      const [sx,sy]=pointRadial(angle,radius);
-      const link=document.createElementNS(SVGNS,'path');
-      link.setAttribute('class','ttsplink');
-      link.setAttribute('d',`M${cx.toFixed(2)},${cy.toFixed(2)} L${sx.toFixed(2)},${sy.toFixed(2)}`);
-      link.setAttribute('stroke','#e3e6e1'); link.setAttribute('stroke-width','1');
-      layer.appendChild(link);
-      const el=document.createElementNS(SVGNS,'circle');
-      el.setAttribute('cx',sx.toFixed(2)); el.setAttribute('cy',sy.toFixed(2)); el.setAttribute('r',r);
-      el.setAttribute('fill',colorOf(it));
-      const title=document.createElementNS(SVGNS,'title'); title.textContent=titleOf(it); el.appendChild(title);
-      layer.appendChild(el);
-      return {it, el, sx, sy, angle};
-    });
-  }
-
-  function expandFamily(el){
-    const d=el.dataset;
-    const spAll=(((window.__TAXATREE_SP__||{})[group]||{})[`${d.order}|${d.name}`])||[];
-    const cx=+el.getAttribute('cx'), cy=+el.getAttribute('cy'), baseAngle=+d.angle;
-
-    // 속 단위로 묶기 — 서버는 종 목록만 내려주고, 속 집계는 이미 받아 둔 이 목록에서 즉석에서 계산한다.
-    const byGenus=new Map();
-    for(const s of spAll){
-      const gname=s[3]||'(미분류)';
-      if(!byGenus.has(gname)) byGenus.set(gname,[]);
-      byGenus.get(gname).push(s);
+  // entry(path 마지막 원소) → 그 자식들. 목/과는 taxa_tree.js 집계, 속/종은 지연 로드된 종 목록에서 즉석 계산.
+  function focusChildren(entry){
+    if(entry.rank==='group') return {childRank:'order', items:Object.entries(g.orders)};
+    if(entry.rank==='order') return {childRank:'family', items:Object.entries(entry.stats.families)};
+    if(entry.rank==='family'){
+      const spAll=(((window.__TAXATREE_SP__||{})[group]||{})[`${entry.order}|${entry.key}`])||[];
+      const byGenus=new Map();
+      for(const s of spAll){ const gn=s[3]||'(미분류)'; if(!byGenus.has(gn)) byGenus.set(gn,[]); byGenus.get(gn).push(s); }
+      return {childRank:'genus', items:[...byGenus.entries()].sort((a,b)=>a[0].localeCompare(b[0]))};
     }
-    const genera=[...byGenus.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
-
-    const placed=fanOut(genusLayer, cx, cy, baseAngle, R_GENUS, genera, 2.6,
-      ([,list])=>{ let n=0; for(const s of list) if(s[2]==='n') n++; return gapColor(list.length? n/list.length : 0); },
-      ([gname,list])=>`${gname} · ${list.length}종`);
-
-    placed.forEach(({it:[gname,list], el:gEl, sx, sy, angle})=>{
-      const c={f:0,d:0,n:0}; for(const s of list) c[s[2]]++;
-      gEl.classList.add('ttgenusleaf');
-      gEl.addEventListener('mouseenter',()=>gEl.parentNode.appendChild(gEl));
-      gEl.addEventListener('click',()=>{
-        if(info) info.innerHTML=`<b>${esc(gname)}</b>(속) — 총 ${nf2(list.length)}종 · `+
-          `<span style="color:#015543">발견 ${nf2(c.f)}</span> · <span style="color:#9a7b2f">휴면 ${nf2(c.d)}</span> · `+
-          `<span style="color:#b5482f">미발견 ${nf2(c.n)}</span>`;
-        if(expandedGenus===gEl){ collapseSpecies(); return; }
-        collapseSpecies();
-        expandGenus(gEl, sx, sy, angle, list);
-      });
-    });
-
-    if(info) info.innerHTML=`<b>${esc(d.name)}</b>(과) 펼침 — 속 ${nf2(genera.length)}개 · 총 ${nf2(spAll.length)}종. 속을 눌러 보세요.`;
-    el.classList.add('ttleaf-open');
-    expandedFamily=el;
+    return {childRank:'species', items:entry.list.map(s=>[s[0],s])};             // entry.rank==='genus'
   }
 
-  function expandGenus(gEl, gx, gy, gAngle, list){
-    const placed=fanOut(spLayer, gx, gy, gAngle, R_SP, list, 2,
-      s=>STATE_COLOR[s[2]]||'#8a9a90', s=>`${s[1]} · ${STATE_LABEL[s[2]]||''}`);
-    placed.forEach(({it:s, el:sEl})=>{
-      sEl.classList.add('ttspleaf');
-      sEl.addEventListener('mouseenter',()=>sEl.parentNode.appendChild(sEl));
-      sEl.addEventListener('click',()=>{
-        if(!info) return;
-        info.innerHTML=`<b>${esc(s[1])}</b>(종) — <span style="color:${STATE_COLOR[s[2]]||'#333'}">${STATE_LABEL[s[2]]||''}</span>`;
-      });
-    });
-    gEl.classList.add('ttleaf-open');
-    expandedGenus=gEl;
+  function renderCrumbs(){
+    crumbHost.innerHTML=path.map((p,i)=>{
+      const total=p.stats.n||0, pct=total?p.stats.none/total:0, cur=i===path.length-1;
+      return `<button type="button" class="ttcrumb${cur?' on':''}" data-i="${i}"${cur?' disabled':''}>`+
+        `<i class="dot" style="background:${gapColor(pct)}"></i>${esc(p.label)}</button>`;
+    }).join('');
+    crumbHost.querySelectorAll('.ttcrumb:not(.on)').forEach(b=>
+      b.addEventListener('click',()=>{ path.length=+b.dataset.i+1; renderFocus(); }));
   }
 
-  host.querySelectorAll('.ttleaf,.ttnode').forEach(el=>{
-    el.addEventListener('mouseenter',()=>el.parentNode.appendChild(el));   // 확대된 원이 이웃 위로 보이게 맨 위로
-    el.addEventListener('click',()=>{
-      if(info){
-        const d=el.dataset, rank=d.depth==='1'?'목':'과';
-        info.innerHTML=`<b>${esc(d.name)}</b>(${rank}) — 총 ${nf2(+d.total)}종 · `+
-          `<span style="color:#015543">발견 ${nf2(+d.found)}</span> · <span style="color:#9a7b2f">휴면 ${nf2(+d.dormant)}</span> · `+
-          `<span style="color:#b5482f">미발견 ${nf2(+d.none)}</span>`;
-      }
-      if(el.dataset.depth!=='2') return;                    // 속·종 펼치기는 과(잎)에서만 시작
-      if(expandedFamily===el){ collapseFamily(); return; }
-      collapseFamily();
-      loadTaxaTreeSp(group, ()=>expandFamily(el));
-    });
-  });
+  function renderFocus(){
+    const entry=path[path.length-1];
+    if(info){
+      const rl=RANK_LABEL[entry.rank]||'';
+      info.innerHTML=`<b>${esc(entry.label)}</b>${rl?`(${rl})`:''} — 총 ${nf2(entry.stats.n)}종 · `+
+        `<span style="color:#015543">발견 ${nf2(entry.stats.found)}</span> · <span style="color:#9a7b2f">휴면 ${nf2(entry.stats.dormant)}</span> · `+
+        `<span style="color:#b5482f">미발견 ${nf2(entry.stats.none)}</span>`;
+    }
+
+    const {childRank, items}=focusChildren(entry);
+    const R=ringRadius(childRank, items.length), half=R+PAD;
+    diagHost.innerHTML=`<svg class="taxatree" width="${2*half}" height="${2*half}" viewBox="-${half} -${half} ${2*half} ${2*half}" `+
+      `role="img" aria-label="${esc(entry.label)} 계통수"><g class="ttring-links"></g><g class="ttfocus"></g><g class="ttring"></g></svg>`;
+    const svg=diagHost.querySelector('svg');
+    const linksLayer=svg.querySelector('.ttring-links'), focusLayer=svg.querySelector('.ttfocus'), ringLayer=svg.querySelector('.ttring');
+
+    const fr=BASE_R[entry.rank]*FOCUS_SCALE, fTotal=entry.stats.n||0, fPct=fTotal?entry.stats.none/fTotal:0;
+    const fc=document.createElementNS(SVGNS,'circle');
+    fc.setAttribute('r',fr); fc.setAttribute('fill',gapColor(fPct));
+    const ftitle=document.createElementNS(SVGNS,'title');
+    ftitle.textContent=`${entry.label} · ${nf2(fTotal)}종 · 발견 ${nf2(entry.stats.found)}·휴면 ${nf2(entry.stats.dormant)}·미발견 ${nf2(entry.stats.none)}`;
+    fc.appendChild(ftitle);
+    focusLayer.appendChild(fc);
+    const flabel=document.createElementNS(SVGNS,'text');
+    flabel.setAttribute('y', fr+13);
+    flabel.textContent=entry.label;
+    focusLayer.appendChild(flabel);
+
+    if(childRank==='species'){
+      const placed=drawRing(ringLayer, linksLayer, items, R, BASE_R.species,
+        val=>STATE_COLOR[val[2]]||'#8a9a90', (key,val)=>`${val[1]} · ${STATE_LABEL[val[2]]||''}`);
+      placed.forEach(({val,el})=>{
+        el.classList.add('ttchild');
+        el.addEventListener('click',()=>{
+          if(!info) return;
+          info.innerHTML=`<b>${esc(val[1])}</b>(종) — <span style="color:${STATE_COLOR[val[2]]||'#333'}">${STATE_LABEL[val[2]]||''}</span>`;
+        });
+      });
+    } else {
+      const statsOf = childRank==='genus'
+        ? (list)=>{ const c=countStates(list); return {n:list.length,found:c.f,dormant:c.d,none:c.n}; }
+        : (v)=>v;                                            // order·family는 이미 {n,found,dormant,none,...} 형태
+      const colorOf=val=>{ const st=statsOf(val); return gapColor(st.n? st.none/st.n : 0); };
+      const titleOf=(key,val)=>{ const st=statsOf(val); return `${key} · ${nf2(st.n)}종`; };
+      const placed=drawRing(ringLayer, linksLayer, items, R, BASE_R[childRank], colorOf, titleOf);
+      placed.forEach(({key,val,el})=>{
+        el.classList.add('ttchild');
+        el.addEventListener('click',()=>{
+          if(childRank==='family'){
+            if(info) info.textContent='속 정보를 불러오는 중…';
+            loadTaxaTreeSp(group, ()=>{
+              path.push({rank:'family', key, label:key, stats:val, order:entry.key});
+              renderFocus();
+            });
+          } else if(childRank==='genus'){
+            path.push({rank:'genus', key, label:key, stats:statsOf(val), list:val});
+            renderFocus();
+          } else {
+            path.push({rank:'order', key, label:key, stats:val});
+            renderFocus();
+          }
+        });
+      });
+    }
+
+    renderCrumbs();
+  }
+
+  renderFocus();
 }
 function nf2(n){ return (n||0).toLocaleString('ko-KR'); }
 window.renderTaxaTree=renderTaxaTree;
