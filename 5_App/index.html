@@ -121,10 +121,14 @@
   .vintro h2{margin:0 0 6px;font-size:19px}
   .vintro p{margin:0;color:var(--muted);font-size:13px;max-width:64ch;line-height:1.6}
   .vintro p b{color:var(--ink);font-weight:600}
-  /* 분류 체계도 탭 — 분류군 타일 고르개(지도의 드롭다운형 분류군 선택과 별개, 이 탭 전용) */
-  .taxatabpick{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
-  .taxatabpick button{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card);
-    border-radius:999px;padding:6px 14px 6px 8px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+  /* 분류 체계도 탭 — 분류군 타일 고르개(지도의 드롭다운형 분류군 선택과 별개, 이 탭 전용). 가로로 긴
+     알약 모양 대신, 다른 화면(dhead 등)에서 이미 쓰는 정사각형 아이콘 칩을 키워 정사각형에 가까운
+     카드로 — 폭이 좁아지면 라벨이 두 줄로 접히므로 aspect-ratio 대신 min-height로 "정사각형에 가깝게". */
+  .taxatabpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin:16px 0}
+  .taxatabpick button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    min-height:96px;border:1px solid var(--line);background:var(--card);border-radius:var(--radius);
+    padding:12px 8px;font:inherit;font-size:12.5px;font-weight:600;line-height:1.3;cursor:pointer;color:var(--ink);text-align:center}
+  .taxatabpick button .chip{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
   .taxatabpick button:hover{border-color:#9ec3b2;background:#eef3f1}
   .taxatabpick button.on{background:var(--accent);border-color:var(--accent);color:#fff}
   .taxatabpick button:disabled{opacity:.4;cursor:default}
@@ -3264,7 +3268,7 @@ function renderTaxaTab(){
   pick.innerHTML=all.map(t=>{
     const cur=t.group===taxaTabGroup;
     return `<button type="button" data-g="${t.group}" class="${cur?'on':''}"${t.has_data?'':' disabled'}>`+
-      `${chipHTML(t.group,18)}<span>${t.kor}</span></button>`;
+      `${chipHTML(t.group,24)}<span>${t.kor}</span></button>`;
   }).join('');
   pick.querySelectorAll('[data-g]:not(:disabled)').forEach(b=>b.onclick=()=>{
     if(b.dataset.g===taxaTabGroup) return;
