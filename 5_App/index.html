@@ -126,7 +126,7 @@
      카드로 — 폭이 좁아지면 라벨이 두 줄로 접히므로 aspect-ratio 대신 min-height로 "정사각형에 가깝게". */
   .taxatabpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin:16px 0}
   .taxatabpick button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
-    min-height:96px;border:1px solid var(--line);background:var(--card);border-radius:var(--radius);
+    min-height:96px;border:1px solid var(--line);background:none;border-radius:var(--radius);
     padding:12px 8px;font:inherit;font-size:12.5px;font-weight:600;line-height:1.3;cursor:pointer;color:var(--ink);text-align:center}
   .taxatabpick button .chip{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
   .taxatabpick button:hover{border-color:#9ec3b2;background:#eef3f1}
@@ -1172,14 +1172,13 @@
   .ttcrumb.on{background:var(--accent);border-color:var(--accent);color:#fff;cursor:default}
   .ttcrumb .dot{width:9px;height:9px;border-radius:50%;flex:none}
   .ttdiagram{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
-  /* 웨지를 호버하면 이 콜아웃(줄+글자)으로 이름·개수를 크게 보여준다 — 안쪽 라벨이 있든 없든 전부(통일).
-     네이티브 title 툴팁은 작고 늦게 떠서 답답하다는 불만이 있었다. 흰 상자를 대 보니 너무 부담스러워서
-     배경 없이 흰 테두리(halo)만 준 글자로 — 링 라벨(.ttlabels text)과 같은 계열의 가벼운 표현이다. */
+  /* 웨지를 호버하면 이 콜아웃(줄+말풍선)으로 이름·개수를 크게 보여준다 — 안쪽 라벨이 있든 없든 전부(통일).
+     네이티브 title 툴팁은 작고 늦게 떠서 답답하다는 불만이 있었다. */
   .ttcallout-line{position:absolute;height:2px;transform-origin:0 50%;pointer-events:none;border-radius:1px}
-  .ttcallout-box{position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:5;
-    display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;white-space:nowrap;color:var(--ink);
-    text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 8px #fff,0 0 8px #fff}
-  .ttcallout-box i{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block;box-shadow:0 0 0 1.5px #fff}
+  .ttcallout-box{position:absolute;transform:translate(-50%,-50%);background:var(--card);border:1px solid var(--line);
+    border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.16);
+    pointer-events:none;display:flex;align-items:center;gap:6px;z-index:5}
+  .ttcallout-box i{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
   /* 자식이 많은 링(목 259개 등)은 기본은 이 상자 폭·최대 높이에 맞춰 축소돼 보이고(JS가 픽셀로 직접 계산 —
      둘 다 정사각형이라 폭만 보는 CSS max-width/height:auto 로는 세로가 안 잘려서 부족함), 휠로 확대·드래그로
      회전(돌림판처럼)해서 원하는 부분을 크게/편한 자리로 볼 수 있다. */
