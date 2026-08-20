@@ -957,6 +957,7 @@
       </div>
       <div id="taxaTreeHost"></div>
       <div id="taxaTreeInfo" class="muted2" style="margin-top:8px;font-size:12.5px"></div>
+      <div id="taxaAlbum" class="ttalbum"></div>
     </div>
   </section>
 
@@ -1180,6 +1181,18 @@
     pointer-events:none;display:flex;align-items:center;gap:6px;z-index:5}
   .ttcallout-box i{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
   .ttcallout-img{width:44px;height:44px;border-radius:8px;object-fit:cover;flex:none;display:block;border:1px solid var(--line)}
+  /* 콜아웃은 호버당 하나씩만 보여서 "비교"하려면 기억에 의존해야 한다는 피드백 — 지금 링(형제들) 중
+     사진 있는 것만 모아 한꺼번에 더 크게 늘어놓는 앨범. 사진 없는 형제는 조용히 뺀다(빈 칸 안 만듦). */
+  .ttalbum:empty{display:none}
+  .ttalbum h4{margin:18px 0 8px;font-size:12px;font-weight:600;color:var(--muted)}
+  .ttalbum-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px}
+  .ttalbum-card{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    background:var(--card);cursor:pointer;padding:0;font:inherit;text-align:left}
+  .ttalbum-card:hover{border-color:#9ec3b2}
+  .ttalbum-card img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+  .ttalbum-card .tt-cap{padding:6px 8px}
+  .ttalbum-card .tt-cap b{display:block;font-size:11.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ttalbum-card .tt-cap span{font-size:11px;color:var(--muted)}
   /* 자식이 많은 링(목 259개 등)은 기본은 이 상자 폭·최대 높이에 맞춰 축소돼 보이고(JS가 픽셀로 직접 계산 —
      둘 다 정사각형이라 폭만 보는 CSS max-width/height:auto 로는 세로가 안 잘려서 부족함), 휠로 확대·드래그로
      회전(돌림판처럼)해서 원하는 부분을 크게/편한 자리로 볼 수 있다. */
@@ -4905,6 +4918,8 @@ function renderTaxaTree(group, hostId, infoId){
 
   host.innerHTML=`<div class="ttlayout"><div class="ttcrumbs"></div><div class="ttdiagram"></div><div class="ttoverview"></div></div>`;
   const crumbHost=host.querySelector('.ttcrumbs'), diagHost=host.querySelector('.ttdiagram'), ovHost=host.querySelector('.ttoverview');
+  let albumRefresh=null;   // renderFocus 가 매번 최신 renderAlbum 을 여기 넣어 둔다 — 사진 자료가 나중에
+                            // 도착해도(첫 렌더는 loadRep 콜백보다 먼저 돈다) 지금 보고 있는 화면을 다시 채운다.
 
   let path=[{rank:'group', key:group, label:g.kor, stats:{n:g.n,found:g.found,dormant:g.dormant,none:g.none}}];
 
@@ -5089,6 +5104,33 @@ function renderTaxaTree(group, hostId, infoId){
       focusLayer.addEventListener('click',()=>{ path.pop(); renderFocus(); });
     }
 
+    // ── 자식 선택 — 웨지 클릭·앨범 클릭 공용(같은 자식을 두 곳에서 고를 수 있으니 동작도 하나로). ──
+    const statsOf = childRank==='genus' ? genusStatsOf : (v)=>v;    // order·family는 이미 {n,found,dormant,none,...} 형태(species 분기는 안 씀)
+    function selectChild(key, val){
+      if(childRank==='species'){
+        if(!info) return;
+        info.innerHTML=`<b>${esc(val[1])}</b>(종) — <span style="color:${STATE_COLOR[val[2]]||'#333'}">${STATE_LABEL[val[2]]||''}</span>`;
+      } else if(childRank==='family'){
+        if(info) info.textContent='속 정보를 불러오는 중…';
+        loadTaxaTreeSp(group, ()=>{
+          path.push({rank:'family', key, label:key, stats:val, order:entry.key});
+          renderFocus();
+        });
+      } else if(childRank==='genus'){
+        path.push({rank:'genus', key, label:key, stats:statsOf(val), list:val});
+        renderFocus();
+      } else {
+        path.push({rank:'order', key, label:key, stats:val});
+        renderFocus();
+      }
+    }
+
+    // ── 대표 사진 찾기 — 콜아웃(호버 하나)·앨범(형제 전부) 공용. ──
+    const photoOf = childRank==='species' ? (key,val)=>window.repOf&&window.repOf({t:group,k:val[0]})
+      : childRank==='genus' ? (key,val)=>repFromSpeciesList(val)
+      : childRank==='family' ? (key,val)=>repFromFamilies(entry.key,[key])
+      : (key,val)=>repFromFamilies(key, Object.keys(val.families));   // childRank==='order'
+
     // 링을 통째로 다시 그린다 — 각도 배분에 ringRotation(회전 오프셋)을 그대로 넣으므로, 회전 중에도
     // 라벨 위/아래 뒤집힘 판정(drawWedgeRing 안, 실제 화면 각도 기준)이 매번 다시 맞게 계산된다.
     let ringRotation=0;
@@ -5096,47 +5138,45 @@ function renderTaxaTree(group, hostId, infoId){
       hideCallout();   // 다시 그리는 동안(회전 드래그 등) 옛 웨지를 가리키던 콜아웃이 남지 않게.
       ringLayer.innerHTML=''; labelLayer.innerHTML='';
       const angleSpans=wedgeAngles(childRank, counts, 2*Math.PI, ringRotation);
-      if(childRank==='species'){
-        const placed=drawWedgeRing(ringLayer, labelLayer, items, angleSpans, rI, rO,
-          val=>STATE_COLOR[val[2]]||'#8a9a90', (key,val)=>`${val[1]} · ${STATE_LABEL[val[2]]||''}`,
-          true, (key,val)=>val[1], showCallout, hideCallout,
-          (key,val)=>window.repOf&&window.repOf({t:group,k:val[0]}));
-        placed.forEach(({val,el})=>{
-          el.classList.add('clickable');
-          el.addEventListener('click',()=>{
-            if(!info) return;
-            info.innerHTML=`<b>${esc(val[1])}</b>(종) — <span style="color:${STATE_COLOR[val[2]]||'#333'}">${STATE_LABEL[val[2]]||''}</span>`;
-          });
-        });
-      } else {
-        const statsOf = childRank==='genus' ? genusStatsOf : (v)=>v;    // order·family는 이미 {n,found,dormant,none,...} 형태
-        const colorOf=val=>{ const st=statsOf(val); return gapColor(st.n? st.none/st.n : 0); };
-        const titleOf=(key,val)=>{ const st=statsOf(val); return `${key} · ${nf2(st.n)}종`; };
-        const photoOf = childRank==='genus' ? (key,val)=>repFromSpeciesList(val)
-          : childRank==='family' ? (key,val)=>repFromFamilies(entry.key,[key])
-          : (key,val)=>repFromFamilies(key, Object.keys(val.families));            // childRank==='order'
-        const placed=drawWedgeRing(ringLayer, labelLayer, items, angleSpans, rI, rO, colorOf, titleOf, true, (key)=>key, showCallout, hideCallout, photoOf);
-        placed.forEach(({key,val,el})=>{
-          el.classList.add('clickable');
-          el.addEventListener('click',()=>{
-            if(childRank==='family'){
-              if(info) info.textContent='속 정보를 불러오는 중…';
-              loadTaxaTreeSp(group, ()=>{
-                path.push({rank:'family', key, label:key, stats:val, order:entry.key});
-                renderFocus();
-              });
-            } else if(childRank==='genus'){
-              path.push({rank:'genus', key, label:key, stats:statsOf(val), list:val});
-              renderFocus();
-            } else {
-              path.push({rank:'order', key, label:key, stats:val});
-              renderFocus();
-            }
-          });
-        });
-      }
+      const colorOf = childRank==='species' ? val=>STATE_COLOR[val[2]]||'#8a9a90'
+        : val=>{ const st=statsOf(val); return gapColor(st.n? st.none/st.n : 0); };
+      const titleOf = childRank==='species' ? (key,val)=>`${val[1]} · ${STATE_LABEL[val[2]]||''}`
+        : (key,val)=>{ const st=statsOf(val); return `${key} · ${nf2(st.n)}종`; };
+      const labelText = childRank==='species' ? (key,val)=>val[1] : (key)=>key;
+      const placed=drawWedgeRing(ringLayer, labelLayer, items, angleSpans, rI, rO, colorOf, titleOf, true, labelText, showCallout, hideCallout, photoOf);
+      placed.forEach(({key,val,el})=>{
+        el.classList.add('clickable');
+        el.addEventListener('click',()=>selectChild(key,val));
+      });
     }
     drawRing();
+
+    // ── 앨범 — 지금 링(형제들) 중 사진 있는 것만 모아 콜아웃보다 크게 한꺼번에. 호버는 하나씩만 보여
+    // "비교"하려면 기억에 의존해야 한다는 피드백 — 형제 전부를 나란히 놓고 비교하라는 취지. ──
+    function renderAlbum(){
+      const host=document.getElementById('taxaAlbum'); if(!host) return;
+      const cards=[];
+      for(const [key,val] of items){
+        const photo=photoOf(key,val); if(!photo) continue;
+        const name = childRank==='species'? val[1] : key;
+        const sub = childRank==='species'? (STATE_LABEL[val[2]]||'') : `${nf2(statsOf(val).n)}종`;
+        cards.push({photo, name, sub, key, val});
+      }
+      if(!cards.length){ host.innerHTML=''; return; }
+      host.innerHTML=`<h4>사진으로 보기 <span class="muted2">(${nf2(cards.length)}/${nf2(items.length)})</span></h4><div class="ttalbum-grid"></div>`;
+      const grid=host.querySelector('.ttalbum-grid');
+      cards.forEach(c=>{
+        const btn=document.createElement('button');
+        btn.type='button'; btn.className='ttalbum-card';
+        const cred=esc(['© '+(c.photo.by||'국립생물자원관'), c.photo.lic].filter(Boolean).join(' · '));
+        btn.innerHTML=`<img src="${esc(c.photo.url)}" alt="" loading="lazy" title="${cred}" onerror="this.closest('.ttalbum-card').remove()">`+
+          `<div class="tt-cap"><b>${esc(c.name)}</b><span>${esc(c.sub)}</span></div>`;
+        btn.addEventListener('click', ()=>selectChild(c.key,c.val));
+        grid.appendChild(btn);
+      });
+    }
+    albumRefresh=renderAlbum;
+    renderAlbum();
 
     let zoomLevel=1;
     const applyZoom=()=>{ svg.style.transform=zoomLevel>1? `scale(${zoomLevel.toFixed(3)})` : ''; };
@@ -5251,8 +5291,15 @@ function renderTaxaTree(group, hostId, infoId){
 
   renderFocus();
   buildSearchIndex();
-  loadTaxaTreeSp(group, buildSearchIndex);   // 속·종 데이터가 나중에 도착하면 색인에 더한다(이미 있으면 즉시 콜백)
-  if(window.loadRep) window.loadRep(group);  // 콜아웃 대표 사진용(종 상세 화면과 같은 자료) — 미리 당겨 둔다
+  // 앨범(대표 사진)은 목·과 단계에서 taxatree_sp_<T>.js(과별 종 목록)와 rep_<T>.js(사진) 둘 다 있어야
+  // 채워진다 — 서로 다른 두 비동기 로드라 어느 쪽이 늦게 와도 그 콜백에서 다시 그려 줘야 한다(하나만
+  // 걸어 두면 나머지 하나가 늦게 도착하는 경우 앨범이 계속 비어 있는 경합이 실제로 있었다).
+  loadTaxaTreeSp(group, ()=>{ buildSearchIndex(); if(albumRefresh) albumRefresh(); });
+  // 콜아웃·앨범 대표 사진용(종 상세 화면과 같은 자료) — 미리 당겨 둔다. 콜아웃은 호버 시점에 매번 새로
+  // 찾으니 늦게 도착해도 상관없지만, 앨범은 렌더 시점에 한 번 굳혀 두는 값이라 사진이 도착한 뒤 한 번
+  // 다시 그려 줘야 한다(첫 렌더는 이 로드보다 먼저 돈다) — 그때 이미 다른 화면으로 넘어갔으면
+  // albumRefresh 가 그 최신 화면의 renderAlbum 을 가리키고 있어 항상 지금 보는 화면이 다시 그려진다.
+  if(window.loadRep) window.loadRep(group, ()=>{ if(albumRefresh) albumRefresh(); });
 
 
   // ── 검색창 배선 ──
