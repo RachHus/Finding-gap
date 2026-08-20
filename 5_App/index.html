@@ -957,6 +957,39 @@
       <h3 style="margin:0 0 12px">많이 추가된 종 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이용자들이 관심 종으로 가장 많이 추가한 종입니다 — 종별 익명 집계(개인 정보 없이 합계만).">?</button></h3>
       <ol class="wl trendlist" id="trendList"><li class="muted2">불러오는 중…</li></ol>
     </div>
+
+    <!-- 사이트 피드백 — 야생생물 제보와 달리 이 웹앱 자체(버그·개선 제안)에 대한 의견. 로그인 없이도
+         남길 수 있다(anon insert 허용, 이 사이트에서 유일). 필드가 3개뿐이라 모달 대신 인라인 폼. -->
+    <div class="authcard" id="feedbackCard" style="max-width:none">
+      <h3 style="margin:0 0 12px">사이트 피드백 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이 웹사이트 자체에 대한 의견입니다 — 버그·오류·개선 제안을 남겨 주세요. 야생생물 관측 제보와는 다릅니다. 로그인 없이도 작성할 수 있고, 모든 글이 공개됩니다.">?</button></h3>
+      <div class="rpt-f">
+        <label for="fbCategory">종류(선택)</label>
+        <select id="fbCategory">
+          <option value="">선택 안 함</option>
+          <option value="bug">버그 신고</option>
+          <option value="suggestion">기능 제안</option>
+          <option value="other">기타</option>
+        </select>
+      </div>
+      <div class="rpt-f">
+        <label for="fbMessage">내용 <span class="req">*</span></label>
+        <textarea id="fbMessage" maxlength="2000" rows="3" placeholder="발견한 문제나 제안을 적어 주세요"></textarea>
+      </div>
+      <div class="rpt-f" id="fbNameWrap">
+        <label for="fbGuestName">이름(선택)</label>
+        <input type="text" id="fbGuestName" maxlength="40" placeholder="비워두면 '익명'으로 표시됩니다" autocomplete="name">
+      </div>
+      <div class="fb-hp" aria-hidden="true">
+        <label for="fbWebsite">웹사이트</label>
+        <input type="text" id="fbWebsite" name="website" tabindex="-1" autocomplete="off">
+      </div>
+      <button class="rpt-submit" id="fbSubmit" type="button">피드백 보내기</button>
+      <div class="rpt-msg" id="fbMsg"></div>
+    </div>
+    <div class="authcard" id="feedbackListCard" style="max-width:none">
+      <h3 style="margin:0 0 12px">받은 피드백 <button type="button" class="qtip" aria-label="설명 보기" data-tip="다른 방문자가 남긴 사이트 피드백입니다. 운영자가 답변하면 함께 표시됩니다.">?</button></h3>
+      <ol class="wl feedlist" id="feedbackList"><li class="muted2">불러오는 중…</li></ol>
+    </div>
   </div>
 
   </section>
@@ -1071,7 +1104,7 @@
   .rpt-f{margin-bottom:13px}
   .rpt-f>label{display:block;font-size:12px;font-weight:600;color:#4f6f61;margin-bottom:5px}
   .rpt-f .req{color:#c0392b}
-  .rpt-f input,.rpt-f textarea{width:100%;border:1px solid #d7ded9;border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box}
+  .rpt-f input,.rpt-f textarea,.rpt-f select{width:100%;border:1px solid #d7ded9;border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box}
   .rpt-f input:focus-visible,.rpt-f textarea:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
   .rpt-f textarea{resize:vertical;min-height:52px}
   .rpt-sp{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid #d7ded9;border-radius:8px;background:#f7faf8}
@@ -1095,6 +1128,9 @@
   .rpt-gate .go{display:inline-block;border:0;border-radius:9px;padding:11px 20px;font-weight:700;background:var(--accent);color:#fff;cursor:pointer;text-decoration:none}
   .rpt-photo-prev{display:flex;align-items:center;gap:10px;margin-top:8px}
   .rpt-photo-prev img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #d7ded9}
+  /* 허니팟(스팸봇 함정) — display:none 이 아니라 화면 밖으로 밀어낸다: 일부 봇은 display:none·visibility:hidden
+     필드는 건너뛰고 채우지 않는데, 이 방식은 그런 봇도 걸리게 한다. tabindex=-1 로 실사용자 탭 순서에서는 빠진다. */
+  .fb-hp{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden}
   .rpt-photo-prev button{border:1px solid #d7ded9;background:#fff;border-radius:7px;padding:6px 10px;font-size:12px;cursor:pointer}
   .rpt-url-toggle{display:inline-block;margin-top:6px;font-size:12px;color:var(--faint);cursor:pointer;text-decoration:underline}
   .report-lk{cursor:pointer}
@@ -3252,7 +3288,7 @@ else Promise.all([
 
 <!-- 마이페이지(로그인·알림·활동 지역·관심 종·내 제보) — Supabase 설정(config.js)이 있을 때만 활성, 없으면 정적 안내 유지 -->
 <script type="module">
-import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, adminPendingTaxonRefs, setTaxonRefStatus, myTaxonReferences } from './fg_supabase.js';
+import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, adminPendingTaxonRefs, setTaxonRefStatus, myTaxonReferences, submitFeedback, siteFeedback, adminPendingFeedback, setFeedbackStatus, deleteFeedback } from './fg_supabase.js';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const view=document.getElementById('view-my');
 const spName=k=>{ const sp=(window.__SPIDX__||[]).find(x=>x.k===k); return sp?{n:sp.n||sp.s,s:sp.s||'',t:sp.t||''}:{n:k,s:'',t:''}; };
@@ -3335,6 +3371,58 @@ async function renderFeed(){
     rows.forEach(r=>{ const li=document.createElement('li'); li.innerHTML=reportLine(r,false); host.appendChild(li); });
   }catch(err){ host.innerHTML=`<li class="muted2">피드를 불러오지 못했습니다 (${esc(err.message||String(err))}).</li>`; }
 }
+
+// ── 사이트 피드백 공개 게시판 — 야생생물 제보(reports)와 달리 이 웹앱 자체에 대한 의견.
+// 로그인 없이도 작성 가능(anon insert). 상태 게이트가 없어(즉시 공개) 목록은 검수 대기열이 아니라
+// 그냥 최신순 전체 — reportLine 이 아니라 별도 feedbackLine 을 쓰는 이유는 '기여자→발견상태' 배지가
+// 아니라 '분류→상태→답변'이라 구성이 달라서.
+const _FBCAT={bug:'버그 신고', suggestion:'기능 제안', other:'기타'};
+const _FBSTATUS={open:['접수됨','#9a7b2f','#f5eede'], answered:['답변 완료','#015543','#e7f1ee'], closed:['종료','#6b7280','#eef0ee']};
+function feedbackStatusBadge(s){ const m=_FBSTATUS[s]||_FBSTATUS.open; return `<span class="dbadge" style="background:${m[2]};color:${m[1]}">${m[0]}</span>`; }
+function feedbackLine(r){
+  const cat=r.category?`<span class="dbadge" style="background:#eef3f1;color:#015543">${esc(_FBCAT[r.category]||r.category)}</span>`:'';
+  const reply=r.admin_reply?`<div class="fnote">운영자 답변: ${esc(r.admin_reply)}</div>`:'';
+  return `<span class="nm">${esc(r.poster||'익명')}</span> ${cat}${feedbackStatusBadge(r.status)}`+
+    `<span class="fmeta">${esc((r.created_at||'').slice(0,10))}</span>`+
+    `<div class="fnote">${esc(r.message)}</div>${reply}`;
+}
+async function renderFeedback(){
+  const host=document.getElementById('feedbackList'); if(!host) return;
+  try{
+    const rows=await siteFeedback(30);
+    if(!rows.length){ host.innerHTML='<li class="muted2">아직 피드백이 없습니다. 위 양식으로 첫 의견을 남겨 보세요.</li>'; return; }
+    host.innerHTML='';
+    rows.forEach(r=>{ const li=document.createElement('li'); li.innerHTML=feedbackLine(r); host.appendChild(li); });
+  }catch(err){ host.innerHTML=`<li class="muted2">피드백을 불러오지 못했습니다 (${esc(err.message||String(err))}).</li>`; }
+}
+let fbUser=null;
+function fbToggleName(){ const w=document.getElementById('fbNameWrap'); if(w) w.hidden=!!fbUser; }   // 로그인 시엔 profiles.display_name 을 쓰므로 이름 입력을 숨긴다
+async function fbDoSubmit(){
+  const btn=document.getElementById('fbSubmit'), msg=document.getElementById('fbMsg');
+  const hp=(document.getElementById('fbWebsite')||{}).value||'';
+  const message=(document.getElementById('fbMessage')||{}).value||'';
+  const category=(document.getElementById('fbCategory')||{}).value||'';
+  const guestName=(document.getElementById('fbGuestName')||{}).value||'';
+  msg.className='rpt-msg';
+  if(hp.trim()){                                       // 허니팟에 값이 있으면 봇으로 보고 조용히 무시(성공한 척)
+    msg.className='rpt-msg ok'; msg.textContent='피드백이 등록되었습니다. 감사합니다.';
+    document.getElementById('fbMessage').value=''; return;
+  }
+  if(!message.trim()){ msg.className='rpt-msg err'; msg.textContent='내용을 입력하세요.'; return; }
+  btn.disabled=true; btn.textContent='등록 중…';
+  try{
+    const { error } = await submitFeedback({ category: category||null, message, guest_name: fbUser?null:guestName });
+    if(error) throw error;
+    window.fgTrack&&fgTrack('feedback_submitted',{category:category||'none'});
+    msg.className='rpt-msg ok'; msg.textContent='피드백이 등록되었습니다. 감사합니다.';
+    document.getElementById('fbMessage').value=''; document.getElementById('fbCategory').value='';
+    if(!fbUser) document.getElementById('fbGuestName').value='';
+    renderFeedback();
+  }catch(e){
+    msg.className='rpt-msg err'; msg.textContent='등록에 실패했습니다: '+((e&&e.message)||'알 수 없는 오류');
+  }finally{ btn.disabled=false; btn.textContent='피드백 보내기'; }
+}
+document.getElementById('fbSubmit')?.addEventListener('click', fbDoSubmit);
 
 // ── ③ 유망 공백 미션보드(정적 자산 __MISSIONS__) ──
 function renderMissions(){
@@ -3566,6 +3654,11 @@ async function myPage(user){
     <h3 style="margin:0 0 4px">관리자 · 분류 이력 제보 검토</h3>
     <p class="muted2" style="margin:0 0 12px">논문 근거로 들어온 학명 변경 제보를 승인/거부합니다. 승인 시 종 상세에 "이명 확인됨" 배지로 반영됩니다.</p>
     <ul class="wl feedlist" id="taxonRefAdminList"><li class="muted2">불러오는 중…</li></ul>
+  </div>
+  <div class="authcard" id="feedbackAdminCard" style="max-width:none;display:none;margin-top:14px">
+    <h3 style="margin:0 0 4px">관리자 · 사이트 피드백</h3>
+    <p class="muted2" style="margin:0 0 12px">답변 대기 중인 사이트 피드백입니다. 답변하면 작성자를 포함한 모든 방문자에게 공개됩니다.</p>
+    <ul class="wl feedlist" id="feedbackAdminList"><li class="muted2">불러오는 중…</li></ul>
   </div>`;
   view.querySelector('#logoutBtn').onclick=async()=>{ await signOut(); };
   paintMyNotif();
@@ -3670,6 +3763,42 @@ async function myPage(user){
           catch(e){ b.disabled=false; alert('처리 실패: '+(e.message||e)); } });
         al.appendChild(li); });
     }catch(err){ al.innerHTML=`<li class="authmsg err">검토 목록 로드 실패: ${esc(err.message||String(err))}</li>`; }
+  })();
+  (async()=>{                                              // 사이트 피드백 답변 대기 큐(role='admin'만 — RLS 로 비관리자는 빈 결과)
+    let role=null; try{ role=await myRole(); }catch(_){}
+    if(role!=='admin') return;
+    const card=view.querySelector('#feedbackAdminCard'), al=view.querySelector('#feedbackAdminList'); if(!card) return;
+    card.style.display='';
+    try{
+      const rows=await adminPendingFeedback();
+      if(!rows.length){ al.innerHTML='<li class="muted2">답변 대기 피드백이 없습니다.</li>'; return; }
+      al.innerHTML='';
+      rows.forEach(r=>{ const li=document.createElement('li');
+        const cat=r.category?`<span class="dbadge" style="background:#eef3f1;color:#015543">${esc(_FBCAT[r.category]||r.category)}</span>`:'';
+        li.innerHTML=`<span class="nm">${esc(r.guest_name||'(로그인 사용자)')}</span> ${cat}`+
+          `<span class="fmeta">${esc((r.created_at||'').slice(0,10))}</span><div class="fnote">${esc(r.message)}</div>`+
+          `<span class="admbtns"><button class="btn sm" data-a="answered">답변</button><button class="btn sm rej" data-a="closed">종료</button><button class="btn sm rej" data-a="delete">삭제</button></span>`;
+        li.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{
+          b.disabled=true;
+          try{
+            if(b.dataset.a==='delete'){
+              // 남의 공개 글을 되돌릴 수 없이 지우는 것이라, 다른 관리자 버튼과 달리 확인창을 둔다.
+              if(!confirm('이 피드백을 삭제할까요? 되돌릴 수 없습니다.')){ b.disabled=false; return; }
+              const {error}=await deleteFeedback(r.id); if(error) throw error;
+            }else if(b.dataset.a==='answered'){
+              const reply=prompt('답변 내용(작성자를 포함한 모두에게 공개됩니다):',''); if(reply===null){ b.disabled=false; return; }
+              if(!reply.trim()){ alert('답변 내용을 입력하세요.'); b.disabled=false; return; }
+              const {error}=await setFeedbackStatus(r.id,'answered',reply); if(error) throw error;
+            }else{
+              const {error}=await setFeedbackStatus(r.id,'closed',null); if(error) throw error;
+            }
+            li.remove();
+            if(!al.children.length) al.innerHTML='<li class="muted2">답변 대기 피드백이 없습니다.</li>';
+            renderFeedback();                                // 공개 목록도 함께 갱신
+          }catch(e){ b.disabled=false; alert('처리 실패: '+(e.message||e)); }
+        });
+        al.appendChild(li); });
+    }catch(err){ al.innerHTML=`<li class="authmsg err">피드백 목록 로드 실패: ${esc(err.message||String(err))}</li>`; }
   })();
   (async()=>{                                              // 내 제보 이력(본인 RLS)
     const mr=view.querySelector('#myrep'); if(!mr) return;
@@ -3782,7 +3911,7 @@ function trackLogin(u, ev){
   loginSent=true;
   window.fgTrack&&fgTrack('login_success',{method:(u.app_metadata&&u.app_metadata.provider)||'email'});
 }
-if(configured){ onAuth((user,ev)=>{ trackLogin(user,ev); return user ? myPage(user) : loginCard(); }); renderTrending(); renderFeed(); renderLeaderboard(); }
+if(configured){ onAuth((user,ev)=>{ trackLogin(user,ev); fbUser=user; fbToggleName(); return user ? myPage(user) : loginCard(); }); renderTrending(); renderFeed(); renderLeaderboard(); renderFeedback(); }
 </script>
 
 <!-- 머리말 계정·알림 — 로그인 상태를 페이지 전역(비-module 스크립트 포함)에 알리고, 알림을 모아 보여준다.
