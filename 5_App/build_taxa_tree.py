@@ -61,7 +61,7 @@ def build():
     tree = {}
     sp_by_group = {}                           # group -> "order|family" -> [[ktsn, korean_name, code, genus_la], ...]
     n_species = n_orders = n_families = 0
-    seen_orders, seen_families = set(), set()
+    seen_orders, seen_families, seen_genera = set(), set(), set()
     for ktsn, korean_name, group, order_la, family_la, genus_la in con.execute(
             "select ktsn, korean_name, taxon_group, order_la, family_la, genus_la from species where rank='종'"):
         order_la = (order_la or "").strip() or "(미분류)"
@@ -80,22 +80,31 @@ def build():
 
         # 속(genus)은 목→과처럼 별도 집계 트리를 만들지 않는다 — 계통수는 과까지만 그리고,
         # 과를 펼쳤을 때 속 단위 그룹은 이 종 목록(genus_la)에서 브라우저가 즉석에서 묶는다.
+        # (분류군별 목·과·속·종 개수 요약표에 쓸 속 개수만 group_n_genus 로 따로 집계한다.)
         sp_by_group.setdefault(group, {}).setdefault(f"{order_la}|{family_la}", []).append(
             [ktsn, korean_name or "", STATE_CODE[st], genus_la])
 
         n_species += 1
         seen_orders.add((group, order_la))
         seen_families.add((group, order_la, family_la))
+        seen_genera.add((group, genus_la))
 
     con.close()
     n_orders, n_families = len(seen_orders), len(seen_families)
+
+    genus_n_by_group = {}
+    for group, genus_la in seen_genera:
+        genus_n_by_group[group] = genus_n_by_group.get(group, 0) + 1
+    for group, g_node in tree.items():
+        g_node["genus_n"] = genus_n_by_group.get(group, 0)
 
     payload = {"gen": meta.get("generated", ""), "ref": ref, "cut": cut, "tree": tree}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("window.__TAXATREE__=" + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
                    encoding="utf-8")
     kb = OUT.stat().st_size / 1024
-    print(f"생성 {OUT.relative_to(BASE)} · 분류군 {len(tree)} · 목 {n_orders} · 과 {n_families} · 종 {n_species} · {kb:.1f} KB")
+    n_genera = len(seen_genera)
+    print(f"생성 {OUT.relative_to(BASE)} · 분류군 {len(tree)} · 목 {n_orders} · 과 {n_families} · 속 {n_genera} · 종 {n_species} · {kb:.1f} KB")
 
     OUT_SP_DIR.mkdir(parents=True, exist_ok=True)
     for g, by_key in sorted(sp_by_group.items()):

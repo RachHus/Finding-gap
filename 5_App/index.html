@@ -128,6 +128,15 @@
   .taxatabpick button:hover{border-color:#9ec3b2;background:#eef3f1}
   .taxatabpick button.on{background:var(--accent);border-color:var(--accent);color:#fff}
   .taxatabpick button:disabled{opacity:.4;cursor:default}
+  .taxasumm{width:100%;border-collapse:collapse;font-size:13px}
+  .taxasumm th{text-align:right;font-weight:600;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--line)}
+  .taxasumm th:first-child{text-align:left}
+  .taxasumm td{padding:7px 10px;border-bottom:1px solid #f1f1ee}
+  .taxasumm td.nm{display:flex;align-items:center;gap:8px}
+  .taxasumm td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .taxasumm tr{cursor:pointer}
+  .taxasumm tr:hover{background:#f6f9f7}
+  .taxasumm tr.on{background:#eef3f1;font-weight:600}
   /* cards */
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
   @media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}.cards .card.quiz{grid-column:1/-1;flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}}
@@ -945,6 +954,10 @@
       <p>분류군을 고르면 그 목→과→속→종 분류 체계를 나무로 보여줍니다 — 이 분류군에서 어디가 아직 안 알려져 있는지 한눈에 살펴보는 도구입니다.</p>
     </div>
     <div class="taxatabpick" id="taxaTabPick"></div>
+    <div class="dashpanel">
+      <h3>분류군별 목·과·속·종 <button type="button" class="qtip" aria-label="설명 보기" data-tip="분류군마다 목·과·속·종이 몇 개씩 있는지 한눈에 비교합니다. 종수는 국가생물종목록(KTSN)의 '종' 등급만 셉니다 — 아종(亞種) 등급으로 등록된 것은 포함하지 않습니다(예: 왕사슴벌레는 아종 등급이라 사슴벌레과 종수에는 안 잡힙니다).">?</button></h3>
+      <div id="taxaSummaryTable"></div>
+    </div>
     <div class="dashpanel">
       <h3>분류 체계도 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이 분류군의 목→과→속→종 분류 체계를 나무로 그립니다. 웨지가 클수록 그 무리의 종수가 많다는 뜻이고, 색이 붉을수록 조사자료에 아직 기록이 없는 비율(발견공백)이 높다는 뜻입니다. 웨지를 누르면 그 하위 분류로 들어갑니다 — 왼쪽 경로를 눌러 이전 단계로 돌아갈 수 있습니다.">?</button></h3>
       <div class="ttsearch">
@@ -3242,6 +3255,29 @@ function switchAxis(ax){
 
 /* ── 분류 체계도 탭 — 지도(모드 A)와 독립된 분류군 선택. 지도의 curTaxon 은 안 건드린다. ── */
 let taxaTabGroup='', taxaTabInited=false;
+// 분류군 9개 전부의 목·과·속·종 개수를 한 표로 — 하나씩 눌러 들어가 보지 않아도 바로 비교되게.
+// 종수는 taxa_tree.js 의 rank='종' 집계 그대로(아종 미포함) — 다른 화면과 같은 정의를 쓴다.
+function renderTaxaSummary(){
+  const host=document.getElementById('taxaSummaryTable'); if(!host) return;
+  const tree=((window.__TAXATREE__||{}).tree)||{};
+  const all=window.__TAXA__||[];
+  const rows=all.filter(t=>tree[t.group]).map(t=>{
+    const node=tree[t.group];
+    const famN=Object.values(node.orders).reduce((s,o)=>s+Object.keys(o.families).length,0);
+    return {group:t.group, kor:t.kor, order:Object.keys(node.orders).length, family:famN, genus:node.genus_n||0, species:node.n};
+  });
+  host.innerHTML=`<table class="taxasumm"><thead><tr><th scope="col">분류군</th><th scope="col" class="num">목</th>`+
+    `<th scope="col" class="num">과</th><th scope="col" class="num">속</th><th scope="col" class="num">종</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr class="${r.group===taxaTabGroup?'on':''}" data-g="${r.group}">`+
+      `<td class="nm">${chipHTML(r.group,15)}${r.kor}</td>`+
+      `<td class="num">${nf(r.order)}</td><td class="num">${nf(r.family)}</td>`+
+      `<td class="num">${nf(r.genus)}</td><td class="num">${nf(r.species)}</td></tr>`).join('')+
+    `</tbody></table>`;
+  host.querySelectorAll('tr[data-g]').forEach(tr=>tr.onclick=()=>{
+    if(tr.dataset.g===taxaTabGroup) return;
+    taxaTabGroup=tr.dataset.g; renderTaxaTab();
+  });
+}
 function renderTaxaTab(){
   const pick=document.getElementById('taxaTabPick'); if(!pick) return;
   const all=window.__TAXA__||[];
@@ -3257,6 +3293,7 @@ function renderTaxaTab(){
     if(b.dataset.g===taxaTabGroup) return;
     taxaTabGroup=b.dataset.g; renderTaxaTab();
   });
+  renderTaxaSummary();
   if(window.renderTaxaTree) window.renderTaxaTree(taxaTabGroup,'taxaTreeHost','taxaTreeInfo');
 }
 
