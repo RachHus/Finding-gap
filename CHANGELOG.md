@@ -21,6 +21,11 @@ Finding gap의 릴리스 단위 변경 이력입니다.
   - 유전·형태학적 진단 정보(이 무리가 왜 나뉘었는지)는 나중 과제로 — 지금 갖고 있는 데이터에 없음, 초점 노드 자리를 나중에 확장할 수 있게만 남겨둠. 논문 근거로 목·과 소속 자체를 재배치하는 기능도 범위 밖(`taxon_reference_reports`는 학명 변경만 다룸).
   - **오른쪽에 "전체 모양" 미니 개요를 추가.** 드릴다운으로 밀도 문제는 풀었지만, 그 대신 매 순간 형제들만 보여서(특히 깊이 들어가면 점 하나에 선 하나만 남아) 처음 있던 "나무 전체를 한눈에" 보는 임팩트가 사라졌다는 피드백— 그래서 인터랙티브 드릴다운 원 옆에 그 분류군 전체(목→과)를 작게 그린 고정 크기 개요를 항상 띄운다. 목까지는 눌러서 바로 그 목으로 점프하고(지금 드릴다운 위치를 진하게 표시), 과는 누르지 않고 색 텍스처만 — 굳이 개요까지 곤충류 수백 개 과를 정밀 클릭 가능하게 만들 필요는 없다고 봄(정확한 조작은 옆의 큰 원이 계속 맡음). 무척추동물처럼 목이 259개라 개요 안에서 점끼리 좀 겹치는 분류군도 있지만, 장식·방향 감각용이라 감수 — 실제 클릭은 여전히 큰 원에서.
   - 연결선을 직선 대신 접선 방향으로 살짝 휘는 곡선(`radialLinkPath`)으로 바꿔 가지 뻗는 느낌을 더했다.
+- **사이트 피드백 공개 게시판 추가.** 배포는 했는데 피드백이 잘 안 들어와서 — 로그인 장벽 없이(익명 포함) 버그·개선 의견을 남길 수 있는 채널을 시민과학 탭에 붙였다. 관리자만 보는 비공개 제보함과 누구나 읽는 공개 게시판 중 **공개 게시판**을 선택(소통하는 느낌을 원함) — 검수 대기열이 아니라 즉시 공개, 관리자는 답변(`admin_reply`)·삭제(모더레이션)만 사후에.
+  - 새 테이블 `site_feedback` — 이 프로젝트에서 **유일하게 로그인 없이 쓸 수 있는 테이블**이다. 기존 두 제보(`reports`·`taxon_reference_reports`)는 전부 `user_id not null default auth.uid()`라 anon(`auth.uid()`가 NULL)은 애초에 못 썼다. 여긴 `user_id`를 nullable로 두고(FK도 `on delete set null` — 탈퇴해도 공개된 글은 남게) insert 정책을 `to anon, authenticated`로 열었다. 익명 작성자는 `profiles`가 없으니 `guest_name`을 직접 적고, 표시 이름은 `profiles.display_name → guest_name → '익명'` 순으로 `public_feedback()` RPC가 서버에서 정리해 내려준다.
+  - 스팸 방어는 클라이언트 허니팟 필드(`display:none` 대신 화면 밖 절대위치 — 일부 봇은 display:none은 건너뛰므로) + 메시지 길이 제약 정도로 최소화 — CAPTCHA·레이트리밋·IP 기록은 이 규모에서 과함. REST 엔드포인트에 직접 스크립트로 붓는 공격까지는 못 막는다는 한계를 알고 감수.
+  - 검증 중 실제로 하나 걸렸다: 관리자 role이 없는 상태에서 직접 SQL로 `INSERT ... RETURNING`을 테스트했더니 RLS 위반으로 막혔다 — 원인은 anon한테 SELECT 정책이 없어서 RETURNING이 요구하는 "삽입한 행을 다시 읽어오는" 권한이 없었던 것(INSERT 자체는 통과, RETURNING이 별도로 SELECT 가시성을 요구하는 Postgres RLS 특성). 실제 앱 코드(`submitFeedback()`)는 `.select()`를 안 붙여 Supabase가 `Prefer: return=minimal`을 보내므로 이 문제를 안 만난다 — 로컬에 실제 Supabase 키를 넣어 빌드한 뒤 Playwright로 브라우저에서 진짜 anon 제출까지 재현해 201 응답·공개 목록 반영·허니팟 무시를 전부 실측 확인했다.
+  - `5_App/supabase/site_feedback.sql` Supabase 적용 완료(2026-08-20) — RLS·정책 4개·SECURITY DEFINER 함수 실측 확인. `5_App/supabase/README.md`에 이전에 빠져 있던 `taxon_status_check.sql`·`taxon_reference_reports.sql`·`taxon_reference_reports_note.sql` 항목도 이번에 같이 채워 넣었다(실제로는 적용돼 있었는데 문서화가 안 돼 있었음).
 
 ## [0.11.0] - 2026-08-19
 
