@@ -946,7 +946,11 @@
     </div>
     <div class="taxatabpick" id="taxaTabPick"></div>
     <div class="dashpanel">
-      <h3>분류 체계도 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이 분류군의 목→과→속→종 분류 체계를 나무로 그립니다. 색이 붉을수록 그 무리에 속한 종 중 조사자료에 아직 기록이 없는 비율(발견공백)이 높다는 뜻입니다. 노드를 누르면 그 하위 분류로 들어갑니다 — 왼쪽 경로를 눌러 이전 단계로 돌아갈 수 있습니다.">?</button></h3>
+      <h3>분류 체계도 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이 분류군의 목→과→속→종 분류 체계를 나무로 그립니다. 웨지가 클수록 그 무리의 종수가 많다는 뜻이고, 색이 붉을수록 조사자료에 아직 기록이 없는 비율(발견공백)이 높다는 뜻입니다. 웨지를 누르면 그 하위 분류로 들어갑니다 — 왼쪽 경로를 눌러 이전 단계로 돌아갈 수 있습니다.">?</button></h3>
+      <div class="ttsearch">
+        <input type="search" id="taxaSearchInput" placeholder="과·속·종 이름으로 찾기 (예: Cyprinidae)" autocomplete="off" aria-label="분류군 내 검색">
+        <div class="sresults ttsearch-results" id="taxaSearchResults" style="display:none"></div>
+      </div>
       <div id="taxaTreeHost"></div>
       <div id="taxaTreeInfo" class="muted2" style="margin-top:8px;font-size:12.5px"></div>
     </div>
@@ -1165,19 +1169,23 @@
   .ttcrumb .dot{width:9px;height:9px;border-radius:50%;flex:none}
   .ttdiagram{overflow:auto}
   .taxatree{display:block;margin:0 auto}
-  .ttring-link{pointer-events:none;stroke:#e3e6e1;stroke-width:1;fill:none}
-  .ttchild{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .12s ease,stroke-width .12s ease}
-  .ttchild:hover{stroke:var(--ink);stroke-width:1.4;transform:scale(1.5)}
+  /* 선버스트 웨지 — 점 대신 종수 비례 폭의 부채꼴. scale()은 부채꼴을 일그러뜨리므로(반지름 방향이 아니라
+     그냥 확대라 이웃과 어긋남) 대신 그 웨지의 바깥 방향(--nx/--ny, JS가 심어 둠)으로 살짝 밀어낸다. */
+  .ttwedge{transition:transform .12s ease,filter .12s ease}
+  .ttwedge:hover{transform:translate(calc(var(--nx,0)*6px),calc(var(--ny,0)*6px));filter:brightness(1.08);stroke:var(--ink);stroke-width:1.2}
+  .ttwedge.clickable{cursor:pointer}
+  .ttov-order.on{stroke:var(--ink);stroke-width:2}
+  .ttlabels{pointer-events:none}
+  .ttlabels text{font-size:10px;fill:#fff;font-weight:600;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:2.4px;stroke-linejoin:round}
   .ttfocus circle{stroke:var(--ink);stroke-width:1.6}
   .ttfocus text{font-size:11px;fill:var(--ink);pointer-events:none;text-anchor:middle}
   .ttoverview{border-left:1px solid var(--line);padding-left:16px}
   .ttoverview h4{margin:0 0 6px;font-size:11.5px;font-weight:600;color:var(--muted)}
-  .ttov-order{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .12s ease,stroke-width .12s ease}
-  .ttov-order:hover{stroke:var(--ink);stroke-width:1.3;transform:scale(1.7)}
-  .ttov-order.on{stroke:var(--ink);stroke-width:1.8}
-  .ttov-fam{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .12s ease,stroke-width .12s ease}
-  .ttov-fam:hover{stroke:var(--ink);stroke-width:1;transform:scale(2.4)}
-  .ttov-link{pointer-events:none;stroke:#e3e6e1;stroke-width:.8;fill:none}
+  .ttsearch{position:relative;margin:10px 0 14px}
+  .ttsearch input{width:100%;border:1px solid #d7ded9;border-radius:8px;padding:9px 12px;font:inherit;font-size:13px;box-sizing:border-box}
+  .ttsearch input:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
+  .ttsearch-results{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;max-height:280px}
+  .ttsearch-results .r .tg{margin-left:auto;color:var(--muted);font-size:11px}
   @media(max-width:880px){ .ttlayout{grid-template-columns:1fr} .ttcrumbs{flex-direction:row;flex-wrap:wrap}
     .ttoverview{border-left:none;border-top:1px solid var(--line);padding-left:0;padding-top:12px} }
   @media(max-width:880px){ .rpt-overlay{padding:0;align-items:flex-end} .rpt-modal{max-width:none;max-height:94vh;border-radius:14px 14px 0 0} }
@@ -4718,8 +4726,10 @@ if(configured){
      노드를 누르면 그 노드가 중심이 되고 자식들만 원 하나에 다시 배치된다 — 형제들끼리만 화면을 나눠 쓰므로
      곤충류처럼 큰 분류군(예: 딱정벌레목 아래 과 113개, Ichneumonidae 아래 속 328개)도 항상 클릭 가능한
      밀도를 유지한다(예전엔 목→과 전체를 한 원에 동시에 펼쳐 큰 분류군에서 잎이 안 눌리는 문제가 있었음).
-     지나온 경로는 왼쪽 breadcrumb. 매 순간 한 세대만 그리므로 손으로 계산한 삼각함수(pointRadial)만으로
-     충분 — d3 레이아웃 라이브러리 없이 기존 donutSVG와 같은 방식으로 손으로 조립한다. -->
+     이 드릴다운 자체는 그대로 두고, 이번 라운드는 "지금 링의 자식들을 어떻게 그리느냐"만 바꿨다 — 점 대신
+     종수에 비례한 폭의 부채꼴(선버스트 웨지)로, 라벨을 웨지 위에 직접 얹는다. 지나온 경로는 왼쪽 breadcrumb.
+     매 순간 한 세대만 그리므로 손으로 계산한 삼각함수(pointRadial)만으로 충분 — d3 없이 기존 donutSVG와
+     같은 방식(ringArc)으로 손으로 조립한다. -->
 <script type="module">
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -4735,36 +4745,73 @@ function pointRadial(angle,radius){
   const a=angle-Math.PI/2;
   return [radius*Math.cos(a), radius*Math.sin(a)];
 }
-// 원점→(x,y) 접선 방향으로 살짝 휜 완만한 곡선 — 일직선보다 가지 뻗는 느낌이 난다.
-function radialLinkPath(x,y){
-  const cx=x*0.5-y*0.15, cy=y*0.5+x*0.15;
-  return `M0,0 Q${cx.toFixed(2)},${cy.toFixed(2)} ${x.toFixed(2)},${y.toFixed(2)}`;
-}
 
 const STATE_COLOR={f:'#015543', d:'#9a7b2f', n:'#b5482f'};
 const STATE_LABEL={f:'발견', d:'휴면', n:'미발견'};
-const RANK_LABEL={group:'분류군', order:'목', family:'과', genus:'속'};
+const RANK_LABEL={group:'분류군', order:'목', family:'과', genus:'속', species:'종'};
 
-// 계급별 노드 크기 — 상위 계급일수록 크게. 초점으로 그릴 땐 ×FOCUS_SCALE.
-const BASE_R={group:8, order:6.6, family:5, genus:3.8, species:2.6};
-const FOCUS_SCALE=1.8;
-const RING_MARGIN=1.35;                                     // 자식 원끼리 겹치지 않을 최소 간격 배수
-const MIN_RING_R={order:72, family:60, genus:50, species:42};
-const PAD=36;                                               // 뷰박스 여백(초점 라벨·호버 확대 여유)
-function ringRadius(childRank,n){
-  const dia=BASE_R[childRank]*2;
-  const need=n>1 ? (n*RING_MARGIN*dia)/(2*Math.PI) : 0;
-  return Math.max(MIN_RING_R[childRank], need);
+// ── 웨지 각도 배분: 종수에 비례하되, 항목마다 최소폭을 보장한다(1종짜리가 1000종짜리 옆에서 안 사라지게).
+// 최소폭 예약 총합이 전체 각도의 60%를 넘지 못하게 캡을 둬서, n이 아무리 커져도(실측 목 259개까지 확인)
+// 절대 원을 넘치지 않는다 — n이 아주 크면 캡이 걸려 자동으로 최소폭이 줄어드는 방식.
+const DEG=Math.PI/180;
+const FLOOR_DESIRED={order:10*DEG, family:8*DEG, genus:6*DEG, species:6*DEG};
+const FLOOR_CAP_FRAC=0.6;
+function wedgeFloorAngle(rank,n){
+  const desired=FLOOR_DESIRED[rank]||8*DEG;
+  return n? Math.min(desired, FLOOR_CAP_FRAC*2*Math.PI/n) : 0;
+}
+// totalAngle/startAngle 기본은 온 원 — 개요의 중첩 링(부모 목 구간 안에 과를 채울 때)은 그 구간만 넘기면 된다.
+function wedgeAngles(rank, counts, totalAngle=2*Math.PI, startAngle=0){
+  const n=counts.length, total=counts.reduce((a,b)=>a+b,0)||1;
+  const floor=n? Math.min(FLOOR_DESIRED[rank]||8*DEG, FLOOR_CAP_FRAC*totalAngle/n) : 0;
+  const remain=totalAngle-floor*n;
+  let a=startAngle;
+  return counts.map(c=>{ const w=floor+remain*(c/total); const p=[a,a+w]; a+=w; return p; });
+}
+// 인접 웨지 사이 살짝 여백 — 중심각(라벨 기준)은 안 바뀌게 양쪽에서 대칭으로 깎는다.
+function insetGap(a0,a1){
+  const w=a1-a0, gap=Math.min(w*0.6, Math.max(0.0035, Math.min(w*0.15, 0.025)));
+  return [a0+gap/2, a1-gap/2];
+}
+// 부채꼴(annular sector) SVG path — 기존 donutSVG의 ringArc와 같은 산수, 이 모듈의 12시 각도 규약으로.
+function wedgePath(rI,rO,a0,a1){
+  const large=(a1-a0)>Math.PI?1:0;
+  const [xo0,yo0]=pointRadial(a0,rO), [xo1,yo1]=pointRadial(a1,rO);
+  const [xi1,yi1]=pointRadial(a1,rI), [xi0,yi0]=pointRadial(a0,rI);
+  return `M${xo0.toFixed(2)} ${yo0.toFixed(2)} A${rO} ${rO} 0 ${large} 1 ${xo1.toFixed(2)} ${yo1.toFixed(2)} `+
+         `L${xi1.toFixed(2)} ${yi1.toFixed(2)} A${rI} ${rI} 0 ${large} 0 ${xi0.toFixed(2)} ${yi0.toFixed(2)} Z`;
 }
 
-// 오른쪽 드릴다운 원과는 별개로, 왼쪽 아래에 그 분류군 전체(목→과)를 작게 보여주는 개요 — 지금 어디를
-// 들여다보고 있는지 + 전체 모양(예전 방사형 cladogram이 주던 "한눈에 보이는 나무" 느낌)을 되살린다.
-// 목까지만 클릭 가능(밀도 계산 없이 고정 크기라 목이 아주 많은 분류군은 인접한 목이 눌릴 수 있음 — 감수:
-// 어차피 정확한 조작은 오른쪽 원이 맡고, 여긴 방향 잡기 + 장식용). 과는 클릭 안 되는 장식 텍스처만.
-const OV_R_ORDER=70, OV_R_FAM=16, OV_PAD=14;
+// 계급별 크기 — 상위 계급일수록 크게. 초점(중심 원)으로 그릴 땐 ×FOCUS_SCALE.
+const BASE_R={group:8, order:6.6, family:5, genus:3.8, species:2.6};
+const FOCUS_SCALE=1.8;
+const L_MIN={order:13, family:10, genus:8, species:5};        // 최소폭 웨지도 이 정도 호 길이(px)는 갖게
+const R_FLOOR={order:72, family:60, genus:50, species:42};    // 방어용 하한
+const THICK={order:44, family:36, genus:29, species:23};      // 링 두께
+const HUB_GAP=6;                                              // 초점 원과 링 사이 최소 여백
+function ringRadii(childRank, counts, focusR){
+  const floorAngle=wedgeFloorAngle(childRank, counts.length);
+  const rI=Math.max(R_FLOOR[childRank], floorAngle? L_MIN[childRank]/floorAngle : 0, focusR+HUB_GAP);
+  return {rI, rO:rI+THICK[childRank]};
+}
+
+// 라벨 — 실제 캔버스로 글자 폭을 재서, 웨지 호 길이에 맞으면 그대로/줄임표/그마저 안 되면 생략(호버·클릭으로 대체).
+const _mctx=document.createElement('canvas').getContext('2d');
+const BODY_FONT=`'Pretendard Variable',system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif`;
+function fitLabel(str, fontPx, arcLenPx){
+  _mctx.font=`${fontPx}px ${BODY_FONT}`;
+  const budget=arcLenPx*0.86;
+  if(_mctx.measureText(str).width<=budget) return str;
+  if(budget<14) return null;
+  for(let n=str.length-1;n>=1;n--){ const cand=str.slice(0,n)+'…'; if(_mctx.measureText(cand).width<=budget) return cand; }
+  return null;
+}
+
+// 개요("전체 모양") — 목 링 + 그 위에 딱 붙는 과 링, 진짜 2단 중첩 선버스트.
+const OV_HUB_R=10, OV_THICK_ORDER=32, OV_THICK_FAMILY=24, OV_PAD=18;
 
 const _txfile=t=>t.replace(/[^A-Za-z0-9]/g,'_');
-// taxatree_sp_<T>.js 지연 로드 — 과를 처음 펼칠 때만 그 분류군의 종 목록(genus_la 포함)을 가져온다.
+// taxatree_sp_<T>.js 지연 로드 — 분류군을 고르는 즉시(검색이 속·종까지 바로 되게) 미리 받아 둔다.
 // index.html 의 classic-script _loadScript() 는 이 <script type="module"> 블록에서 안 보여서(스코프 분리) 따로 둔다.
 const _spCbs={};
 function loadTaxaTreeSp(t, cb){
@@ -4780,22 +4827,41 @@ function loadTaxaTreeSp(t, cb){
 
 const SVGNS='http://www.w3.org/2000/svg';
 function countStates(list){ const c={f:0,d:0,n:0}; for(const s of list) c[s[2]]++; return c; }
+// 속의 {n,found,dormant,none} — 실제 속 클릭 경로와 검색 점프 경로가 같은 계산을 쓰게 공용으로 뺀다.
+function genusStatsOf(list){ const c=countStates(list); return {n:list.length,found:c.f,dormant:c.d,none:c.n}; }
 
-// 자식들을 항상 360도 균등 분할로 배치 — 매 순간 형제들끼리만 원 하나를 나눠 쓰므로 부채꼴로 각도를 아낄 이유가 없다.
-function drawRing(ringLayer, linksLayer, items, radius, r, colorOf, titleOf){
+// 웨지 한 링을 그린다 — 메인 드릴다운 링과 개요 두 링 모두 이걸로. wantLabel=false 면 라벨 없이(개요 과 링).
+function drawWedgeRing(wedgeLayer, labelLayer, items, angleSpans, rI, rO, colorOf, titleOf, wantLabel, labelText){
   return items.map(([key,val],i)=>{
-    const angle=items.length>1 ? (2*Math.PI*i/items.length) : 0;
-    const [x,y]=pointRadial(angle,radius);
-    const link=document.createElementNS(SVGNS,'path');
-    link.setAttribute('class','ttring-link');
-    link.setAttribute('d',radialLinkPath(x,y));
-    linksLayer.appendChild(link);
-    const el=document.createElementNS(SVGNS,'circle');
-    el.setAttribute('cx',x.toFixed(2)); el.setAttribute('cy',y.toFixed(2)); el.setAttribute('r',r);
-    el.setAttribute('fill',colorOf(val));
+    const [ga0,ga1]=insetGap(angleSpans[i][0], angleSpans[i][1]);
+    const mid=(ga0+ga1)/2;
+    const el=document.createElementNS(SVGNS,'path');
+    el.setAttribute('d', wedgePath(rI,rO,ga0,ga1));
+    el.setAttribute('fill', colorOf(val));
+    el.classList.add('ttwedge');
+    const [nx,ny]=pointRadial(mid,1);
+    el.style.setProperty('--nx',nx.toFixed(3)); el.style.setProperty('--ny',ny.toFixed(3));
+    // 부채꼴은 가운데가 뚫려 있어 바운딩박스 중심이 웨지 밖(구멍)일 수 있다 — 각도가 넓을수록 심함(작은
+    // n에서 흔함). 실제로 항상 웨지 안인 점(중간각·중간반지름)을 SVG 로컬 좌표로 같이 남겨 둔다.
+    const [mcx,mcy]=pointRadial(mid,(rI+rO)/2);
+    el.setAttribute('data-cx',mcx.toFixed(2)); el.setAttribute('data-cy',mcy.toFixed(2));
     const title=document.createElementNS(SVGNS,'title'); title.textContent=titleOf(key,val); el.appendChild(title);
-    ringLayer.appendChild(el);
-    return {key, val, el};
+    wedgeLayer.appendChild(el);
+    if(wantLabel){
+      const arcLen=(ga1-ga0)*((rI+rO)/2);
+      const txt=fitLabel(labelText(key,val), 10, arcLen);
+      if(txt){
+        const midR=(rI+rO)/2, [lx,ly]=pointRadial(mid,midR);
+        let rot=(mid*180/Math.PI)%360; if(rot<0) rot+=360;
+        if(rot>90 && rot<270) rot+=180;
+        const lbl=document.createElementNS(SVGNS,'text');
+        lbl.setAttribute('transform',`translate(${lx.toFixed(2)},${ly.toFixed(2)}) rotate(${rot.toFixed(1)})`);
+        lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('dominant-baseline','middle');
+        lbl.textContent=txt;
+        labelLayer.appendChild(lbl);
+      }
+    }
+    return {key, val, el, mid};
   });
 }
 
@@ -4833,50 +4899,47 @@ function renderTaxaTree(group, hostId, infoId){
       b.addEventListener('click',()=>{ path.length=+b.dataset.i+1; renderFocus(); }));
   }
 
-  // 오른쪽 드릴다운과 별개로 항상 그리는 전체(목→과) 개요 — 목만 클릭해서 그 목으로 바로 점프.
+  // 오른쪽 드릴다운과 별개로 항상 그리는 전체(목→과) 개요 — 목 링 위에 과 링이 딱 붙는 2단 중첩 선버스트.
+  // 목은 클릭해서 그 목으로 바로 점프. 과는 색 텍스처 + 호버 툴팁만(목이 아주 많으면 그 안의 과는 눈으로
+  // 구분 안 될 만큼 얇아지는데, 이건 웨지로 바꾼다고 새로 생기는 문제가 아니라 원래부터 감수하던 것).
   function renderOverview(){
-    const orders=Object.entries(g.orders);
-    const half=OV_R_ORDER+OV_R_FAM+OV_PAD;
+    const orders=Object.entries(g.orders).sort((a,b)=>a[0].localeCompare(b[0]));
+    const orderSpans=wedgeAngles('order', orders.map(([,o])=>o.n||0));
+    const rI_o=OV_HUB_R, rO_o=OV_HUB_R+OV_THICK_ORDER, rO_f=rO_o+OV_THICK_FAMILY;
+    const half=rO_f+OV_PAD;
     ovHost.innerHTML=`<h4>전체 모양</h4><svg width="${2*half}" height="${2*half}" viewBox="-${half} -${half} ${2*half} ${2*half}" `+
-      `role="img" aria-label="${esc(g.kor)} 전체 목→과 개요"><g class="ttov-links"></g><g class="ttov-fams"></g><g class="ttov-orders"></g></svg>`;
+      `role="img" aria-label="${esc(g.kor)} 전체 목→과 개요"><g class="ttov-orders"></g><g class="ttov-fams"></g></svg>`;
     const svg=ovHost.querySelector('svg');
-    const linksLayer=svg.querySelector('.ttov-links'), famLayer=svg.querySelector('.ttov-fams'), orderLayer=svg.querySelector('.ttov-orders');
+    const orderLayer=svg.querySelector('.ttov-orders'), famLayer=svg.querySelector('.ttov-fams');
     const currentOrder=path.length>1 ? path[1].key : null;
 
     orders.forEach(([oname,onode],i)=>{
-      const angle=orders.length>1 ? 2*Math.PI*i/orders.length : 0;
-      const [ox,oy]=pointRadial(angle,OV_R_ORDER);
-      const olink=document.createElementNS(SVGNS,'path');
-      olink.setAttribute('class','ttov-link'); olink.setAttribute('d',radialLinkPath(ox,oy));
-      linksLayer.appendChild(olink);
+      const [a0,a1]=orderSpans[i], [ga0,ga1]=insetGap(a0,a1), mid=(ga0+ga1)/2;
+      const el=document.createElementNS(SVGNS,'path');
+      el.setAttribute('d', wedgePath(rI_o,rO_o,ga0,ga1));
+      el.setAttribute('fill', gapColor(onode.n? onode.none/onode.n : 0));
+      el.classList.add('ttwedge','clickable','ttov-order'); if(oname===currentOrder) el.classList.add('on');
+      const [nx,ny]=pointRadial(mid,1);
+      el.style.setProperty('--nx',nx.toFixed(3)); el.style.setProperty('--ny',ny.toFixed(3));
+      const [mcx,mcy]=pointRadial(mid,(rI_o+rO_o)/2);
+      el.setAttribute('data-cx',mcx.toFixed(2)); el.setAttribute('data-cy',mcy.toFixed(2));
+      const title=document.createElementNS(SVGNS,'title'); title.textContent=`${oname} · ${nf2(onode.n)}종`; el.appendChild(title);
+      el.addEventListener('click',()=>{ path=[path[0], {rank:'order', key:oname, label:oname, stats:onode}]; renderFocus(); });
+      orderLayer.appendChild(el);
 
-      const fams=Object.entries(onode.families);
-      const spread=Math.min(1.1, 0.25+fams.length*0.03);
+      const fams=Object.entries(onode.families).sort((a,b)=>a[0].localeCompare(b[0]));
+      const famSpans=wedgeAngles('family', fams.map(([,f])=>f.n||0), a1-a0, a0);   // 부모 목 구간(간격 삽입 전) 안에 채운다
       fams.forEach(([fname,fnode],j)=>{
-        const fa=fams.length>1 ? angle-spread/2+spread*(j/(fams.length-1)) : angle;
-        const [fx,fy]=pointRadial(fa, OV_R_ORDER+OV_R_FAM);
-        const flink=document.createElementNS(SVGNS,'path');
-        flink.setAttribute('class','ttov-link');
-        flink.setAttribute('d',`M${ox.toFixed(2)},${oy.toFixed(2)} L${fx.toFixed(2)},${fy.toFixed(2)}`);
-        linksLayer.appendChild(flink);
-        const fdot=document.createElementNS(SVGNS,'circle');
-        fdot.setAttribute('class','ttov-fam'); fdot.setAttribute('cx',fx.toFixed(2)); fdot.setAttribute('cy',fy.toFixed(2)); fdot.setAttribute('r',1.3);
-        fdot.setAttribute('fill', gapColor(fnode.n? fnode.none/fnode.n : 0));
-        const ftitle=document.createElementNS(SVGNS,'title'); ftitle.textContent=`${fname} · ${nf2(fnode.n)}종`; fdot.appendChild(ftitle);
-        fdot.addEventListener('mouseenter',()=>fdot.parentNode.appendChild(fdot));   // 겹친 점들 중 가려진 걸 위로
-        famLayer.appendChild(fdot);
+        const [fa0,fa1]=insetGap(famSpans[j][0], famSpans[j][1]);
+        const fel=document.createElementNS(SVGNS,'path');
+        fel.setAttribute('d', wedgePath(rO_o,rO_f,fa0,fa1));                       // rI = 목 링의 rO — 딱 붙임
+        fel.setAttribute('fill', gapColor(fnode.n? fnode.none/fnode.n : 0));
+        fel.classList.add('ttwedge');
+        const fmid=(fa0+fa1)/2, [fnx,fny]=pointRadial(fmid,1);
+        fel.style.setProperty('--nx',fnx.toFixed(3)); fel.style.setProperty('--ny',fny.toFixed(3));
+        const ftitle=document.createElementNS(SVGNS,'title'); ftitle.textContent=`${fname} · ${nf2(fnode.n)}종`; fel.appendChild(ftitle);
+        famLayer.appendChild(fel);
       });
-
-      const odot=document.createElementNS(SVGNS,'circle');
-      odot.setAttribute('class','ttov-order'+(oname===currentOrder?' on':''));
-      odot.setAttribute('cx',ox.toFixed(2)); odot.setAttribute('cy',oy.toFixed(2)); odot.setAttribute('r',2.6);
-      odot.setAttribute('fill', gapColor(onode.n? onode.none/onode.n : 0));
-      const otitle=document.createElementNS(SVGNS,'title'); otitle.textContent=`${oname} · ${nf2(onode.n)}종`; odot.appendChild(otitle);
-      odot.addEventListener('click',()=>{
-        path=[path[0], {rank:'order', key:oname, label:oname, stats:onode}];
-        renderFocus();
-      });
-      orderLayer.appendChild(odot);
     });
   }
 
@@ -4890,13 +4953,19 @@ function renderTaxaTree(group, hostId, infoId){
     }
 
     const {childRank, items}=focusChildren(entry);
-    const R=ringRadius(childRank, items.length), half=R+PAD;
-    diagHost.innerHTML=`<svg class="taxatree" width="${2*half}" height="${2*half}" viewBox="-${half} -${half} ${2*half} ${2*half}" `+
-      `role="img" aria-label="${esc(entry.label)} 분류 체계도"><g class="ttring-links"></g><g class="ttfocus"></g><g class="ttring"></g></svg>`;
-    const svg=diagHost.querySelector('svg');
-    const linksLayer=svg.querySelector('.ttring-links'), focusLayer=svg.querySelector('.ttfocus'), ringLayer=svg.querySelector('.ttring');
+    const countOf = childRank==='species' ? ()=>1 : (childRank==='genus' ? ([,list])=>list.length : ([,v])=>v.n||0);
+    const counts=items.map(countOf);
+    const angleSpans=wedgeAngles(childRank, counts);
+    const fr=BASE_R[entry.rank]*FOCUS_SCALE;
+    const {rI,rO}=ringRadii(childRank, counts, fr);
+    const half=rO+30;
 
-    const fr=BASE_R[entry.rank]*FOCUS_SCALE, fTotal=entry.stats.n||0, fPct=fTotal?entry.stats.none/fTotal:0;
+    diagHost.innerHTML=`<svg class="taxatree" width="${2*half}" height="${2*half}" viewBox="-${half} -${half} ${2*half} ${2*half}" `+
+      `role="img" aria-label="${esc(entry.label)} 분류 체계도"><g class="ttfocus"></g><g class="ttring"></g><g class="ttlabels"></g></svg>`;
+    const svg=diagHost.querySelector('svg');
+    const focusLayer=svg.querySelector('.ttfocus'), ringLayer=svg.querySelector('.ttring'), labelLayer=svg.querySelector('.ttlabels');
+
+    const fTotal=entry.stats.n||0, fPct=fTotal?entry.stats.none/fTotal:0;
     const fc=document.createElementNS(SVGNS,'circle');
     fc.setAttribute('r',fr); fc.setAttribute('fill',gapColor(fPct));
     const ftitle=document.createElementNS(SVGNS,'title');
@@ -4909,24 +4978,23 @@ function renderTaxaTree(group, hostId, infoId){
     focusLayer.appendChild(flabel);
 
     if(childRank==='species'){
-      const placed=drawRing(ringLayer, linksLayer, items, R, BASE_R.species,
-        val=>STATE_COLOR[val[2]]||'#8a9a90', (key,val)=>`${val[1]} · ${STATE_LABEL[val[2]]||''}`);
+      const placed=drawWedgeRing(ringLayer, labelLayer, items, angleSpans, rI, rO,
+        val=>STATE_COLOR[val[2]]||'#8a9a90', (key,val)=>`${val[1]} · ${STATE_LABEL[val[2]]||''}`,
+        true, (key,val)=>val[1]);
       placed.forEach(({val,el})=>{
-        el.classList.add('ttchild');
+        el.classList.add('clickable');
         el.addEventListener('click',()=>{
           if(!info) return;
           info.innerHTML=`<b>${esc(val[1])}</b>(종) — <span style="color:${STATE_COLOR[val[2]]||'#333'}">${STATE_LABEL[val[2]]||''}</span>`;
         });
       });
     } else {
-      const statsOf = childRank==='genus'
-        ? (list)=>{ const c=countStates(list); return {n:list.length,found:c.f,dormant:c.d,none:c.n}; }
-        : (v)=>v;                                            // order·family는 이미 {n,found,dormant,none,...} 형태
+      const statsOf = childRank==='genus' ? genusStatsOf : (v)=>v;    // order·family는 이미 {n,found,dormant,none,...} 형태
       const colorOf=val=>{ const st=statsOf(val); return gapColor(st.n? st.none/st.n : 0); };
       const titleOf=(key,val)=>{ const st=statsOf(val); return `${key} · ${nf2(st.n)}종`; };
-      const placed=drawRing(ringLayer, linksLayer, items, R, BASE_R[childRank], colorOf, titleOf);
+      const placed=drawWedgeRing(ringLayer, labelLayer, items, angleSpans, rI, rO, colorOf, titleOf, true, (key)=>key);
       placed.forEach(({key,val,el})=>{
-        el.classList.add('ttchild');
+        el.classList.add('clickable');
         el.addEventListener('click',()=>{
           if(childRank==='family'){
             if(info) info.textContent='속 정보를 불러오는 중…';
@@ -4949,7 +5017,87 @@ function renderTaxaTree(group, hostId, infoId){
     renderOverview();
   }
 
+  // ── 검색 색인: 목·과는 taxa_tree.js 로 바로(항상 있음), 속·종은 taxatree_sp_<T>.js 로드가 끝나야 채워진다.
+  // 분류군을 고르는 즉시 그 파일을 미리 당겨 오므로(과를 눌러야만 불러오던 것에서 바뀜), 검색창은 그때부터
+  // 속·종까지 바로 찾을 수 있다 — 로드 전엔 목·과만, 끝나면 자동으로 다시 지어진다.
+  let searchIndex=[];
+  function buildSearchIndex(){
+    const idx=[];
+    const orderEntries=Object.entries(g.orders).sort((a,b)=>a[0].localeCompare(b[0]));
+    for(const [oname,onode] of orderEntries){
+      idx.push({rank:'order', label:oname, searchKey:oname.toLowerCase(),
+        path:[{rank:'order',key:oname,label:oname,stats:onode}]});
+      const famEntries=Object.entries(onode.families).sort((a,b)=>a[0].localeCompare(b[0]));
+      for(const [fname,fnode] of famEntries){
+        idx.push({rank:'family', label:fname, searchKey:fname.toLowerCase(),
+          path:[{rank:'order',key:oname,label:oname,stats:onode},
+                {rank:'family',key:fname,label:fname,stats:fnode,order:oname}]});
+      }
+    }
+    const spByGroup=(window.__TAXATREE_SP__||{})[group];
+    if(spByGroup){
+      for(const [ofKey, spAll] of Object.entries(spByGroup)){
+        const bar=ofKey.indexOf('|'), oname=ofKey.slice(0,bar), fname=ofKey.slice(bar+1);
+        const onode=g.orders[oname], fnode=onode&&onode.families[fname];
+        if(!onode||!fnode) continue;
+        const byGenus=new Map();
+        for(const s of spAll){ const gn=s[3]||'(미분류)'; if(!byGenus.has(gn)) byGenus.set(gn,[]); byGenus.get(gn).push(s); }
+        const genusEntries=[...byGenus.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+        for(const [gname,list] of genusEntries){
+          const gpath=[{rank:'order',key:oname,label:oname,stats:onode},
+                       {rank:'family',key:fname,label:fname,stats:fnode,order:oname},
+                       {rank:'genus',key:gname,label:gname,stats:genusStatsOf(list),list}];
+          idx.push({rank:'genus', label:gname, searchKey:gname.toLowerCase(), path:gpath});
+          for(const s of list){
+            // 종 튜플엔 학명이 없다([ktsn,한글명,상태코드,속명]) — 한글명 + 부모 속 라틴명으로 찾는다.
+            idx.push({rank:'species', label:s[1], searchKey:(s[1]+' '+gname).toLowerCase(), path:gpath, sp:s});
+          }
+        }
+      }
+    }
+    searchIndex=idx;
+  }
+  function jumpToSearchResult(r){
+    path=[path[0], ...r.path];
+    renderFocus();
+    if(r.rank==='species' && info){
+      const s=r.sp;
+      info.innerHTML=`<b>${esc(s[1])}</b>(종) — <span style="color:${STATE_COLOR[s[2]]||'#333'}">${STATE_LABEL[s[2]]||''}</span>`;
+    }
+  }
+
   renderFocus();
+  buildSearchIndex();
+  loadTaxaTreeSp(group, buildSearchIndex);   // 속·종 데이터가 나중에 도착하면 색인에 더한다(이미 있으면 즉시 콜백)
+
+  // ── 검색창 배선 ──
+  const searchInput=document.getElementById('taxaSearchInput'), searchResults=document.getElementById('taxaSearchResults');
+  if(searchInput && searchResults){
+    const doSearchTaxa=()=>{
+      const q=searchInput.value.trim().toLowerCase();
+      if(!q){ searchResults.style.display='none'; searchResults.innerHTML=''; return; }
+      const starts=[], contains=[];
+      for(const row of searchIndex){
+        if(row.searchKey.startsWith(q)){ if(starts.length<8) starts.push(row); }
+        else if(starts.length<8 && row.searchKey.includes(q)){ if(contains.length<8) contains.push(row); }
+        if(starts.length>=8 && contains.length>=8) break;
+      }
+      const results=starts.concat(contains).slice(0,8);
+      if(!results.length){ searchResults.innerHTML='<div class="r"><span class="muted2">검색 결과가 없습니다.</span></div>'; searchResults.style.display=''; return; }
+      searchResults.innerHTML=results.map((r,i)=>
+        `<div class="r" data-i="${i}"><span class="nm">${esc(r.label)}</span><span class="tg">${RANK_LABEL[r.rank]}</span></div>`).join('');
+      searchResults.style.display='';
+      searchResults.querySelectorAll('[data-i]').forEach(el=>el.addEventListener('click',()=>{
+        jumpToSearchResult(results[+el.dataset.i]);
+        searchResults.style.display='none'; searchInput.value='';
+      }));
+    };
+    searchInput.oninput=doSearchTaxa;
+    searchInput.onkeydown=e=>{ if(e.key==='Escape'){ searchResults.style.display='none'; searchInput.blur(); } };
+    document.addEventListener('click',e=>{
+      if(e.target!==searchInput && !searchResults.contains(e.target)) searchResults.style.display='none';
+    });
+  }
 }
 function nf2(n){ return (n||0).toLocaleString('ko-KR'); }
 window.renderTaxaTree=renderTaxaTree;
