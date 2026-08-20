@@ -62,6 +62,7 @@ def build():
     sp_by_group = {}                           # group -> "order|family" -> [[ktsn, korean_name, code, genus_la], ...]
     n_species = n_orders = n_families = 0
     seen_orders, seen_families, seen_genera = set(), set(), set()
+    seen_order_genus, seen_family_genus = set(), set()
     for ktsn, korean_name, group, order_la, family_la, genus_la in con.execute(
             "select ktsn, korean_name, taxon_group, order_la, family_la, genus_la from species where rank='종'"):
         order_la = (order_la or "").strip() or "(미분류)"
@@ -78,9 +79,10 @@ def build():
             node["n"] += 1
             node[st] += 1
 
-        # 속(genus)은 목→과처럼 별도 집계 트리를 만들지 않는다 — 계통수는 과까지만 그리고,
-        # 과를 펼쳤을 때 속 단위 그룹은 이 종 목록(genus_la)에서 브라우저가 즉석에서 묶는다.
-        # (분류군별 목·과·속·종 개수 요약표에 쓸 속 개수만 group_n_genus 로 따로 집계한다.)
+        # 속(genus) 단위 별도 집계 트리(목→과처럼 개별 노드)는 안 만든다 — 과를 펼쳤을 때 실제 속
+        # 그룹은 여전히 이 종 목록(genus_la)에서 브라우저가 즉석에서 묶는다. 다만 "이 목/과 아래
+        # 속이 몇 개인지" 개수(genus_n)만은 분류군·목·과 세 단계 모두 미리 세어 둔다 — 계통도를
+        # 드릴다운할 때마다(종 목록이 아직 지연 로드되기 전에도) 바로 보여줘야 해서.
         sp_by_group.setdefault(group, {}).setdefault(f"{order_la}|{family_la}", []).append(
             [ktsn, korean_name or "", STATE_CODE[st], genus_la])
 
@@ -88,15 +90,27 @@ def build():
         seen_orders.add((group, order_la))
         seen_families.add((group, order_la, family_la))
         seen_genera.add((group, genus_la))
+        seen_order_genus.add((group, order_la, genus_la))
+        seen_family_genus.add((group, order_la, family_la, genus_la))
 
     con.close()
     n_orders, n_families = len(seen_orders), len(seen_families)
 
-    genus_n_by_group = {}
+    genus_n_by_group, genus_n_by_order, genus_n_by_family = {}, {}, {}
     for group, genus_la in seen_genera:
         genus_n_by_group[group] = genus_n_by_group.get(group, 0) + 1
+    for group, order_la, genus_la in seen_order_genus:
+        genus_n_by_order[(group, order_la)] = genus_n_by_order.get((group, order_la), 0) + 1
+    for group, order_la, family_la, genus_la in seen_family_genus:
+        key = (group, order_la, family_la)
+        genus_n_by_family[key] = genus_n_by_family.get(key, 0) + 1
+
     for group, g_node in tree.items():
         g_node["genus_n"] = genus_n_by_group.get(group, 0)
+        for order_la, o_node in g_node["orders"].items():
+            o_node["genus_n"] = genus_n_by_order.get((group, order_la), 0)
+            for family_la, f_node in o_node["families"].items():
+                f_node["genus_n"] = genus_n_by_family.get((group, order_la, family_la), 0)
 
     payload = {"gen": meta.get("generated", ""), "ref": ref, "cut": cut, "tree": tree}
     OUT.parent.mkdir(parents=True, exist_ok=True)
