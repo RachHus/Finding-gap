@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 KTSN 종 마스터 정비 — 정명(corsynSeYn=Y)만, 종/아종 수준(최하위=아종, 변종은 상위로 폴드).
-- 입력: 1_Data/raw/nibr/ktsn_*.ndjson (수집 산출)
+- 입력: 1_Data/raw/nibr/ktsn_*.ndjson (수집 산출) 중 TAXA_KOR 의 서비스 분류군
 - 조인: endangered_species.csv(등급) · national_redlist.csv(적색목록코드) — 학명키 기준
 - 출력: 1_Data/processed/ktsn_master.csv
 규칙:
@@ -12,7 +12,7 @@ KTSN 종 마스터 정비 — 정명(corsynSeYn=Y)만, 종/아종 수준(최하�
 import sys, csv, json, re
 from pathlib import Path
 from collections import defaultdict, Counter
-from taxon_key import ktsn_keys, managed_key
+from taxon_key import ktsn_keys, managed_key, is_variety, norm_dash
 
 
 def _kor(s):
@@ -39,13 +39,14 @@ def load_lookup(path, sci_col, kor_col, val_col, val_name):
         return sci, kor, rows
     for r in csv.DictReader(path.open(encoding="utf-8-sig")):
         v = (r.get(val_col) or "").strip()
-        k = managed_key(r.get(sci_col) or "")
-        if k and k not in sci:
-            sci[k] = v
+        name = r.get(sci_col) or ""
+        k = managed_key(name)
         kn = _kor(r.get(kor_col))
-        if kn and kn not in kor:
+        if k and k not in sci and not is_variety(name):   # 변종 학명은 그 위 종의 평가가 아니다
+            sci[k] = v
+        if kn and kn not in kor:                             # 국명은 층위와 무관하게 그 생물을 가리킨다
             kor[kn] = v
-        rows.append({"sci": k, "kor": kn, "val": v, "name": r.get(sci_col)})
+        rows.append({"sci": k, "kor": kn, "val": v, "name": name})
     print(f"  {path.name}: {len(sci):,}학명키 / {len(kor):,}국명 ({val_name})")
     return sci, kor, rows
 
@@ -87,6 +88,8 @@ def main():
             n_all += 1
             if r.get("corsynSeYn") != "Y":        # 정명만
                 continue
+            if (r.get("txgrpGroupCd") or "") not in TAXA_KOR:   # 서비스 분류군만(수집 대상 밖은 제외)
+                continue
             binom, trinom = ktsn_keys(r.get("gnusKtsnLtnNm"), r.get("specsKtsnLtnNm"),
                                       r.get("sspecsKtsnLtnNm"))
             if not binom:                          # 속+종 미만(상위 분류군) 제외
@@ -102,9 +105,9 @@ def main():
     for key, recs in cand.items():
         rank = "아종" if len(key.split()) == 3 else "종"
         rec = max(recs, key=lambda r: (canon_score(r, rank), -int(r.get("ktsn") or 0)))
-        g = (rec.get("gnusKtsnLtnNm") or "").strip()
-        sp = (rec.get("specsKtsnLtnNm") or "").strip()
-        ss = (rec.get("sspecsKtsnLtnNm") or "").strip()
+        g = norm_dash(rec.get("gnusKtsnLtnNm")).strip()      # 붙임표를 하이픈으로 통일 — 자료마다 표기가 갈린다
+        sp = norm_dash(rec.get("specsKtsnLtnNm")).strip()
+        ss = norm_dash(rec.get("sspecsKtsnLtnNm")).strip()
         sci = " ".join([g, sp] + ([ss] if (rank == "아종" and ss) else []))
         tx = rec.get("txgrpGroupCd") or ""
         kn = _kor(rec.get("ktsnKrnNm"))

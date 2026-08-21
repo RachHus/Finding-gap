@@ -611,7 +611,7 @@ function getTaxonOptions(){
     .concat(taxa.map(t=>({
       value:t,
       ko:TAXON_LABELS[t]||t,
-      la:t,
+      la:'',
       count:meta[t]
     })));
 }

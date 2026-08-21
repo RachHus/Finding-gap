@@ -33,7 +33,7 @@ DATA_FILES = ["taxa_summary.js", "demo_mm.js",
               "env_meta.js", "species_env.js",
               "env_grid.js", "gap_meta.js",        # 발견공백 A: 전국 1km 격자 + 메타(지연 로드)
               "env_model.js", "model_meta.js",     # 서식지 후보: 모형 전용 환경변수 + 생성 메타(지연 로드)
-              "taxon_ko.js",                       # 퀴즈 범위: 과·속 라틴→한글 룩업
+              "taxon_ko.js", "taxon_tree.js",      # 분류 계층: 라틴→한글 이름과 강→목→과→속 포함 관계
               "missions.js",                       # 시민과학 B: 유망 공백 미션보드(정적)
               "region_gaps.js"]                    # 시군구×분류군 발견/공백 합계 — 활동지역 선택·알림용(build_region_gaps.py)
 # 분류군별 관측·점유·미디어·계절·모형·발견공백사유는 분할 산출 — obs_/cells_/media_/season_/rep_/model_/gapreason_<T>.js 전부 복사(지연 로드)

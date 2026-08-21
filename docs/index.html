@@ -422,6 +422,13 @@
   .scard .sci{font-style:italic;color:var(--muted);font-size:13px}
   .scard .row{margin-top:14px}
   .scard .row .k{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px}
+  .lineage{display:flex;flex-wrap:wrap;align-items:center;gap:6px 4px}
+  .lineage .sep{color:var(--muted);font-size:13px}
+  .lin{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:5px 10px;text-align:left;
+       border:1px solid var(--line);border-radius:999px;background:var(--card);
+       font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
+  .lin:hover,.lin:focus-visible{border-color:var(--accent);background:#eef3f1}
+  .lin .la{font-style:italic;color:var(--muted);font-size:12px}
   /* 지도 위 컨트롤 띠 — 분류군·지역 검색·서식지 후보·지역 경계 토글이 한 줄에 나란히 선다.
      하나씩 따로 절대배치하면 폭이 줄어들 때 서로의 타격영역을 먹는다(실측 881px: 가운데 남는 폭 136px).
      한 줄에 다 담기지 않으면 줄만 바뀌고, 왼쪽 시작선과 오른쪽 끝선은 그대로 유지된다. */
@@ -750,6 +757,7 @@
     /* 종 카드 */
     .scard{padding:14px 16px;max-width:100%}
     .scard h3{word-break:keep-all;overflow-wrap:anywhere}
+    .lin{min-height:44px}
     .links{grid-template-columns:1fr}
 
     /* 지도 아래 대표 사진: 세로로 쌓이면 왼쪽 칸이 늘어날 일이 없어 flex 기준이 사진 없는
@@ -848,7 +856,7 @@
 
   <div class="tabs">
     <span class="qfield">
-      <input type="search" id="q" placeholder="종 검색 — 국명·학명·초성(예: 수달, Lutra, ㅅㄷ)" autocomplete="off" aria-label="종 검색">
+      <input type="search" id="q" placeholder="종·분류 검색 — 국명·학명·초성(예: 수달, Lutra, ㅅㄷ)" autocomplete="off" aria-label="종·분류 검색">
       <span class="scount" id="sCount"></span>
     </span>
     <span class="tabsright">
@@ -1225,6 +1233,64 @@ const ROWCAP=1500;                                      // 대용량 분류군 �
 const SP_BY_TAX={};                                     // 분류군 → 종목록(검색 인덱스 파생)
 for(const sp of SPIDX){ (SP_BY_TAX[sp.t]||(SP_BY_TAX[sp.t]=[])).push(sp); }
 const ALL_YEARS=[...new Set(Object.values(OBS).flatMap(d=>d.years||[]))].map(Number).sort((a,b)=>a-b);
+
+/* ── 분류 계층(강·목·과·속) ──
+   taxon_ko.js 는 라틴명 → 한글명, taxon_tree.js 는 위에서 아래로 내려가는 포함 관계를 싣는다.
+   종 카드의 계층 줄과 계층명 검색에서만 쓰므로, 첫 화면을 막지 않게 필요할 때 불러온다. */
+let TAXNAME=null, TAXTREE=null, _taxCbs=null;
+const TAXUP={fam:{},ord:{},cls:{}};                     // 아래에서 위로 — 종에서 속·과·목·강을 거슬러 올라간다
+const TAXALL={cls:[],ord:[],fam:[],gen:[]};             // 계층명 검색이 훑는 이름 목록
+const TAXRANK={cls:'강',ord:'목',fam:'과',gen:'속'};
+const taxAttr=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+function taxonomyReady(){ return !!(TAXNAME&&TAXTREE); }
+function ensureTaxonomy(cb){
+  if(taxonomyReady()){ cb&&cb(); return; }
+  if(_taxCbs){ if(cb)_taxCbs.push(cb); return; }
+  _taxCbs=cb?[cb]:[];
+  const files=['demo/data/taxon_ko.js','demo/data/taxon_tree.js'];
+  let left=files.length;
+  const done=()=>{
+    if(--left) return;
+    TAXNAME=window.__TAXON_KO__||{}; TAXTREE=window.__TAXON_TREE__||{};
+    buildTaxonIndex();
+    const cbs=_taxCbs; _taxCbs=null; cbs.forEach(f=>f&&f());
+  };
+  for(const src of files){
+    const s=document.createElement('script'); s.src=src;
+    s.onload=done; s.onerror=()=>{ console.warn('분류 계층 로드 실패',src); done(); };
+    document.head.appendChild(s);
+  }
+}
+function buildTaxonIndex(){
+  const co=TAXTREE.co||{}, of=TAXTREE.of||{}, fg=TAXTREE.fg||{};
+  const uniq=(keys,vals)=>[...new Set(keys.concat(...vals))];
+  TAXALL.cls=Object.keys(co);
+  TAXALL.ord=uniq(Object.keys(of),Object.values(co));
+  TAXALL.fam=uniq(Object.keys(fg),Object.values(of));
+  TAXALL.gen=Object.keys(TAXNAME.gen||{});              // 속 라틴명은 학명 앞머리로 이미 걸리니 한글명만 훑는다
+  for(const p in fg) for(const c of fg[p]) TAXUP.fam[c]=p;
+  for(const p in of) for(const c of of[p]) TAXUP.ord[c]=p;
+  for(const p in co) for(const c of co[p]) TAXUP.cls[c]=p;
+}
+const isSubspecies=sp=>(sp.s||'').trim().split(' ').length>=3;   // 아종 학명은 세 마디(속·종·아종)
+function lineageOf(sp){                                 // 종 → [{rank,la,ko}] · 비어 있는 층은 건너뛴다
+  if(!taxonomyReady()) return [];
+  const gen=(sp.s||'').split(' ')[0];
+  const fam=(TAXTREE.sp||{})[sp.k]||TAXUP.fam[gen]||'';  // 같은 속이라도 종에 따라 과가 갈리는 경우가 있다
+  const ord=fam?(TAXUP.ord[fam]||''):'';
+  const cls=ord?(TAXUP.cls[ord]||''):'';
+  return [['cls',cls],['ord',ord],['fam',fam],['gen',gen]].filter(x=>x[1])
+    .map(([rank,la])=>({rank:TAXRANK[rank], la, ko:(TAXNAME[rank]||{})[la]||''}));
+}
+function lineageRow(sp){                                // 한글명과 학명을 나란히 — 눌러서 그 아래 종을 찾는다
+  const path=lineageOf(sp);
+  if(!path.length) return '';
+  const cell=x=>`<button type="button" class="lin" data-q="${taxAttr(x.ko||x.la)}" `+
+    `title="${x.rank} — 이 분류에 속한 종 찾기"><span class="ko">${x.ko||x.la}</span>`+
+    (x.ko?`<span class="la">${x.la}</span>`:'')+`</button>`;
+  return `<div class="row"><div class="k">분류 체계</div>`+
+    `<div class="lineage">${path.map(cell).join('<span class="sep" aria-hidden="true">›</span>')}</div></div>`;
+}
 
 /* ── 배지 ── */
 function badges(g,r){
@@ -2471,10 +2537,10 @@ function repSpeciesOf(group){
 function syncSearchHint(group){
   const el=document.getElementById('q'); if(!el) return;
   const sp=repSpeciesOf(group);
-  if(!sp){ el.placeholder='종 검색 — 국명·학명·초성'; return; }
+  if(!sp){ el.placeholder='종·분류 검색 — 국명·학명·초성'; return; }
   const genus=(sp.s||'').split(' ')[0];
   const ex=[sp.n||sp.s, genus, sp.n?toCho(sp.n):''].filter(Boolean).join(', ');
-  el.placeholder=`종 검색 — 국명·학명·초성(예: ${ex})`;
+  el.placeholder=`종·분류 검색 — 국명·학명·초성(예: ${ex})`;
 }
 window.fgSyncSearchHint=syncSearchHint;
 function fillSearchTaxon(){
@@ -2505,24 +2571,67 @@ function setFold(on){                                      // 종 목록 접기(
   sFold.querySelector('.t').textContent=on?'종 목록 펼치기':'종 목록 접기';
   sFold.querySelector('.ar').textContent=on?'▼':'▲';
 }
+function taxonMatch(raw, ql, isCho){                   // 질의와 맞는 강·목·과·속 → 그 아래 속 이름 집합
+  if(!taxonomyReady()||raw.length<2) return null;
+  const gens=new Set(), fams=new Set(), labels=[];
+  const down={
+    gen:g=>gens.add(g),
+    fam:f=>{ fams.add(f); ((TAXTREE.fg||{})[f]||[]).forEach(down.gen); },
+    ord:o=>((TAXTREE.of||{})[o]||[]).forEach(down.fam),
+    cls:c=>((TAXTREE.co||{})[c]||[]).forEach(down.ord)
+  };
+  // 강·목은 이름이 통째로 맞을 때만 받는다 — 넓은 층이 부분일치로 걸리면 수만 종이 딸려 온다.
+  // 속은 라틴명을 보지 않는다 — 학명 앞머리가 곧 속명이라 종 이름 검색이 이미 같은 일을 한다.
+  const wide=rank=>rank==='cls'||rank==='ord';
+  const match=(rank,la,ko)=> isCho
+    ? (!!ko && (wide(rank) ? toCho(ko)===raw : toCho(ko).startsWith(raw)))
+    : (wide(rank) ? (ko===raw||la.toLowerCase()===ql)
+                  : ((rank!=='gen'&&la.toLowerCase().startsWith(ql))||(!!ko&&ko.includes(raw))));
+  for(const rank of ['cls','ord','fam','gen']){
+    const dict=TAXNAME[rank]||{};
+    for(const la of TAXALL[rank]){
+      const ko=dict[la]||'';
+      if(!match(rank,la,ko)) continue;
+      if(labels.length<8) labels.push(ko?`${ko} ${la}`:la);
+      down[rank](la);
+    }
+  }
+  return gens.size?{gens,fams,labels}:null;
+}
+function inTaxon(tx,sp){
+  const ov=(TAXTREE.sp||{})[sp.k];
+  return tx.gens.has((sp.s||'').split(' ')[0]) || (!!ov&&tx.fams.has(ov));
+}
+function searchTaxon(name){                             // 종 카드의 계층 줄 → 그 분류에 속한 종 목록
+  if(!name) return;
+  q.value=name;
+  doSearch();
+  sResults.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
 function doSearch(){
   const raw=q.value.trim();
   if(!raw){ sResults.style.display='none'; sCount.textContent=''; if(sFold) sFold.style.display='none'; setFold(false); return; }
   const ql=raw.toLowerCase();
   const isCho=/^[ㄱ-ㅎ]+$/.test(raw);     // 초성쿼리일 때만 초성매칭(전체 한글엔 오매칭 방지)
+  if(!taxonomyReady()) ensureTaxonomy(()=>{ if(q.value.trim()===raw) doSearch(); });
+  const tx=taxonMatch(raw,ql,isCho);
   const pool=sTax?(SP_BY_TAX[sTax]||[]):SPIDX;
   const scored=[];
+  let viaTax=false;
   for(const sp of pool){
     const nl=(sp.n||'').toLowerCase(), sl=(sp.s||'').toLowerCase();
     let sc=-1;
     if(isCho){ const cn=toCho(sp.n||''); if(cn.startsWith(raw))sc=0; else if(cn.includes(raw))sc=2; }
     else { if(nl.startsWith(ql))sc=0; else if(sl.startsWith(ql))sc=1; else if(nl.includes(ql))sc=2; else if(sl.includes(ql))sc=3; }
+    if(sc<0 && tx && inTaxon(tx,sp)){ sc=4; viaTax=true; }   // 이름이 아니라 속한 분류로 걸린 종
     if(sc>=0) scored.push([sc,sp]);
   }
   scored.sort((a,b)=>a[0]-b[0] || (a[1].n||a[1].s).localeCompare(b[1].n||b[1].s,'ko'));
   const total=scored.length;
   SRES=scored.slice(0,60).map(x=>x[1]);
-  sCount.textContent=`${nf(total)}건${total>60?' · 상위 60 표시':''}`;
+  // 분류로 걸린 종이 실제로 있을 때만 어떤 분류였는지 밝힌다
+  const via=viaTax?` · ${tx.labels.slice(0,2).join(' · ')}${tx.labels.length>2?` 외 ${tx.labels.length-2}`:''}`:'';
+  sCount.textContent=`${nf(total)}건${via}${total>60?' · 상위 60 표시':''}`;
   sResults.style.display='';
   if(sFold){ sFold.style.display=''; sFoldC.textContent=sCount.textContent; }
   setFold(false);                                         // 새로 찾았으면 결과부터 보여준다
@@ -2695,7 +2804,8 @@ function renderSpecies(sp){
       <div style="min-width:0"><h3>${sp.n||sp.s}</h3><div class="sci">${sp.s}</div></div>
       <button class="watchbtn" data-k="${sp.k}" style="margin-left:auto" hidden>☆ 관심 종</button>
     </div>
-    <div style="margin-top:8px">${badges(sp.g,sp.r)||'<span class="muted">일반종</span>'} <span class="badge" style="background:#eef3f1;color:var(--accent)">${TAXON_KOR[sp.t]||sp.t}</span><span id="gapReasonBadge">${gapReasonBadge(sp)}</span></div>
+    <div style="margin-top:8px">${badges(sp.g,sp.r)||'<span class="muted">일반종</span>'} <span class="badge" style="background:#eef3f1;color:var(--accent)">${TAXON_KOR[sp.t]||sp.t}</span><span id="gapReasonBadge">${gapReasonBadge(sp)}</span>${isSubspecies(sp)?' <span class="badge" style="background:var(--card);border:1px solid var(--line);color:var(--muted)">아종</span>':''}</div>
+    <div id="lineageHost">${lineageRow(sp)}</div>
     <div style="margin-top:8px;display:flex;align-items:center;gap:8px" title="같은 분류군·희귀도 그룹 안에서 이 종에 대한 대중 관심(관측 기록·한국어 위키 조회 기반)의 상대 위치">
       <span class="muted" style="font-size:12px;white-space:nowrap">관심도</span>
       <span style="flex:1;max-width:150px;height:6px;background:#eef1f0;border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(interestOf(sp.k)*100)}%;background:#6a9a86"></span></span>
@@ -2724,6 +2834,10 @@ function renderSpecies(sp){
   loadRep(sp.t, ()=>renderRepShot(sp));                 // 지도 아래 대표 사진(분류군별 지연 로드)
   loadGapReason(sp.t, ()=>{                             // 발견공백 사유 배지(이명·지역절멸, 분류군별 지연 로드)
     const el=document.getElementById('gapReasonBadge'); if(el) el.innerHTML=gapReasonBadge(sp);
+  });
+  ensureTaxonomy(()=>{                                  // 강·목·과·속 줄(계층 자산 지연 로드)
+    if(selSpecies!==sp) return;
+    const el=document.getElementById('lineageHost'); if(el) el.innerHTML=lineageRow(sp);
   });
   if(window.innerWidth<=880) sCard.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
@@ -2815,6 +2929,8 @@ function boot(){
   sY1.onchange=()=>{ sy1=+sY1.value; if(sy1<sy0){sy0=sy1;sY0.value=sy0;} if(selSpecies)showSpecies(selSpecies); };
   sDec.onchange=()=>applyDecade('B');
   q.addEventListener('input',doSearch);
+  q.addEventListener('focus',()=>ensureTaxonomy(),{once:true});
+  sCard.addEventListener('click',ev=>{ const b=ev.target.closest('.lin'); if(b) searchTaxon(b.dataset.q); });
   // 초기 렌더(관측자료는 선택 분류군만 지연 로드)
   renderSelChips();
   tblCnt.textContent='관측자료 불러오는 중…';
