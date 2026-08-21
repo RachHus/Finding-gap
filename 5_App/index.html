@@ -1768,9 +1768,11 @@ function syncGapBtn(){                                    // 지도 안 토글 �
   gapBtnEl.disabled=!usable;
   gapBtnEl.setAttribute('aria-pressed', gapOn?'true':'false');
 }
+let _gapJustOn=false;                                     // 방금 사용자가 켰다 — 계산이 끝난 뒤 한 번만 배율을 맞춘다
 function toggleGap(){
   gapOn=!gapOn; syncGapBtn();
-  if(!gapOn){ GAPRES=null; updateGapMap(null); applyGapVis(); }
+  if(!gapOn){ GAPRES=null; updateGapMap(null); applyGapVis(); _gapJustOn=false; }
+  else _gapJustOn=true;
   renderSpView(); refreshSpeciesMap();
 }
 let gapSortDir=-1;                                        // 적합지 비율표 정렬(기본 비율 내림차순)
@@ -1889,10 +1891,20 @@ function renderSpView(){
   refreshSpeciesMap();                                    // 멸종위기종은 격자를 안 켜므로 여기서 범례를 채워야 한다
   if(!gapOn) return;
   ensureGap(()=>loadCells(sp.t, ()=>loadModel(sp.t, ()=>{
-    if(!gapOn||selSpecies!==sp) return;                   // 그 사이 종이 바뀌거나 후보를 껐으면 폐기
+    if(!gapOn||selSpecies!==sp){ _gapJustOn=false; return; }   // 그 사이 종이 바뀌거나 후보를 껐으면 폐기
     const res=computeCandidate(sp); GAPRES=res;
     const h=document.getElementById('gapHost'); if(h) h.outerHTML=gapTable(res);
-    updateGapMap(res); applyGapVis(); refreshSpeciesMap();
+    updateGapMap(res);
+    /* 후보는 1km 단위라 줌 문턱(CELL_MIN_Z) 아래에서는 안 그린다 — 예전에는 켜도 아무것도 안 뜨고
+       "더 확대하면 보입니다" 안내만 남아, 확대가 Ctrl+휠인 것까지 알아야 후보에 닿을 수 있었다.
+       켠 직후 한 번만 그 배율로 맞춘다(중심은 그대로) — 해마다 연도를 바꿀 때처럼 이 함수가 다시
+       불릴 때 화면이 끌려가지 않게. 보여줄 후보가 없는 종(모형 없음·바다 등)은 확대해도 얻을 것이
+       없으니 건드리지 않는다. 애니메이션 없이 즉시 — zoomToFeature 와 같은 이유. */
+    if(_gapJustOn){
+      _gapJustOn=false;
+      if(map && !res.gated && res.cells && res.cells.length && !cellZoomOK()) map.getView().setZoom(CELL_MIN_Z);
+    }
+    applyGapVis(); refreshSpeciesMap();
   })));
 }
 
