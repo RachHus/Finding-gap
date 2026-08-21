@@ -156,3 +156,76 @@ export async function adminPendingReports() {
   return data || [];
 }
 export async function setReportStatus(id, status) { return sb.from('reports').update({ status }).eq('id', id); }
+
+// ── 분류 이력 전문가 제보(taxon_reference_reports) — 논문 근거(DOI) 기반. reports 와 완전히 같은 패턴 ──
+// r = { ktsn, korean_name, scientific_name, to_name, ref_title, ref_authors?, ref_year?, ref_container?, doi?, ref_url?, note? }
+export async function submitTaxonReference(r) {
+  if (!sb) throw new Error('not configured');
+  return sb.from('taxon_reference_reports').insert({
+    ktsn: r.ktsn,
+    korean_name: r.korean_name || null,
+    scientific_name: r.scientific_name || null,
+    to_name: r.to_name,
+    ref_title: r.ref_title,
+    ref_authors: r.ref_authors || null,
+    ref_year: r.ref_year || null,
+    ref_container: r.ref_container || null,
+    doi: r.doi || null,
+    ref_url: r.ref_url || null,
+    note: (r.note && r.note.trim()) || null
+  });
+}
+// 관리자 전용 — RLS(role='admin')로 비관리자는 빈 결과. 검토 대기 제보 목록.
+export async function adminPendingTaxonRefs() {
+  if (!sb) return [];
+  const { data, error } = await sb.from('taxon_reference_reports')
+    .select('id,ktsn,korean_name,scientific_name,to_name,ref_title,ref_authors,ref_year,ref_container,doi,ref_url,note,status,created_at')
+    .eq('status', 'pending').order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+export async function setTaxonRefStatus(id, status, note) {
+  return sb.from('taxon_reference_reports').update({ status, admin_note: (note && note.trim()) || null }).eq('id', id);
+}
+// 내 분류 이력 제보 이력(본인 행 — RLS). myReports() 와 동일한 패턴.
+export async function myTaxonReferences() {
+  if (!sb) return [];
+  const { data, error } = await sb.from('taxon_reference_reports')
+    .select('id,ktsn,korean_name,scientific_name,to_name,ref_title,ref_authors,ref_year,ref_container,doi,ref_url,note,status,admin_note,created_at')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+// ── 사이트 피드백 공개 게시판(site_feedback) — 이 앱 자체(버그·제안)에 대한 의견. 로그인 없이도
+// 작성 가능(anon insert 허용, 이 파일에서 유일). user_id 는 로그인 시 DB default auth.uid() 로
+// 자동 채워지고, 비로그인이면 NULL 로 남는다 — 그 경우 poster 표시는 guest_name 을 쓴다.
+// f = { category?, message, guest_name? } — guest_name 은 비로그인일 때만 클라이언트가 채운다.
+export async function submitFeedback(f) {
+  if (!sb) throw new Error('not configured');
+  return sb.from('site_feedback').insert({
+    category: f.category || null,
+    message: (f.message || '').trim(),
+    guest_name: (f.guest_name && f.guest_name.trim()) || null
+  });
+}
+// 공개 피드백 피드 — public_feedback() RPC(전원 공개, 상태 무관 — 검수 대기열이 아니라 즉시 공개 게시판).
+export async function siteFeedback(limit = 50) {
+  if (!sb) return [];
+  const { data, error } = await sb.rpc('public_feedback', { lim: limit });
+  if (error) throw error;
+  return data || [];
+}
+// 관리자 전용 — RLS(role='admin')로 비관리자는 빈 결과. 답변 대기(open) 목록.
+export async function adminPendingFeedback() {
+  if (!sb) return [];
+  const { data, error } = await sb.from('site_feedback')
+    .select('id,category,message,guest_name,status,admin_reply,created_at')
+    .eq('status', 'open').order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+export async function setFeedbackStatus(id, status, reply) {
+  return sb.from('site_feedback').update({ status, admin_reply: (reply && reply.trim()) || null }).eq('id', id);
+}
+export async function deleteFeedback(id) { return sb.from('site_feedback').delete().eq('id', id); }

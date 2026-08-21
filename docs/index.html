@@ -121,6 +121,17 @@
   .vintro h2{margin:0 0 6px;font-size:19px}
   .vintro p{margin:0;color:var(--muted);font-size:13px;max-width:64ch;line-height:1.6}
   .vintro p b{color:var(--ink);font-weight:600}
+  /* 분류 체계도 탭 — 분류군 타일 고르개(지도의 드롭다운형 분류군 선택과 별개, 이 탭 전용). 가로로 긴
+     알약 모양 대신, 다른 화면(dhead 등)에서 이미 쓰는 정사각형 아이콘 칩을 키워 정사각형에 가까운
+     카드로 — 폭이 좁아지면 라벨이 두 줄로 접히므로 aspect-ratio 대신 min-height로 "정사각형에 가깝게". */
+  .taxatabpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin:16px 0}
+  .taxatabpick button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    min-height:96px;border:1px solid var(--line);background:none;border-radius:var(--radius);
+    padding:12px 8px;font:inherit;font-size:12.5px;font-weight:600;line-height:1.3;cursor:pointer;color:var(--ink);text-align:center}
+  .taxatabpick button .chip{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
+  .taxatabpick button:hover{border-color:#9ec3b2;background:#eef3f1}
+  .taxatabpick button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .taxatabpick button:disabled{opacity:.4;cursor:default}
   /* cards */
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
   @media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}.cards .card.quiz{grid-column:1/-1;flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}}
@@ -830,7 +841,7 @@
 <body>
 <div class="wrap">
   <header>
-    <h1><img src="logo.png" width="177" height="72" alt="Finding gap · 국가 생물종 발견공백"></h1>
+    <h1><a href="." id="homeLink" aria-label="Finding gap 첫 화면으로"><img src="logo.png" width="177" height="72" alt="Finding gap · 국가 생물종 발견공백"></a></h1>
     <p class="sub">국가생물종목록(KTSN)을 기준으로, 국내 조사자료에서 <b>아직 발견되지 않은 종</b>을 분류군·지역·시기로 조회합니다.</p>
     <!-- 계정 · 알림 — 어느 화면에 있든 같은 자리에서 로그인 상태를 보고 오갈 수 있게 상단에 둔다 -->
     <div class="acct" id="acct" hidden>
@@ -848,6 +859,7 @@
 
   <nav class="axes" id="axes" aria-label="홈 메뉴">
     <button class="ax on" data-ax="survey">지도 서비스</button>
+    <button class="ax" data-ax="taxa">분류 체계도</button>
     <button class="ax" data-ax="community">시민과학</button>
     <button class="ax" data-ax="my">마이페이지</button>
   </nav>
@@ -939,6 +951,24 @@
     <section class="dash" id="dash"></section>
   </section>
 
+  <section id="view-taxa" hidden>
+    <div class="vintro">
+      <h2>분류 체계도</h2>
+      <p>분류군을 고르면 그 목→과→속→종 분류 체계를 나무로 보여줍니다 — 이 분류군에서 어디가 아직 안 알려져 있는지 한눈에 살펴보는 도구입니다.</p>
+    </div>
+    <div class="taxatabpick" id="taxaTabPick"></div>
+    <div class="dashpanel">
+      <h3>분류 체계도 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이 분류군의 목→과→속→종 분류 체계를 나무로 그립니다. 웨지가 클수록 그 무리의 종수가 많다는 뜻이고, 색이 붉을수록 조사자료에 아직 기록이 없는 비율(발견공백)이 높다는 뜻입니다. 웨지를 누르면 그 하위 분류로 들어갑니다 — 왼쪽 경로를 눌러 이전 단계로 돌아갈 수 있습니다.">?</button></h3>
+      <div class="ttsearch">
+        <input type="search" id="taxaSearchInput" placeholder="과·속·종 이름으로 찾기 (예: Cyprinidae)" autocomplete="off" aria-label="분류군 내 검색">
+        <div class="sresults ttsearch-results" id="taxaSearchResults" style="display:none"></div>
+      </div>
+      <div id="taxaTreeHost"></div>
+      <div id="taxaTreeInfo" class="muted2" style="margin-top:8px;font-size:12.5px"></div>
+      <div id="taxaAlbum" class="ttalbum"></div>
+    </div>
+  </section>
+
   <section id="view-community" hidden>
   <div id="view-citizen">
     <div class="vintro">
@@ -964,6 +994,39 @@
     <div class="authcard" id="trendCard" style="max-width:none" hidden>
       <h3 style="margin:0 0 12px">많이 추가된 종 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이용자들이 관심 종으로 가장 많이 추가한 종입니다 — 종별 익명 집계(개인 정보 없이 합계만).">?</button></h3>
       <ol class="wl trendlist" id="trendList"><li class="muted2">불러오는 중…</li></ol>
+    </div>
+
+    <!-- 사이트 피드백 — 야생생물 제보와 달리 이 웹앱 자체(버그·개선 제안)에 대한 의견. 로그인 없이도
+         남길 수 있다(anon insert 허용, 이 사이트에서 유일). 필드가 3개뿐이라 모달 대신 인라인 폼. -->
+    <div class="authcard" id="feedbackCard" style="max-width:none">
+      <h3 style="margin:0 0 12px">사이트 피드백 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이 웹사이트 자체에 대한 의견입니다 — 버그·오류·개선 제안을 남겨 주세요. 야생생물 관측 제보와는 다릅니다. 로그인 없이도 작성할 수 있고, 모든 글이 공개됩니다.">?</button></h3>
+      <div class="rpt-f">
+        <label for="fbCategory">종류(선택)</label>
+        <select id="fbCategory">
+          <option value="">선택 안 함</option>
+          <option value="bug">버그 신고</option>
+          <option value="suggestion">기능 제안</option>
+          <option value="other">기타</option>
+        </select>
+      </div>
+      <div class="rpt-f">
+        <label for="fbMessage">내용 <span class="req">*</span></label>
+        <textarea id="fbMessage" maxlength="2000" rows="3" placeholder="발견한 문제나 제안을 적어 주세요"></textarea>
+      </div>
+      <div class="rpt-f" id="fbNameWrap">
+        <label for="fbGuestName">이름(선택)</label>
+        <input type="text" id="fbGuestName" maxlength="40" placeholder="비워두면 '익명'으로 표시됩니다" autocomplete="name">
+      </div>
+      <div class="fb-hp" aria-hidden="true">
+        <label for="fbWebsite">웹사이트</label>
+        <input type="text" id="fbWebsite" name="website" tabindex="-1" autocomplete="off">
+      </div>
+      <button class="rpt-submit" id="fbSubmit" type="button">피드백 보내기</button>
+      <div class="rpt-msg" id="fbMsg"></div>
+    </div>
+    <div class="authcard" id="feedbackListCard" style="max-width:none">
+      <h3 style="margin:0 0 12px">받은 피드백 <button type="button" class="qtip" aria-label="설명 보기" data-tip="다른 방문자가 남긴 사이트 피드백입니다. 운영자가 답변하면 함께 표시됩니다.">?</button></h3>
+      <ol class="wl feedlist" id="feedbackList"><li class="muted2">불러오는 중…</li></ol>
     </div>
   </div>
 
@@ -993,6 +1056,14 @@
   <div class="rpt-modal" role="dialog" aria-modal="true" aria-labelledby="rptTitle">
     <div class="rpt-hd"><h3 id="rptTitle">발견 제보</h3><button class="x" id="rptClose" type="button" aria-label="닫기">&times;</button></div>
     <div class="rpt-bd" id="rptBody"></div>
+  </div>
+</div>
+
+<!-- 분류 이력 전문가 제보 — 논문 근거(DOI)로 학명 변경을 제보. #rptOverlay 와 같은 껍데기 재사용 -->
+<div class="rpt-overlay" id="refOverlay" hidden>
+  <div class="rpt-modal" role="dialog" aria-modal="true" aria-labelledby="refTitle">
+    <div class="rpt-hd"><h3 id="refTitle">분류 이력 제보</h3><button class="x" id="refClose" type="button" aria-label="닫기">&times;</button></div>
+    <div class="rpt-bd" id="refBody"></div>
   </div>
 </div>
 
@@ -1071,7 +1142,7 @@
   .rpt-f{margin-bottom:13px}
   .rpt-f>label{display:block;font-size:12px;font-weight:600;color:#4f6f61;margin-bottom:5px}
   .rpt-f .req{color:#c0392b}
-  .rpt-f input,.rpt-f textarea{width:100%;border:1px solid #d7ded9;border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box}
+  .rpt-f input,.rpt-f textarea,.rpt-f select{width:100%;border:1px solid #d7ded9;border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box}
   .rpt-f input:focus-visible,.rpt-f textarea:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
   .rpt-f textarea{resize:vertical;min-height:52px}
   .rpt-sp{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid #d7ded9;border-radius:8px;background:#f7faf8}
@@ -1095,9 +1166,67 @@
   .rpt-gate .go{display:inline-block;border:0;border-radius:9px;padding:11px 20px;font-weight:700;background:var(--accent);color:#fff;cursor:pointer;text-decoration:none}
   .rpt-photo-prev{display:flex;align-items:center;gap:10px;margin-top:8px}
   .rpt-photo-prev img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #d7ded9}
+  /* 허니팟(스팸봇 함정) — display:none 이 아니라 화면 밖으로 밀어낸다: 일부 봇은 display:none·visibility:hidden
+     필드는 건너뛰고 채우지 않는데, 이 방식은 그런 봇도 걸리게 한다. tabindex=-1 로 실사용자 탭 순서에서는 빠진다. */
+  .fb-hp{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden}
   .rpt-photo-prev button{border:1px solid #d7ded9;background:#fff;border-radius:7px;padding:6px 10px;font-size:12px;cursor:pointer}
   .rpt-url-toggle{display:inline-block;margin-top:6px;font-size:12px;color:var(--faint);cursor:pointer;text-decoration:underline}
   .report-lk{cursor:pointer}
+  .ttlayout{display:grid;grid-template-columns:180px 1fr 260px;gap:16px;align-items:start}
+  .ttcrumbs{display:flex;flex-direction:column;gap:6px}
+  .ttcrumb{display:flex;align-items:center;gap:7px;border:1px solid #d7e3df;background:#eef3f1;
+    border-radius:999px;padding:5px 10px 5px 8px;font:inherit;font-size:12.5px;cursor:pointer;
+    text-align:left;color:var(--ink)}
+  .ttcrumb:hover{border-color:#9ec3b2;background:#e3ede8}
+  .ttcrumb.on{background:var(--accent);border-color:var(--accent);color:#fff;cursor:default}
+  .ttcrumb .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .ttdiagram{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  /* 웨지를 호버하면 이 콜아웃(줄+말풍선)으로 이름·개수를 크게 보여준다 — 안쪽 라벨이 있든 없든 전부(통일).
+     네이티브 title 툴팁은 작고 늦게 떠서 답답하다는 불만이 있었다. */
+  .ttcallout-line{position:absolute;height:2px;transform-origin:0 50%;pointer-events:none;border-radius:1px}
+  .ttcallout-box{position:absolute;transform:translate(-50%,-50%);background:var(--card);border:1px solid var(--line);
+    border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.16);
+    pointer-events:none;display:flex;align-items:center;gap:6px;z-index:5}
+  .ttcallout-box i{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+  .ttcallout-img{width:44px;height:44px;border-radius:8px;object-fit:cover;flex:none;display:block;border:1px solid var(--line)}
+  /* 콜아웃은 호버당 하나씩만 보여서 "비교"하려면 기억에 의존해야 한다는 피드백 — 지금 링(형제들) 중
+     사진 있는 것만 모아 한꺼번에 더 크게 늘어놓는 앨범. 사진 없는 형제는 조용히 뺀다(빈 칸 안 만듦). */
+  .ttalbum:empty{display:none}
+  .ttalbum h4{margin:18px 0 8px;font-size:12px;font-weight:600;color:var(--muted)}
+  .ttalbum-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px}
+  .ttalbum-card{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    background:var(--card);cursor:pointer;padding:0;font:inherit;text-align:left}
+  .ttalbum-card:hover{border-color:#9ec3b2}
+  .ttalbum-card img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+  .ttalbum-card .tt-cap{padding:6px 8px}
+  .ttalbum-card .tt-cap b{display:block;font-size:11.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ttalbum-card .tt-cap span{font-size:11px;color:var(--muted)}
+  /* 자식이 많은 링(목 259개 등)은 기본은 이 상자 폭·최대 높이에 맞춰 축소돼 보이고(JS가 픽셀로 직접 계산 —
+     둘 다 정사각형이라 폭만 보는 CSS max-width/height:auto 로는 세로가 안 잘려서 부족함), 휠로 확대·드래그로
+     회전(돌림판처럼)해서 원하는 부분을 크게/편한 자리로 볼 수 있다. */
+  .taxatree{display:block;cursor:grab;touch-action:none}
+  .taxatree.grabbing{cursor:grabbing}
+  /* 선버스트 웨지 — 점 대신 종수 비례 폭의 부채꼴. scale()은 부채꼴을 일그러뜨리므로(반지름 방향이 아니라
+     그냥 확대라 이웃과 어긋남) 대신 그 웨지의 바깥 방향(--nx/--ny, JS가 심어 둠)으로 살짝 밀어낸다. */
+  .ttwedge{transition:transform .12s ease,filter .12s ease}
+  .ttwedge:hover{transform:translate(calc(var(--nx,0)*6px),calc(var(--ny,0)*6px));filter:brightness(1.08);stroke:var(--ink);stroke-width:1.2}
+  .ttwedge.clickable{cursor:pointer}
+  .ttov-order.on{stroke:var(--ink);stroke-width:2}
+  .ttlabels{pointer-events:none}
+  .ttlabels text{font-size:10px;fill:#fff;font-weight:600;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:2.4px;stroke-linejoin:round}
+  .ttfocus circle{stroke:var(--ink);stroke-width:1.6}
+  .ttfocus text{font-size:11px;fill:var(--ink);pointer-events:none;text-anchor:middle}
+  .ttfocus.clickable{cursor:pointer}
+  .ttfocus.clickable:hover circle{stroke-width:2.6}
+  .ttoverview{border-left:1px solid var(--line);padding-left:16px}
+  .ttoverview h4{margin:0 0 6px;font-size:11.5px;font-weight:600;color:var(--muted)}
+  .ttsearch{position:relative;margin:10px 0 14px}
+  .ttsearch input{width:100%;border:1px solid #d7ded9;border-radius:8px;padding:9px 12px;font:inherit;font-size:13px;box-sizing:border-box}
+  .ttsearch input:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
+  .ttsearch-results{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;max-height:280px}
+  .ttsearch-results .r .tg{margin-left:auto;color:var(--muted);font-size:11px}
+  @media(max-width:880px){ .ttlayout{grid-template-columns:1fr} .ttcrumbs{flex-direction:row;flex-wrap:wrap}
+    .ttoverview{border-left:none;border-top:1px solid var(--line);padding-left:0;padding-top:12px} }
   @media(max-width:880px){ .rpt-overlay{padding:0;align-items:flex-end} .rpt-modal{max-width:none;max-height:94vh;border-radius:14px 14px 0 0} }
 
   /* 근거의 세기 설명 — 읽는 글이라 본문보다 넓게 두고 줄간을 늘린다 */
@@ -1174,6 +1303,7 @@
 <script src="demo/data/env_meta.js"></script>
 <script src="demo/data/missions.js" onerror="window.__MISSIONS__=window.__MISSIONS__||[]"></script>
 <script src="demo/data/region_gaps.js" onerror="window.__REGGAP__=window.__REGGAP__||null"></script>
+<script src="demo/data/taxa_tree.js" onerror="window.__TAXATREE__=window.__TAXATREE__||null"></script>
 <script>
 /* ── 토큰·상수 ── */
 const RL_FILL={EX:'#000',EW:'#3D2645',RE:'#6B4E71',CR:'#D81E05',EN:'#FC7F3F',VU:'#F2DC00',NT:'#C3D838',LC:'#5CB85C',DD:'#CFCFC4',NENA:'#E6E6DE'};
@@ -1307,6 +1437,7 @@ function badges(g,r){
 const _escGap=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function gapReasonBadge(sp){
   const g=((window.__GAPREASON__||{})[sp.t]||{})[sp.k]; if(!g) return '';
+  if(g.r==='reference') return ` <span class="badge" style="background:#e3efe9;color:#1f6b4a" title="전문가 제보(논문 근거)로 확인된 이명 — 현재 인정 학명은 ${_escGap(g.n||'')}.${g.c?' 근거: '+_escGap(g.c)+'.':''} '미발견'이 조사부족이 아니라 학명이 바뀐 것일 수 있습니다.">이명 확인됨</span>`;
   if(g.r==='synonym') return ` <span class="badge" style="background:#f5eede;color:#9a7b2f" title="GBIF 국제 분류 데이터베이스 기준 이명(synonym) — 현재 인정 학명은 ${_escGap(g.n||'')}. '미발견'이 조사부족이 아니라 학명이 바뀐 것일 수 있습니다.">이명 가능성</span>`;
   if(g.r==='regionally_extinct') return ` <span class="badge" style="background:#eceef0;color:#6b7280" title="국가적색목록 지역절멸(RE) — 국내에서 이미 절멸로 평가된 종입니다. '미발견'이 조사부족이 아니라 이미 사라졌기 때문일 수 있습니다.">국내 지역절멸 기준종</span>`;
   return '';
@@ -2825,11 +2956,17 @@ function renderSpecies(sp){
         ${reportLink}
       </div>
     </div>
+    <div class="row"><div class="k">분류 이력</div>
+      <div class="links">
+        <a class="lk taxonref-lk" data-k="${sp.k}" role="button" tabindex="0" hidden><span class="t">논문 근거로 학명 변경 제보하기</span></a>
+      </div>
+    </div>
   </div>`;
   syncGapBtn();                                          // 종을 골랐으니 지도 안 서식지 후보 토글을 쓸 수 있다
   renderSpView();                                        // 우측 표(+ 후보를 켰으면 적합지 비율)
   if(window.fgWatch) window.fgWatch.decorate(sp.k);     // 관심 종 ☆ 버튼(로그인 시 활성)
   if(window.fgReport) window.fgReport.decorateCard(sp); // 발견 제보 버튼(Supabase 설정 시 노출)
+  if(window.fgTaxonRef) window.fgTaxonRef.decorateCard(sp); // 분류 이력 제보 버튼(Supabase 설정 시 노출)
   clearRepShot();                                       // 앞 종의 사진이 남아 있지 않게 먼저 비운다
   loadRep(sp.t, ()=>renderRepShot(sp));                 // 지도 아래 대표 사진(분류군별 지연 로드)
   loadGapReason(sp.t, ()=>{                             // 발견공백 사유 배지(이명·지역절멸, 분류군별 지연 로드)
@@ -3140,7 +3277,9 @@ function renderDash(group){
       <span><i class="g out"></i>미발견</span>
     </div>
     <div class="donuts">${donutHTML}</div>
-  </div>`;
+  </div>
+
+  `;
   document.getElementById('dash').innerHTML=html;
 }
 
@@ -3238,13 +3377,34 @@ function renderFoot(){
 /* ── 홈 화면 전환 ── */
 function switchAxis(ax){
   document.querySelectorAll('.axes .ax').forEach(b=>b.classList.toggle('on',b.dataset.ax===ax));
-  ['survey','community','my'].forEach(k=>{
+  ['survey','taxa','community','my'].forEach(k=>{
     const v=document.getElementById('view-'+k); if(v) v.hidden = ax!==k;
   });
   if(ax!=='survey' && window.fgChatDrawer) window.fgChatDrawer.close();
   { const fab=document.getElementById('chatToggle'); if(fab) fab.hidden = ax!=='survey'; }   // 도우미는 지도 화면의 도구다
   // 숨김 상태에서는 지도 크기가 0으로 잡히므로, 조사정보로 돌아올 때 다시 계산한다.
   if(ax==='survey' && window.fgMapResize) window.fgMapResize();
+  if(ax==='taxa' && !taxaTabInited){ taxaTabInited=true; renderTaxaTab(); }   // 처음 들어올 때만 그린다(비용이 있는 SVG)
+}
+
+/* ── 분류 체계도 탭 — 지도(모드 A)와 독립된 분류군 선택. 지도의 curTaxon 은 안 건드린다. ── */
+let taxaTabGroup='', taxaTabInited=false;
+function renderTaxaTab(){
+  const pick=document.getElementById('taxaTabPick'); if(!pick) return;
+  const all=window.__TAXA__||[];
+  if(!taxaTabGroup || !all.some(t=>t.group===taxaTabGroup && t.has_data)){
+    taxaTabGroup=(all.find(t=>t.has_data)||{}).group||curTaxon;
+  }
+  pick.innerHTML=all.map(t=>{
+    const cur=t.group===taxaTabGroup;
+    return `<button type="button" data-g="${t.group}" class="${cur?'on':''}"${t.has_data?'':' disabled'}>`+
+      `${chipHTML(t.group,24)}<span>${t.kor}</span></button>`;
+  }).join('');
+  pick.querySelectorAll('[data-g]:not(:disabled)').forEach(b=>b.onclick=()=>{
+    if(b.dataset.g===taxaTabGroup) return;
+    taxaTabGroup=b.dataset.g; renderTaxaTab();
+  });
+  if(window.renderTaxaTree) window.renderTaxaTree(taxaTabGroup,'taxaTreeHost','taxaTreeInfo');
 }
 
 /* ── 마이페이지로 이동 — 알림·관심 종·로그인이 모두 이 화면으로 모인다 ──
@@ -3262,6 +3422,12 @@ function fgGoLogin(why){
   setTimeout(()=>{ const el=document.getElementById('authEmail'); if(el) el.focus({preventScroll:true}); }, 380);
 }
 window.fgGoMy=fgGoMy; window.fgGoLogin=fgGoLogin;
+
+/* ── 로고 → 첫 화면. 분류군·연도·지역·검색어까지 전부 처음 그대로 되돌린다 — 상태를 하나씩
+   되돌리다 빠뜨리는 것보다, 딥링크 없는 깨끗한 주소로 다시 열어 boot() 가 계산하는 진짜
+   기본값을 그대로 믿는다(homeLink 는 href="." 라 JS 없이도 이 결과와 같다). ── */
+function fgGoHome(){ location.href=location.pathname; }
+window.fgGoHome=fgGoHome;
 
 /* ── 알림·마이페이지에서 지도의 지역 화면으로 ── */
 function fgShowRegion(code,taxon,metric){
@@ -3315,7 +3481,7 @@ else Promise.all([
 
 <!-- 마이페이지(로그인·알림·활동 지역·관심 종·내 제보) — Supabase 설정(config.js)이 있을 때만 활성, 없으면 정적 안내 유지 -->
 <script type="module">
-import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile } from './fg_supabase.js';
+import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, adminPendingTaxonRefs, setTaxonRefStatus, myTaxonReferences, submitFeedback, siteFeedback, adminPendingFeedback, setFeedbackStatus, deleteFeedback } from './fg_supabase.js';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const view=document.getElementById('view-my');
 const spName=k=>{ const sp=(window.__SPIDX__||[]).find(x=>x.k===k); return sp?{n:sp.n||sp.s,s:sp.s||'',t:sp.t||''}:{n:k,s:'',t:''}; };
@@ -3360,6 +3526,35 @@ function reportLine(r,mine){
   return `<span class="nm">${esc(nm)}</span> ${sci} ${statusBadge(r.status)}${gap}`+
     `<span class="fmeta">${esc(r.observed_date||'')}${who}</span>${link}${del}${photo}${note}`;
 }
+function taxonRefLine(r){                                  // 분류 이력 제보 한 줄(관리자 검토 큐 전용)
+  const nm=r.korean_name||r.scientific_name||r.ktsn;
+  const sci=(r.scientific_name&&r.scientific_name!==nm)?`<span class="sci">${esc(r.scientific_name)}</span>`:'';
+  const change=`<div class="fnote">${esc(r.scientific_name||'?')} → <b>${esc(r.to_name)}</b></div>`;
+  const cite=[r.ref_authors,r.ref_year,r.ref_title,r.ref_container].filter(Boolean).map(esc).join(' · ');
+  const link=r.doi?`<a class="muted2" href="https://doi.org/${esc(r.doi)}" target="_blank" rel="noopener nofollow ugc" style="margin-left:8px">DOI →</a>`
+    :(/^https?:\/\//i.test(r.ref_url||'')?`<a class="muted2" href="${esc(r.ref_url)}" target="_blank" rel="noopener nofollow ugc" style="margin-left:8px">근거 →</a>`:'');
+  const note=r.note?`<div class="fnote">${esc(r.note)}</div>`:'';
+  return `<span class="nm">${esc(nm)}</span> ${sci}${link}${change}`+
+    (cite?`<div class="fnote">근거: ${cite}</div>`:'')+note;
+}
+// reports 의 _RSTATUS/statusBadge 는 'rejected' 를 모르고 'pending' 으로 접혀 보인다(기존 동작, 여긴 안 건드림) —
+// 반려 사유를 보여줘야 하는 이 목록에서는 셋을 정확히 구분해야 해서 별도 배지를 쓴다.
+function taxonRefStatusBadge(s){
+  const m = s==='approved' ? ['승인','#015543','#e7f1ee']
+    : s==='rejected' ? ['반려','#b5482f','#f7e7e2']
+    : ['검토 중','#9a7b2f','#f5eede'];
+  return `<span class="dbadge" style="background:${m[2]};color:${m[1]}">${m[0]}</span>`;
+}
+function taxonRefMineLine(r){                               // 분류 이력 제보 한 줄("내 제보" 전용 — 상태·반려사유 표시)
+  const nm=r.korean_name||r.scientific_name||r.ktsn;
+  const sci=(r.scientific_name&&r.scientific_name!==nm)?`<span class="sci">${esc(r.scientific_name)}</span>`:'';
+  const change=`<div class="fnote">${esc(r.scientific_name||'?')} → <b>${esc(r.to_name)}</b></div>`;
+  const cite=[r.ref_authors,r.ref_year,r.ref_title,r.ref_container].filter(Boolean).map(esc).join(' · ');
+  const rejectNote=(r.status==='rejected'&&r.admin_note)?`<div class="fnote">반려 사유: ${esc(r.admin_note)}</div>`:'';
+  return `<span class="nm">${esc(nm)}</span> ${sci} ${taxonRefStatusBadge(r.status)}`+
+    `<span class="fmeta">${esc((r.created_at||'').slice(0,10))}</span>`+
+    change + (cite?`<div class="fnote">근거: ${cite}</div>`:'') + rejectNote;
+}
 async function renderFeed(){
   const host=document.getElementById('feedList'); if(!host) return;
   try{
@@ -3369,6 +3564,58 @@ async function renderFeed(){
     rows.forEach(r=>{ const li=document.createElement('li'); li.innerHTML=reportLine(r,false); host.appendChild(li); });
   }catch(err){ host.innerHTML=`<li class="muted2">피드를 불러오지 못했습니다 (${esc(err.message||String(err))}).</li>`; }
 }
+
+// ── 사이트 피드백 공개 게시판 — 야생생물 제보(reports)와 달리 이 웹앱 자체에 대한 의견.
+// 로그인 없이도 작성 가능(anon insert). 상태 게이트가 없어(즉시 공개) 목록은 검수 대기열이 아니라
+// 그냥 최신순 전체 — reportLine 이 아니라 별도 feedbackLine 을 쓰는 이유는 '기여자→발견상태' 배지가
+// 아니라 '분류→상태→답변'이라 구성이 달라서.
+const _FBCAT={bug:'버그 신고', suggestion:'기능 제안', other:'기타'};
+const _FBSTATUS={open:['접수됨','#9a7b2f','#f5eede'], answered:['답변 완료','#015543','#e7f1ee'], closed:['종료','#6b7280','#eef0ee']};
+function feedbackStatusBadge(s){ const m=_FBSTATUS[s]||_FBSTATUS.open; return `<span class="dbadge" style="background:${m[2]};color:${m[1]}">${m[0]}</span>`; }
+function feedbackLine(r){
+  const cat=r.category?`<span class="dbadge" style="background:#eef3f1;color:#015543">${esc(_FBCAT[r.category]||r.category)}</span>`:'';
+  const reply=r.admin_reply?`<div class="fnote">운영자 답변: ${esc(r.admin_reply)}</div>`:'';
+  return `<span class="nm">${esc(r.poster||'익명')}</span> ${cat}${feedbackStatusBadge(r.status)}`+
+    `<span class="fmeta">${esc((r.created_at||'').slice(0,10))}</span>`+
+    `<div class="fnote">${esc(r.message)}</div>${reply}`;
+}
+async function renderFeedback(){
+  const host=document.getElementById('feedbackList'); if(!host) return;
+  try{
+    const rows=await siteFeedback(30);
+    if(!rows.length){ host.innerHTML='<li class="muted2">아직 피드백이 없습니다. 위 양식으로 첫 의견을 남겨 보세요.</li>'; return; }
+    host.innerHTML='';
+    rows.forEach(r=>{ const li=document.createElement('li'); li.innerHTML=feedbackLine(r); host.appendChild(li); });
+  }catch(err){ host.innerHTML=`<li class="muted2">피드백을 불러오지 못했습니다 (${esc(err.message||String(err))}).</li>`; }
+}
+let fbUser=null;
+function fbToggleName(){ const w=document.getElementById('fbNameWrap'); if(w) w.hidden=!!fbUser; }   // 로그인 시엔 profiles.display_name 을 쓰므로 이름 입력을 숨긴다
+async function fbDoSubmit(){
+  const btn=document.getElementById('fbSubmit'), msg=document.getElementById('fbMsg');
+  const hp=(document.getElementById('fbWebsite')||{}).value||'';
+  const message=(document.getElementById('fbMessage')||{}).value||'';
+  const category=(document.getElementById('fbCategory')||{}).value||'';
+  const guestName=(document.getElementById('fbGuestName')||{}).value||'';
+  msg.className='rpt-msg';
+  if(hp.trim()){                                       // 허니팟에 값이 있으면 봇으로 보고 조용히 무시(성공한 척)
+    msg.className='rpt-msg ok'; msg.textContent='피드백이 등록되었습니다. 감사합니다.';
+    document.getElementById('fbMessage').value=''; return;
+  }
+  if(!message.trim()){ msg.className='rpt-msg err'; msg.textContent='내용을 입력하세요.'; return; }
+  btn.disabled=true; btn.textContent='등록 중…';
+  try{
+    const { error } = await submitFeedback({ category: category||null, message, guest_name: fbUser?null:guestName });
+    if(error) throw error;
+    window.fgTrack&&fgTrack('feedback_submitted',{category:category||'none'});
+    msg.className='rpt-msg ok'; msg.textContent='피드백이 등록되었습니다. 감사합니다.';
+    document.getElementById('fbMessage').value=''; document.getElementById('fbCategory').value='';
+    if(!fbUser) document.getElementById('fbGuestName').value='';
+    renderFeedback();
+  }catch(e){
+    msg.className='rpt-msg err'; msg.textContent='등록에 실패했습니다: '+((e&&e.message)||'알 수 없는 오류');
+  }finally{ btn.disabled=false; btn.textContent='피드백 보내기'; }
+}
+document.getElementById('fbSubmit')?.addEventListener('click', fbDoSubmit);
 
 // ── ③ 유망 공백 미션보드(정적 자산 __MISSIONS__) ──
 function renderMissions(){
@@ -3588,11 +3835,23 @@ async function myPage(user){
       <a class="btn cta sm" href="#report" style="margin-left:auto">＋ 발견 제보하기</a>
     </div>
     <ul class="wl feedlist" id="myrep" style="margin-top:10px"><li class="muted2">불러오는 중…</li></ul>
+    <h3 style="margin:18px 0 0">내 분류 이력 제보</h3>
+    <ul class="wl feedlist" id="myTaxonRef" style="margin-top:10px"><li class="muted2">불러오는 중…</li></ul>
   </div>
   <div class="authcard" id="adminCard" style="max-width:none;display:none;margin-top:14px">
     <h3 style="margin:0 0 4px">관리자 · 제보 검토</h3>
     <p class="muted2" style="margin:0 0 12px">검토 대기 제보를 승인/거부합니다. 승인 제보는 다음 재빌드에 <b>시민 재발견</b>으로 반영됩니다.</p>
     <ul class="wl feedlist" id="adminList"><li class="muted2">불러오는 중…</li></ul>
+  </div>
+  <div class="authcard" id="taxonRefAdminCard" style="max-width:none;display:none;margin-top:14px">
+    <h3 style="margin:0 0 4px">관리자 · 분류 이력 제보 검토</h3>
+    <p class="muted2" style="margin:0 0 12px">논문 근거로 들어온 학명 변경 제보를 승인/거부합니다. 승인 시 종 상세에 "이명 확인됨" 배지로 반영됩니다.</p>
+    <ul class="wl feedlist" id="taxonRefAdminList"><li class="muted2">불러오는 중…</li></ul>
+  </div>
+  <div class="authcard" id="feedbackAdminCard" style="max-width:none;display:none;margin-top:14px">
+    <h3 style="margin:0 0 4px">관리자 · 사이트 피드백</h3>
+    <p class="muted2" style="margin:0 0 12px">답변 대기 중인 사이트 피드백입니다. 답변하면 작성자를 포함한 모든 방문자에게 공개됩니다.</p>
+    <ul class="wl feedlist" id="feedbackAdminList"><li class="muted2">불러오는 중…</li></ul>
   </div>`;
   view.querySelector('#logoutBtn').onclick=async()=>{ await signOut(); };
   paintMyNotif();
@@ -3675,6 +3934,65 @@ async function myPage(user){
         al.appendChild(li); });
     }catch(err){ al.innerHTML=`<li class="authmsg err">검토 목록 로드 실패: ${esc(err.message||String(err))}</li>`; }
   })();
+  (async()=>{                                              // 분류 이력 제보 검토 큐(role='admin'만 — RLS 로 비관리자는 빈 결과)
+    let role=null; try{ role=await myRole(); }catch(_){}
+    if(role!=='admin') return;
+    const card=view.querySelector('#taxonRefAdminCard'), al=view.querySelector('#taxonRefAdminList'); if(!card) return;
+    card.style.display='';
+    try{
+      const rows=await adminPendingTaxonRefs();
+      if(!rows.length){ al.innerHTML='<li class="muted2">검토 대기 제보가 없습니다.</li>'; return; }
+      al.innerHTML='';
+      rows.forEach(r=>{ const li=document.createElement('li');
+        li.innerHTML=taxonRefLine(r)+
+          `<span class="admbtns"><button class="btn sm" data-a="approved">승인</button><button class="btn sm rej" data-a="rejected">거부</button></span>`;
+        li.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{
+          // 반려는 이유를 남겨야 제보자가 마이페이지에서 왜인지 알 수 있다 — 취소하면 아무 것도 안 한다.
+          let note=null;
+          if(b.dataset.a==='rejected'){ note=prompt('반려 사유(제보자에게 보입니다):',''); if(note===null) return; }
+          b.disabled=true;
+          try{ const {error}=await setTaxonRefStatus(r.id,b.dataset.a,note); if(error) throw error; li.remove();
+            if(!al.children.length) al.innerHTML='<li class="muted2">검토 대기 제보가 없습니다.</li>'; }
+          catch(e){ b.disabled=false; alert('처리 실패: '+(e.message||e)); } });
+        al.appendChild(li); });
+    }catch(err){ al.innerHTML=`<li class="authmsg err">검토 목록 로드 실패: ${esc(err.message||String(err))}</li>`; }
+  })();
+  (async()=>{                                              // 사이트 피드백 답변 대기 큐(role='admin'만 — RLS 로 비관리자는 빈 결과)
+    let role=null; try{ role=await myRole(); }catch(_){}
+    if(role!=='admin') return;
+    const card=view.querySelector('#feedbackAdminCard'), al=view.querySelector('#feedbackAdminList'); if(!card) return;
+    card.style.display='';
+    try{
+      const rows=await adminPendingFeedback();
+      if(!rows.length){ al.innerHTML='<li class="muted2">답변 대기 피드백이 없습니다.</li>'; return; }
+      al.innerHTML='';
+      rows.forEach(r=>{ const li=document.createElement('li');
+        const cat=r.category?`<span class="dbadge" style="background:#eef3f1;color:#015543">${esc(_FBCAT[r.category]||r.category)}</span>`:'';
+        li.innerHTML=`<span class="nm">${esc(r.guest_name||'(로그인 사용자)')}</span> ${cat}`+
+          `<span class="fmeta">${esc((r.created_at||'').slice(0,10))}</span><div class="fnote">${esc(r.message)}</div>`+
+          `<span class="admbtns"><button class="btn sm" data-a="answered">답변</button><button class="btn sm rej" data-a="closed">종료</button><button class="btn sm rej" data-a="delete">삭제</button></span>`;
+        li.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{
+          b.disabled=true;
+          try{
+            if(b.dataset.a==='delete'){
+              // 남의 공개 글을 되돌릴 수 없이 지우는 것이라, 다른 관리자 버튼과 달리 확인창을 둔다.
+              if(!confirm('이 피드백을 삭제할까요? 되돌릴 수 없습니다.')){ b.disabled=false; return; }
+              const {error}=await deleteFeedback(r.id); if(error) throw error;
+            }else if(b.dataset.a==='answered'){
+              const reply=prompt('답변 내용(작성자를 포함한 모두에게 공개됩니다):',''); if(reply===null){ b.disabled=false; return; }
+              if(!reply.trim()){ alert('답변 내용을 입력하세요.'); b.disabled=false; return; }
+              const {error}=await setFeedbackStatus(r.id,'answered',reply); if(error) throw error;
+            }else{
+              const {error}=await setFeedbackStatus(r.id,'closed',null); if(error) throw error;
+            }
+            li.remove();
+            if(!al.children.length) al.innerHTML='<li class="muted2">답변 대기 피드백이 없습니다.</li>';
+            renderFeedback();                                // 공개 목록도 함께 갱신
+          }catch(e){ b.disabled=false; alert('처리 실패: '+(e.message||e)); }
+        });
+        al.appendChild(li); });
+    }catch(err){ al.innerHTML=`<li class="authmsg err">피드백 목록 로드 실패: ${esc(err.message||String(err))}</li>`; }
+  })();
   (async()=>{                                              // 내 제보 이력(본인 RLS)
     const mr=view.querySelector('#myrep'); if(!mr) return;
     try{
@@ -3690,6 +4008,15 @@ async function myPage(user){
           catch(e){ d.disabled=false; alert('삭제 실패: '+(e.message||e)); } };
         mr.appendChild(li); });
     }catch(err){ mr.innerHTML=`<li class="authmsg err">내 제보 로드 실패: ${esc(err.message||String(err))}</li>`; }
+  })();
+  (async()=>{                                              // 내 분류 이력 제보(본인 RLS) — 수정·삭제 없음(반려 사유로 남김)
+    const mt=view.querySelector('#myTaxonRef'); if(!mt) return;
+    try{
+      const rows=await myTaxonReferences();
+      if(!rows.length){ mt.innerHTML='<li class="muted2">아직 제보한 분류 이력이 없습니다.</li>'; return; }
+      mt.innerHTML='';
+      rows.forEach(r=>{ const li=document.createElement('li'); li.innerHTML=taxonRefMineLine(r); mt.appendChild(li); });
+    }catch(err){ mt.innerHTML=`<li class="authmsg err">내 분류 이력 제보 로드 실패: ${esc(err.message||String(err))}</li>`; }
   })();
   const wlist=view.querySelector('#wlList'), summ=view.querySelector('#wlSummary'),
         wfil=view.querySelector('#wlFilter'), wpanel=view.querySelector('#wlPanel'),
@@ -3777,7 +4104,7 @@ function trackLogin(u, ev){
   loginSent=true;
   window.fgTrack&&fgTrack('login_success',{method:(u.app_metadata&&u.app_metadata.provider)||'email'});
 }
-if(configured){ onAuth((user,ev)=>{ trackLogin(user,ev); return user ? myPage(user) : loginCard(); }); renderTrending(); renderFeed(); renderLeaderboard(); }
+if(configured){ onAuth((user,ev)=>{ trackLogin(user,ev); fbUser=user; fbToggleName(); return user ? myPage(user) : loginCard(); }); renderTrending(); renderFeed(); renderLeaderboard(); renderFeedback(); }
 </script>
 
 <!-- 머리말 계정·알림 — 로그인 상태를 페이지 전역(비-module 스크립트 포함)에 알리고, 알림을 모아 보여준다.
@@ -4329,6 +4656,799 @@ if(configured){
   const act=window.FG_ACTION;
   if(act && act.act==='report'){ const sp=SPIDX.find(s=>s.k===act.sp); if(sp) open(sp); }
 }
+</script>
+
+<!-- 분류 이력 전문가 제보 — 논문 근거(DOI)로 학명 변경을 제보. #rptOverlay 모듈과 같은 구조(로그인 게이트·
+     검증 후 활성화되는 제출 버튼·성공/실패 메시지), 지도·사진 없이 서지 정보만 받는다는 점만 다르다.
+     DOI가 있으면 Crossref(api.crossref.org, 무료·키 불필요·CORS 열림)로 제목·저자·연도·저널을 끌어와
+     채운다 — 자체 서식을 발명하지 않고 학술 인프라 표준에 기댄다. -->
+<script type="module">
+import { configured, onAuth, submitTaxonReference } from './fg_supabase.js';
+import * as pdfjsLib from 'https://esm.sh/pdfjs-dist@4/build/pdf.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://esm.sh/pdfjs-dist@4/build/pdf.worker.min.mjs';
+const SPIDX2 = window.__SPIDX__ || [];
+const refOverlay = document.getElementById('refOverlay');
+const refBody = document.getElementById('refBody');
+let refUser = null, refSelSp = null;
+
+function escRef(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function decorateTaxonRefCard(sp){
+  const b=document.querySelector('.taxonref-lk[data-k="'+(window.CSS&&CSS.escape?CSS.escape(sp.k):sp.k)+'"]');
+  if(!b) return;
+  if(!configured){ b.hidden=true; return; }
+  b.hidden=false;
+  b.onclick=()=>openRef(sp);
+  b.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openRef(sp); } };
+}
+
+function openRef(prefill){
+  refSelSp = prefill ? {k:prefill.k,n:prefill.n,s:prefill.s,t:prefill.t} : null;
+  refOverlay.hidden = false;
+  document.body.style.overflow='hidden';
+  renderRef();
+}
+function closeRef(){
+  refOverlay.hidden = true;
+  document.body.style.overflow='';
+}
+
+function renderRef(){
+  if(!configured){ refBody.innerHTML='<div class="rpt-gate"><p>제보 기능이 아직 활성화되지 않았습니다.</p></div>'; return; }
+  if(!refUser){
+    refBody.innerHTML='<div class="rpt-gate"><p>분류 이력 제보는 로그인 후 이용할 수 있습니다.</p>'+
+      '<a class="go" href="#" id="refGoLogin">로그인하러 가기</a></div>';
+    const go=refBody.querySelector('#refGoLogin');
+    if(go) go.onclick=(e)=>{ e.preventDefault(); closeRef(); if(window.fgGoLogin) fgGoLogin(); };
+    return;
+  }
+  refBody.innerHTML =
+    '<div class="rpt-f" id="refSpWrap"></div>'+
+    '<div class="rpt-f"><label>변경 후 학명 <span class="req">*</span></label><input type="text" id="refToName" placeholder="예: Lycodon rufozonatus"></div>'+
+    '<div class="rpt-f"><label>논문 PDF(있으면 DOI 자동 인식)</label>'+
+      '<input type="file" id="refPdf" accept="application/pdf">'+
+      '<div class="rpt-hint" id="refPdfHint" style="margin-top:6px"></div></div>'+
+    '<div class="rpt-f"><label>DOI(있으면 자동 조회)</label>'+
+      '<div style="display:flex;gap:6px"><input type="text" id="refDoi" placeholder="예: 10.1670/17-045" style="flex:1">'+
+      '<button class="btn sm" id="refDoiLookup" type="button">조회</button></div>'+
+      '<div class="rpt-hint" id="refDoiHint" style="margin-top:6px"></div></div>'+
+    '<div class="rpt-f"><label>논문 제목 <span class="req">*</span></label><input type="text" id="refPaperTitle"></div>'+
+    '<div class="rpt-f"><label>저자</label><input type="text" id="refAuthors" placeholder="Piwowar HA, Day RS"></div>'+
+    '<div class="rpt-f"><label>연도</label><input type="number" id="refYear" min="1700" max="'+new Date().getFullYear()+'"></div>'+
+    '<div class="rpt-f"><label>저널·출처</label><input type="text" id="refContainer"></div>'+
+    '<div class="rpt-f"><label>URL(DOI 없는 문헌의 대체 링크)</label><input type="url" id="refUrl" placeholder="https://..."></div>'+
+    '<div class="rpt-f"><label>메모 (선택)</label><textarea id="refNote"></textarea></div>'+
+    '<button class="rpt-submit" id="refSubmit" type="button">제보 등록</button>'+
+    '<div class="rpt-msg" id="refMsg"></div>';
+  renderRefSp();
+  document.getElementById('refDoiLookup').onclick=doiLookup;
+  document.getElementById('refPdf').addEventListener('change', onPdfChange);
+  document.getElementById('refSubmit').onclick=doRefSubmit;
+  ['refToName','refPaperTitle'].forEach(id=>document.getElementById(id).addEventListener('input',updateRefSubmit));
+  updateRefSubmit();
+}
+
+function renderRefSp(){
+  const w=document.getElementById('refSpWrap'); if(!w) return;
+  if(refSelSp){
+    w.innerHTML='<label>대상 종</label><div class="rpt-sp"><div style="min-width:0">'+
+      '<span class="nm">'+escRef(refSelSp.n||refSelSp.s)+'</span> <span class="sci">'+escRef(refSelSp.s)+'</span></div>'+
+      '<button class="chg" type="button">변경</button></div>';
+    w.querySelector('.chg').onclick=()=>{ refSelSp=null; renderRefSp(); updateRefSubmit(); };
+  } else {
+    w.innerHTML='<label>종 <span class="req">*</span></label>'+
+      '<input type="search" id="refSpSearch" placeholder="국명·학명 검색(예: 수달, Lutra)" autocomplete="off">'+
+      '<div class="rpt-srlist" id="refSpList" hidden></div>';
+    const inp=document.getElementById('refSpSearch'), list=document.getElementById('refSpList');
+    inp.addEventListener('input',()=>{
+      const qq=inp.value.trim().toLowerCase();
+      if(qq.length<1){ list.hidden=true; list.innerHTML=''; return; }
+      const hits=[];
+      for(let i=0;i<SPIDX2.length && hits.length<8;i++){ const x=SPIDX2[i];
+        if((x.n&&x.n.toLowerCase().includes(qq))||(x.s&&x.s.toLowerCase().includes(qq))) hits.push(x); }
+      if(!hits.length){ list.hidden=true; list.innerHTML=''; return; }
+      list.innerHTML=hits.map(x=>'<div class="it" data-k="'+escRef(x.k)+'">'+escRef(x.n||x.s)+'<span class="sci">'+escRef(x.s)+'</span></div>').join('');
+      list.hidden=false;
+      list.querySelectorAll('.it').forEach(it=>it.onclick=()=>{
+        const x=SPIDX2.find(s=>s.k===it.dataset.k);
+        if(x){ refSelSp={k:x.k,n:x.n,s:x.s,t:x.t}; renderRefSp(); updateRefSubmit(); }
+      });
+    });
+    inp.focus();
+  }
+}
+
+// Crossref works API — DOI → 제목/저자/연도/저널. 무료·키 불필요·CORS 허용(실측 확인).
+// PDF에서 텍스트만 뽑아 DOI 패턴을 찾는다(첫 2쪽 — DOI는 거의 항상 첫 쪽이나 참고문헌 머리에 있다).
+// "무엇이 무엇으로 바뀌었다"는 판단 자체는 사람이 직접 입력하게 남겨둔다 — 서지정보만 기계가 돕는다.
+const DOI_RE = /10\.\d{4,9}\/[-._;()\/:A-Z0-9]+/i;
+async function extractDoiFromPdf(file){
+  const buf = await file.arrayBuffer();
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+  let text = '';
+  const pages = Math.min(2, doc.numPages);
+  for(let i=1;i<=pages;i++){
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it=>it.str).join(' ') + '\n';
+  }
+  const m = text.match(DOI_RE);
+  return m ? m[0].replace(/[.,;]+$/,'') : null;  // 문장부호가 DOI 끝에 붙어 오는 경우 정리
+}
+async function onPdfChange(e){
+  const f=e.target.files[0];
+  const hint=document.getElementById('refPdfHint');
+  if(!f){ hint.textContent=''; return; }
+  hint.textContent='PDF에서 DOI 찾는 중…';
+  try{
+    const doi = await extractDoiFromPdf(f);
+    if(doi){
+      document.getElementById('refDoi').value = doi;
+      hint.textContent = `DOI를 찾았습니다(${doi}) — 서지정보를 자동으로 채웁니다.`;
+      await doiLookup();
+    } else {
+      hint.textContent = 'PDF에서 DOI를 찾지 못했습니다. 아래 DOI 칸에 직접 입력하거나, 제목·저자 등을 손으로 채워 주세요.';
+    }
+  }catch(err){
+    console.warn('PDF DOI 추출 실패', err);
+    hint.textContent = 'PDF를 읽지 못했습니다. DOI를 알고 있다면 아래 칸에 직접 입력하세요.';
+  }
+}
+async function doiLookup(){
+  const doi=document.getElementById('refDoi').value.trim().replace(/^https?:\/\/doi\.org\//i,'');
+  const hint=document.getElementById('refDoiHint');
+  if(!doi){ hint.textContent='DOI를 입력하세요.'; return; }
+  hint.textContent='조회 중…';
+  try{
+    const r=await fetch('https://api.crossref.org/works/'+encodeURIComponent(doi));
+    if(!r.ok) throw new Error(r.status===404?'해당 DOI를 찾을 수 없습니다':'조회 실패('+r.status+')');
+    const d=(await r.json()).message;
+    const title=(d.title&&d.title[0])||'';
+    const authors=(d.author||[]).map(a=>[a.family,a.given].filter(Boolean).join(' ')).join(', ');
+    const dp=(d.published&&d.published['date-parts']&&d.published['date-parts'][0])||[];
+    const year=dp[0]||'';
+    const container=(d['container-title']&&d['container-title'][0])||'';
+    if(title) document.getElementById('refPaperTitle').value=title;
+    if(authors) document.getElementById('refAuthors').value=authors;
+    if(year) document.getElementById('refYear').value=year;
+    if(container) document.getElementById('refContainer').value=container;
+    hint.textContent='자동으로 채웠습니다 — 필요하면 아래에서 고쳐도 됩니다.';
+    updateRefSubmit();
+  }catch(e){
+    hint.textContent=(e&&e.message)||'조회 실패 — 아래 칸에 직접 입력하세요.';
+  }
+}
+
+function updateRefSubmit(){
+  const su=document.getElementById('refSubmit'); if(!su) return;
+  const toName=(document.getElementById('refToName')||{}).value||'';
+  const title=(document.getElementById('refPaperTitle')||{}).value||'';
+  su.disabled = !(refSelSp && toName.trim() && title.trim());
+}
+async function doRefSubmit(){
+  const su=document.getElementById('refSubmit'), msg=document.getElementById('refMsg');
+  const toName=document.getElementById('refToName').value.trim();
+  const title=document.getElementById('refPaperTitle').value.trim();
+  msg.className='rpt-msg';
+  if(!(refSelSp && toName && title)){ msg.className='rpt-msg err'; msg.textContent='종·변경 후 학명·논문 제목을 모두 입력하세요.'; return; }
+  su.disabled=true; su.textContent='등록 중…';
+  try{
+    const { error } = await submitTaxonReference({
+      ktsn:refSelSp.k, korean_name:refSelSp.n, scientific_name:refSelSp.s, to_name:toName, ref_title:title,
+      ref_authors: document.getElementById('refAuthors').value.trim() || null,
+      ref_year: (()=>{ const y=+document.getElementById('refYear').value; return y?y:null; })(),
+      ref_container: document.getElementById('refContainer').value.trim() || null,
+      doi: document.getElementById('refDoi').value.trim() || null,
+      ref_url: document.getElementById('refUrl').value.trim() || null,
+      note: document.getElementById('refNote').value
+    });
+    if(error) throw error;
+    msg.className='rpt-msg ok';
+    msg.textContent='제보가 등록되었습니다. 관리자 검토 후 반영됩니다.';
+    su.textContent='닫기'; su.disabled=false; su.onclick=closeRef;
+  }catch(e){
+    console.warn('분류 이력 제보 실패', e);
+    msg.className='rpt-msg err';
+    msg.textContent='등록에 실패했습니다: '+((e&&e.message)||'알 수 없는 오류')+' — 잠시 후 다시 시도하세요.';
+    su.textContent='제보 등록'; su.disabled=false; su.onclick=doRefSubmit;
+  }
+}
+
+document.getElementById('refClose').onclick=closeRef;
+refOverlay.addEventListener('click',(e)=>{ if(e.target===refOverlay) closeRef(); });
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape'&&!refOverlay.hidden) closeRef(); });
+
+function refreshTaxonRefCardBtn(){
+  const b=document.querySelector('.taxonref-lk[data-k]'); if(!b) return;
+  const x=SPIDX2.find(s=>s.k===b.dataset.k); if(x) decorateTaxonRefCard(x);
+}
+window.fgTaxonRef={ configured, decorateCard:decorateTaxonRefCard, open:openRef };
+if(configured){
+  refreshTaxonRefCardBtn();
+  onAuth(u=>{ refUser=u; refreshTaxonRefCardBtn(); if(!refOverlay.hidden) renderRef(); });
+}
+</script>
+
+<!-- 분류 체계도 — 분류군을 고르면 목→과→속→종을 드릴다운(재중심) 방식으로 보여준다.
+     노드를 누르면 그 노드가 중심이 되고 자식들만 원 하나에 다시 배치된다 — 형제들끼리만 화면을 나눠 쓰므로
+     곤충류처럼 큰 분류군(예: 딱정벌레목 아래 과 113개, Ichneumonidae 아래 속 328개)도 항상 클릭 가능한
+     밀도를 유지한다(예전엔 목→과 전체를 한 원에 동시에 펼쳐 큰 분류군에서 잎이 안 눌리는 문제가 있었음).
+     이 드릴다운 자체는 그대로 두고, 이번 라운드는 "지금 링의 자식들을 어떻게 그리느냐"만 바꿨다 — 점 대신
+     종수에 비례한 폭의 부채꼴(선버스트 웨지)로, 라벨을 웨지 위에 직접 얹는다. 지나온 경로는 왼쪽 breadcrumb.
+     매 순간 한 세대만 그리므로 손으로 계산한 삼각함수(pointRadial)만으로 충분 — d3 없이 기존 donutSVG와
+     같은 방식(ringArc)으로 손으로 조립한다. -->
+<script type="module">
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// 발견 상태 배지와 같은 색(index.html 다른 곳과 통일) — 미발견 비율로 두 색을 선형 보간.
+const FOUND_RGB=[0x01,0x55,0x43], GAP_RGB=[0xb5,0x48,0x2f];
+function gapColor(pctNone){
+  const t=Math.max(0,Math.min(1,pctNone));
+  const rgb=FOUND_RGB.map((c,i)=>Math.round(c+(GAP_RGB[i]-c)*t));
+  return `rgb(${rgb.join(',')})`;
+}
+// 위쪽 0시 방향을 각도 원점으로 하는 극좌표→직교좌표 변환.
+function pointRadial(angle,radius){
+  const a=angle-Math.PI/2;
+  return [radius*Math.cos(a), radius*Math.sin(a)];
+}
+
+const STATE_COLOR={f:'#015543', d:'#9a7b2f', n:'#b5482f'};
+const STATE_LABEL={f:'발견', d:'휴면', n:'미발견'};
+const RANK_LABEL={group:'분류군', order:'목', family:'과', genus:'속', species:'종'};
+
+// ── 웨지 각도 배분: 종수에 비례하되, 항목마다 최소폭을 보장한다(1종짜리가 1000종짜리 옆에서 안 사라지게).
+// 최소폭 예약 총합이 전체 각도의 60%를 넘지 못하게 캡을 둬서, n이 아무리 커져도(실측 목 259개까지 확인)
+// 절대 원을 넘치지 않는다 — n이 아주 크면 캡이 걸려 자동으로 최소폭이 줄어드는 방식.
+const DEG=Math.PI/180;
+const FLOOR_DESIRED={order:10*DEG, family:8*DEG, genus:6*DEG, species:6*DEG};
+const FLOOR_CAP_FRAC=0.6;
+function wedgeFloorAngle(rank,n){
+  const desired=FLOOR_DESIRED[rank]||8*DEG;
+  return n? Math.min(desired, FLOOR_CAP_FRAC*2*Math.PI/n) : 0;
+}
+// totalAngle/startAngle 기본은 온 원 — 개요의 중첩 링(부모 목 구간 안에 과를 채울 때)은 그 구간만 넘기면 된다.
+function wedgeAngles(rank, counts, totalAngle=2*Math.PI, startAngle=0){
+  const n=counts.length, total=counts.reduce((a,b)=>a+b,0)||1;
+  const floor=n? Math.min(FLOOR_DESIRED[rank]||8*DEG, FLOOR_CAP_FRAC*totalAngle/n) : 0;
+  const remain=totalAngle-floor*n;
+  let a=startAngle;
+  return counts.map(c=>{ const w=floor+remain*(c/total); const p=[a,a+w]; a+=w; return p; });
+}
+// 인접 웨지 사이 살짝 여백 — 중심각(라벨 기준)은 안 바뀌게 양쪽에서 대칭으로 깎는다.
+function insetGap(a0,a1){
+  const w=a1-a0, gap=Math.min(w*0.6, Math.max(0.0035, Math.min(w*0.15, 0.025)));
+  return [a0+gap/2, a1-gap/2];
+}
+// 부채꼴(annular sector) SVG path — 기존 donutSVG의 ringArc와 같은 산수, 이 모듈의 12시 각도 규약으로.
+function wedgePath(rI,rO,a0,a1){
+  const large=(a1-a0)>Math.PI?1:0;
+  const [xo0,yo0]=pointRadial(a0,rO), [xo1,yo1]=pointRadial(a1,rO);
+  const [xi1,yi1]=pointRadial(a1,rI), [xi0,yi0]=pointRadial(a0,rI);
+  return `M${xo0.toFixed(2)} ${yo0.toFixed(2)} A${rO} ${rO} 0 ${large} 1 ${xo1.toFixed(2)} ${yo1.toFixed(2)} `+
+         `L${xi1.toFixed(2)} ${yi1.toFixed(2)} A${rI} ${rI} 0 ${large} 0 ${xi0.toFixed(2)} ${yi0.toFixed(2)} Z`;
+}
+
+// 계급별 크기 — 상위 계급일수록 크게. 초점(중심 원)으로 그릴 땐 ×FOCUS_SCALE.
+const BASE_R={group:8, order:6.6, family:5, genus:3.8, species:2.6};
+const FOCUS_SCALE=1.8;
+const L_MIN={order:13, family:10, genus:8, species:5};        // 최소폭 웨지도 이 정도 호 길이(px)는 갖게
+const R_FLOOR={order:72, family:60, genus:50, species:42};    // 방어용 하한
+const THICK={order:44, family:36, genus:29, species:23};      // 링 두께
+const HUB_GAP=6;                                              // 초점 원과 링 사이 최소 여백
+function ringRadii(childRank, counts, focusR){
+  const floorAngle=wedgeFloorAngle(childRank, counts.length);
+  const rI=Math.max(R_FLOOR[childRank], floorAngle? L_MIN[childRank]/floorAngle : 0, focusR+HUB_GAP);
+  return {rI, rO:rI+THICK[childRank]};
+}
+
+// 라벨 — 실제 캔버스로 글자 폭을 재서, 웨지 호 길이에 맞으면 그대로/줄임표/그마저 안 되면 생략(호버·클릭으로 대체).
+const _mctx=document.createElement('canvas').getContext('2d');
+const BODY_FONT=`'Pretendard Variable',system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif`;
+function fitLabel(str, fontPx, arcLenPx){
+  _mctx.font=`${fontPx}px ${BODY_FONT}`;
+  const budget=arcLenPx*0.86;
+  if(_mctx.measureText(str).width<=budget) return str;
+  if(budget<14) return null;
+  for(let n=str.length-1;n>=1;n--){ const cand=str.slice(0,n)+'…'; if(_mctx.measureText(cand).width<=budget) return cand; }
+  return null;
+}
+
+// 개요("전체 모양") — 목 링 + 그 위에 딱 붙는 과 링, 진짜 2단 중첩 선버스트.
+const OV_HUB_R=10, OV_THICK_ORDER=32, OV_THICK_FAMILY=24, OV_PAD=18;
+
+const _txfile=t=>t.replace(/[^A-Za-z0-9]/g,'_');
+// taxatree_sp_<T>.js 지연 로드 — 분류군을 고르는 즉시(검색이 속·종까지 바로 되게) 미리 받아 둔다.
+// index.html 의 classic-script _loadScript() 는 이 <script type="module"> 블록에서 안 보여서(스코프 분리) 따로 둔다.
+const _spCbs={};
+function loadTaxaTreeSp(t, cb){
+  if((window.__TAXATREE_SP__||{})[t]){ cb&&cb(); return; }
+  if(_spCbs[t]){ _spCbs[t].push(cb); return; }
+  _spCbs[t]=[cb];
+  const s=document.createElement('script');
+  s.src=`demo/data/taxatree_sp_${_txfile(t)}.js`;
+  const done=()=>{ const cbs=_spCbs[t]; _spCbs[t]=null; cbs.forEach(f=>f&&f()); };
+  s.onload=done; s.onerror=()=>{ console.warn('로드 실패', s.src); done(); };
+  document.head.appendChild(s);
+}
+
+const SVGNS='http://www.w3.org/2000/svg';
+function countStates(list){ const c={f:0,d:0,n:0}; for(const s of list) c[s[2]]++; return c; }
+// 속의 {n,found,dormant,none} — 실제 속 클릭 경로와 검색 점프 경로가 같은 계산을 쓰게 공용으로 뺀다.
+function genusStatsOf(list){ const c=countStates(list); return {n:list.length,found:c.f,dormant:c.d,none:c.n}; }
+
+// 웨지 한 링을 그린다 — 메인 드릴다운 링과 개요 두 링 모두 이걸로. wantLabel=false 면 라벨 없이(개요 과 링).
+// showCallout/hideCallout(선택) — 웨지를 호버하면 밖으로 줄이 그어지며 크게 뜨는 콜아웃으로 이름·개수를
+// 보여준다. 안쪽 라벨이 있든 없든 전부 적용(통일) — 네이티브 title 툴팁은 작고 늦게 떠서 잘 안 보인다는
+// 불만이 있었는데, 처음엔 라벨 없는 웨지에만 달았다가 라벨 있는 쪽도 똑같이 해 달라는 요청으로 넓혔다.
+// photoOf(key,val)(선택) — 그 무리를 대표하는 종 사진(repOf 결과)을 콜아웃에 같이 보여준다. 곤충처럼
+// 큰 분류군은 "이게 어느 목·과에 속하는지" 조차 막막하다는 사용자 얘기 — 웨지를 하나씩 훑으며 사진으로
+// 먼저 눈에 익혀 보고 들어가라는 취지(들어가서 보는 것 → 들어가기 전에 비교하는 것으로).
+function drawWedgeRing(wedgeLayer, labelLayer, items, angleSpans, rI, rO, colorOf, titleOf, wantLabel, labelText, showCallout, hideCallout, photoOf){
+  return items.map(([key,val],i)=>{
+    const [ga0,ga1]=insetGap(angleSpans[i][0], angleSpans[i][1]);
+    const mid=(ga0+ga1)/2;
+    const el=document.createElementNS(SVGNS,'path');
+    el.setAttribute('d', wedgePath(rI,rO,ga0,ga1));
+    const fill=colorOf(val);
+    el.setAttribute('fill', fill);
+    el.classList.add('ttwedge');
+    const [nx,ny]=pointRadial(mid,1);
+    el.style.setProperty('--nx',nx.toFixed(3)); el.style.setProperty('--ny',ny.toFixed(3));
+    // 부채꼴은 가운데가 뚫려 있어 바운딩박스 중심이 웨지 밖(구멍)일 수 있다 — 각도가 넓을수록 심함(작은
+    // n에서 흔함). 실제로 항상 웨지 안인 점(중간각·중간반지름)을 SVG 로컬 좌표로 같이 남겨 둔다.
+    const [mcx,mcy]=pointRadial(mid,(rI+rO)/2);
+    el.setAttribute('data-cx',mcx.toFixed(2)); el.setAttribute('data-cy',mcy.toFixed(2));
+    const titleText=titleOf(key,val);
+    const title=document.createElementNS(SVGNS,'title'); title.textContent=titleText; el.appendChild(title);
+    wedgeLayer.appendChild(el);
+    let labeled=false;
+    if(wantLabel){
+      const arcLen=(ga1-ga0)*((rI+rO)/2);
+      const txt=fitLabel(labelText(key,val), 10, arcLen);
+      if(txt){
+        labeled=true;
+        const midR=(rI+rO)/2, [lx,ly]=pointRadial(mid,midR);
+        let rot=(mid*180/Math.PI)%360; if(rot<0) rot+=360;
+        if(rot>90 && rot<270) rot+=180;
+        const lbl=document.createElementNS(SVGNS,'text');
+        lbl.setAttribute('transform',`translate(${lx.toFixed(2)},${ly.toFixed(2)}) rotate(${rot.toFixed(1)})`);
+        lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('dominant-baseline','middle');
+        lbl.textContent=txt;
+        labelLayer.appendChild(lbl);
+      }
+    }
+    if(wantLabel && showCallout && hideCallout){
+      el.addEventListener('pointerenter', ()=>showCallout(el, mid, rO, titleText, fill, photoOf&&photoOf(key,val)));
+      el.addEventListener('pointerleave', hideCallout);
+    }
+    return {key, val, el, mid, labeled};
+  });
+}
+
+function renderTaxaTree(group, hostId, infoId){
+  const host=document.getElementById(hostId); if(!host) return;
+  const info=document.getElementById(infoId);
+  const g=((window.__TAXATREE__||{}).tree||{})[group];
+  if(!g || !Object.keys(g.orders||{}).length){ host.innerHTML='<div class="muted2">분류 체계도 자료가 아직 없습니다.</div>'; return; }
+
+  host.innerHTML=`<div class="ttlayout"><div class="ttcrumbs"></div><div class="ttdiagram"></div><div class="ttoverview"></div></div>`;
+  const crumbHost=host.querySelector('.ttcrumbs'), diagHost=host.querySelector('.ttdiagram'), ovHost=host.querySelector('.ttoverview');
+  let albumRefresh=null;   // renderFocus 가 매번 최신 renderAlbum 을 여기 넣어 둔다 — 사진 자료가 나중에
+                            // 도착해도(첫 렌더는 loadRep 콜백보다 먼저 돈다) 지금 보고 있는 화면을 다시 채운다.
+
+  let path=[{rank:'group', key:group, label:g.kor, stats:{n:g.n,found:g.found,dormant:g.dormant,none:g.none}}];
+
+  // entry(path 마지막 원소) → 그 자식들. 목/과는 taxa_tree.js 집계, 속/종은 지연 로드된 종 목록에서 즉석 계산.
+  function focusChildren(entry){
+    if(entry.rank==='group') return {childRank:'order', items:Object.entries(g.orders)};
+    if(entry.rank==='order') return {childRank:'family', items:Object.entries(entry.stats.families)};
+    if(entry.rank==='family'){
+      const spAll=(((window.__TAXATREE_SP__||{})[group]||{})[`${entry.order}|${entry.key}`])||[];
+      const byGenus=new Map();
+      for(const s of spAll){ const gn=s[3]||'(미분류)'; if(!byGenus.has(gn)) byGenus.set(gn,[]); byGenus.get(gn).push(s); }
+      return {childRank:'genus', items:[...byGenus.entries()].sort((a,b)=>a[0].localeCompare(b[0]))};
+    }
+    return {childRank:'species', items:entry.list.map(s=>[s[0],s])};             // entry.rank==='genus'
+  }
+
+  // 콜아웃에 얹을 대표 사진 — 그 무리(목/과/속) 안에서 사진(repOf) 있는 아무 종이나 첫 번째. 목·과는
+  // 종 목록이 이 노드에 없어(taxa_tree.js는 개수만 집계) taxatree_sp_<T>.js 에서 과 단위로 끌어와야 한다.
+  function repFromSpeciesList(list){
+    if(!window.repOf) return null;
+    for(const s of list){ const r=window.repOf({t:group, k:s[0]}); if(r) return r; }
+    return null;
+  }
+  function repFromFamilies(orderKey, familyNames){
+    const spData=(window.__TAXATREE_SP__||{})[group];
+    if(!spData) return null;
+    for(const fam of familyNames){
+      const list=spData[`${orderKey}|${fam}`];
+      if(!list) continue;
+      const r=repFromSpeciesList(list);
+      if(r) return r;
+    }
+    return null;
+  }
+
+  function renderCrumbs(){
+    crumbHost.innerHTML=path.map((p,i)=>{
+      const total=p.stats.n||0, pct=total?p.stats.none/total:0, cur=i===path.length-1;
+      return `<button type="button" class="ttcrumb${cur?' on':''}" data-i="${i}"${cur?' disabled':''}>`+
+        `<i class="dot" style="background:${gapColor(pct)}"></i>${esc(p.label)}</button>`;
+    }).join('');
+    crumbHost.querySelectorAll('.ttcrumb:not(.on)').forEach(b=>
+      b.addEventListener('click',()=>{ path.length=+b.dataset.i+1; renderFocus(); }));
+  }
+
+  // 오른쪽 드릴다운과 별개로 항상 그리는 전체(목→과) 개요 — 목 링 위에 과 링이 딱 붙는 2단 중첩 선버스트.
+  // 목은 클릭해서 그 목으로 바로 점프. 과는 색 텍스처 + 호버 툴팁만(목이 아주 많으면 그 안의 과는 눈으로
+  // 구분 안 될 만큼 얇아지는데, 이건 웨지로 바꾼다고 새로 생기는 문제가 아니라 원래부터 감수하던 것).
+  function renderOverview(){
+    const orders=Object.entries(g.orders).sort((a,b)=>a[0].localeCompare(b[0]));
+    const orderSpans=wedgeAngles('order', orders.map(([,o])=>o.n||0));
+    const rI_o=OV_HUB_R, rO_o=OV_HUB_R+OV_THICK_ORDER, rO_f=rO_o+OV_THICK_FAMILY;
+    const half=rO_f+OV_PAD;
+    ovHost.innerHTML=`<h4>전체 모양</h4><svg width="${2*half}" height="${2*half}" viewBox="-${half} -${half} ${2*half} ${2*half}" `+
+      `role="img" aria-label="${esc(g.kor)} 전체 목→과 개요"><g class="ttov-orders"></g><g class="ttov-fams"></g></svg>`;
+    const svg=ovHost.querySelector('svg');
+    const orderLayer=svg.querySelector('.ttov-orders'), famLayer=svg.querySelector('.ttov-fams');
+    const currentOrder=path.length>1 ? path[1].key : null;
+
+    orders.forEach(([oname,onode],i)=>{
+      const [a0,a1]=orderSpans[i], [ga0,ga1]=insetGap(a0,a1), mid=(ga0+ga1)/2;
+      const el=document.createElementNS(SVGNS,'path');
+      el.setAttribute('d', wedgePath(rI_o,rO_o,ga0,ga1));
+      el.setAttribute('fill', gapColor(onode.n? onode.none/onode.n : 0));
+      el.classList.add('ttwedge','clickable','ttov-order'); if(oname===currentOrder) el.classList.add('on');
+      const [nx,ny]=pointRadial(mid,1);
+      el.style.setProperty('--nx',nx.toFixed(3)); el.style.setProperty('--ny',ny.toFixed(3));
+      const [mcx,mcy]=pointRadial(mid,(rI_o+rO_o)/2);
+      el.setAttribute('data-cx',mcx.toFixed(2)); el.setAttribute('data-cy',mcy.toFixed(2));
+      const title=document.createElementNS(SVGNS,'title'); title.textContent=`${oname} · ${nf2(onode.n)}종`; el.appendChild(title);
+      el.addEventListener('click',()=>{ path=[path[0], {rank:'order', key:oname, label:oname, stats:onode}]; renderFocus(); });
+      orderLayer.appendChild(el);
+
+      const fams=Object.entries(onode.families).sort((a,b)=>a[0].localeCompare(b[0]));
+      const famSpans=wedgeAngles('family', fams.map(([,f])=>f.n||0), a1-a0, a0);   // 부모 목 구간(간격 삽입 전) 안에 채운다
+      fams.forEach(([fname,fnode],j)=>{
+        const [fa0,fa1]=insetGap(famSpans[j][0], famSpans[j][1]);
+        const fel=document.createElementNS(SVGNS,'path');
+        fel.setAttribute('d', wedgePath(rO_o,rO_f,fa0,fa1));                       // rI = 목 링의 rO — 딱 붙임
+        fel.setAttribute('fill', gapColor(fnode.n? fnode.none/fnode.n : 0));
+        fel.classList.add('ttwedge');
+        const fmid=(fa0+fa1)/2, [fnx,fny]=pointRadial(fmid,1);
+        fel.style.setProperty('--nx',fnx.toFixed(3)); fel.style.setProperty('--ny',fny.toFixed(3));
+        const ftitle=document.createElementNS(SVGNS,'title'); ftitle.textContent=`${fname} · ${nf2(fnode.n)}종`; fel.appendChild(ftitle);
+        famLayer.appendChild(fel);
+      });
+    });
+  }
+
+  function renderFocus(){
+    const entry=path[path.length-1];
+    if(info){
+      const rl=RANK_LABEL[entry.rank]||'';
+      // 지금 초점(entry) 바로 아래 계급들의 개수 — "이 분류군/목/과 하위에 속이 몇 개인지" 드릴다운 매 단계마다 바로 보이게.
+      let below=[];
+      if(entry.rank==='group'){
+        const famN=Object.values(g.orders).reduce((s,o)=>s+Object.keys(o.families).length,0);
+        below=[`목 ${nf2(Object.keys(g.orders).length)}`, `과 ${nf2(famN)}`, `속 ${nf2(g.genus_n||0)}`];
+      } else if(entry.rank==='order'){
+        below=[`과 ${nf2(Object.keys(entry.stats.families).length)}`, `속 ${nf2(entry.stats.genus_n||0)}`];
+      } else if(entry.rank==='family'){
+        below=[`속 ${nf2(entry.stats.genus_n||0)}`];
+      }
+      const belowHTML=below.length? below.join(' · ')+' · ' : '';
+      info.innerHTML=`<b>${esc(entry.label)}</b>${rl?`(${rl})`:''} — ${belowHTML}총 ${nf2(entry.stats.n)}종 · `+
+        `<span style="color:#015543">발견 ${nf2(entry.stats.found)}</span> · <span style="color:#9a7b2f">휴면 ${nf2(entry.stats.dormant)}</span> · `+
+        `<span style="color:#b5482f">미발견 ${nf2(entry.stats.none)}</span>`;
+    }
+
+    const {childRank, items}=focusChildren(entry);
+    const countOf = childRank==='species' ? ()=>1 : (childRank==='genus' ? ([,list])=>list.length : ([,v])=>v.n||0);
+    const counts=items.map(countOf);
+    const fr=BASE_R[entry.rank]*FOCUS_SCALE;
+    const {rI,rO}=ringRadii(childRank, counts, fr);
+    const half=rO+30;
+
+    diagHost.innerHTML=`<svg class="taxatree" width="${2*half}" height="${2*half}" viewBox="-${half} -${half} ${2*half} ${2*half}" `+
+      `role="img" aria-label="${esc(entry.label)} 분류 체계도"><g class="ttfocus"></g><g class="ttring"></g><g class="ttlabels"></g></svg>`+
+      `<div class="ttcallout-line" style="display:none"></div><div class="ttcallout-box" style="display:none"></div>`;
+    const svg=diagHost.querySelector('svg');
+    const focusLayer=svg.querySelector('.ttfocus'), ringLayer=svg.querySelector('.ttring'), labelLayer=svg.querySelector('.ttlabels');
+    const calloutLine=diagHost.querySelector('.ttcallout-line'), calloutBox=diagHost.querySelector('.ttcallout-box');
+    // 라벨 없는(너무 얇은) 웨지를 호버하면 밖으로 줄을 그어 이름·개수를 크게 보여준다 — SVG 밖(HTML)이라
+    // svg의 viewBox 여백에 안 갇히고, 확대·회전과도 무관하게 항상 화면(.ttdiagram) 기준으로 뜬다.
+    function showCallout(el, mid, r, text, color, photo){
+      const dRect=diagHost.getBoundingClientRect();
+      const ctm=svg.getScreenCTM(); if(!ctm) return;
+      const toDiag=(sx,sy)=>{ const p=svg.createSVGPoint(); p.x=sx; p.y=sy; const s=p.matrixTransform(ctm); return {x:s.x-dRect.left, y:s.y-dRect.top}; };
+      const [ex,ey]=pointRadial(mid, r), [fx,fy]=pointRadial(mid, r+20);
+      const P0=toDiag(ex,ey), P1=toDiag(fx,fy);
+      const dx=P1.x-P0.x, dy=P1.y-P0.y, len=Math.hypot(dx,dy)||1, ux=dx/len, uy=dy/len, LEADER=54;
+      let Px=P0.x+ux*LEADER, Py=P0.y+uy*LEADER;
+
+      // 말풍선이 컨테이너 밖으로 나가면(가장자리 웨지) 잘려 보였다 — 먼저 띄워서 실제 크기를 재고,
+      // 그 크기만큼은 항상 안에 들어오게 자리를 당긴다. 링·확대·최대 높이 자체를 안 건드리는 게
+      // 가장자리가 아닌 웨지들의 여백 낭비를 안 만들면서, 필요한 경우에만 자연스럽게 자리를 옮긴다.
+      // 사진은 그 무리 안에서 사진 있는 아무 종이나 하나(대표) — 없으면 글자만(점진적으로 채워질 자료).
+      const photoHTML=photo? `<img class="ttcallout-img" src="${esc(photo.url)}" alt="" loading="lazy" `+
+        `title="${esc(['© '+(photo.by||'국립생물자원관'), photo.lic].filter(Boolean).join(' · '))}" onerror="this.remove()">` : '';
+      calloutBox.innerHTML=`${photoHTML}<i style="background:${color}"></i>${esc(text)}`;
+      calloutBox.style.display='flex';
+      const bw=calloutBox.offsetWidth, bh=calloutBox.offsetHeight, pad=8;
+      if(dRect.width>bw+pad*2) Px=Math.min(Math.max(Px, bw/2+pad), dRect.width-bw/2-pad);
+      if(dRect.height>bh+pad*2) Py=Math.min(Math.max(Py, bh/2+pad), dRect.height-bh/2-pad);
+
+      calloutLine.style.left=P0.x.toFixed(1)+'px'; calloutLine.style.top=P0.y.toFixed(1)+'px';
+      calloutLine.style.width=Math.hypot(Px-P0.x,Py-P0.y).toFixed(1)+'px';
+      calloutLine.style.transform=`rotate(${(Math.atan2(Py-P0.y,Px-P0.x)*180/Math.PI).toFixed(1)}deg)`;
+      calloutLine.style.background=color;
+      calloutLine.style.display='block';
+      calloutBox.style.left=Px.toFixed(1)+'px'; calloutBox.style.top=Py.toFixed(1)+'px';
+    }
+    function hideCallout(){ calloutLine.style.display='none'; calloutBox.style.display='none'; }
+
+    // 컨테이너 폭·최대 높이(둘 다)에 맞춰 기본 크기를 축소한다(확대는 안 함) — 정사각형이라 둘 중 더
+    // 빡빡한 쪽이 기준. 큰 링(목 259개 등)이 화면 밖으로 안 넘치고, 작은 링은 원래 크기 그대로 보인다.
+    const CAP_H=560, native=2*half;
+    const fitScale=Math.min(1, (diagHost.clientWidth||native)/native, CAP_H/native);
+    svg.style.width=(native*fitScale).toFixed(1)+'px';
+    svg.style.height=(native*fitScale).toFixed(1)+'px';
+    // 확대 기준점을 중심이 아니라 12시(링의 중간 반지름) 쪽으로 — 중심 기준으로 키우면 정작 보고 싶은
+    // 링(중심에서 먼 쪽)이 오히려 화면 밖으로 밀려난다. 회전으로 원하는 웨지를 12시로 가져온 다음 휠로
+    // 그 자리를 확대하는 조합 — 이 기준점은 회전과 무관하게 화면상 항상 같은 자리(링 반지름 기준)다.
+    const anchorPct=((half-(rI+rO)/2)/(2*half)*100).toFixed(1);
+    svg.style.transformOrigin=`50% ${anchorPct}%`;
+
+    const fTotal=entry.stats.n||0, fPct=fTotal?entry.stats.none/fTotal:0;
+    const fc=document.createElementNS(SVGNS,'circle');
+    fc.setAttribute('r',fr); fc.setAttribute('fill',gapColor(fPct));
+    const ftitle=document.createElementNS(SVGNS,'title');
+    ftitle.textContent=`${entry.label} · ${nf2(fTotal)}종 · 발견 ${nf2(entry.stats.found)}·휴면 ${nf2(entry.stats.dormant)}·미발견 ${nf2(entry.stats.none)}`+
+      (path.length>1? ' · 눌러서 상위 분류로 이동':'');
+    fc.appendChild(ftitle);
+    focusLayer.appendChild(fc);
+    const flabel=document.createElementNS(SVGNS,'text');
+    flabel.setAttribute('y', fr+13);
+    flabel.textContent=entry.label;
+    focusLayer.appendChild(flabel);
+    // 가운데(초점)를 눌러 위로도 갈 수 있게 — 자식 웨지를 눌러 내려가는 것의 반대 동작.
+    if(path.length>1){
+      focusLayer.classList.add('clickable');
+      focusLayer.addEventListener('click',()=>{ path.pop(); renderFocus(); });
+    }
+
+    // ── 자식 선택 — 웨지 클릭·앨범 클릭 공용(같은 자식을 두 곳에서 고를 수 있으니 동작도 하나로). ──
+    const statsOf = childRank==='genus' ? genusStatsOf : (v)=>v;    // order·family는 이미 {n,found,dormant,none,...} 형태(species 분기는 안 씀)
+    function selectChild(key, val){
+      if(childRank==='species'){
+        if(!info) return;
+        info.innerHTML=`<b>${esc(val[1])}</b>(종) — <span style="color:${STATE_COLOR[val[2]]||'#333'}">${STATE_LABEL[val[2]]||''}</span>`;
+      } else if(childRank==='family'){
+        if(info) info.textContent='속 정보를 불러오는 중…';
+        loadTaxaTreeSp(group, ()=>{
+          path.push({rank:'family', key, label:key, stats:val, order:entry.key});
+          renderFocus();
+        });
+      } else if(childRank==='genus'){
+        path.push({rank:'genus', key, label:key, stats:statsOf(val), list:val});
+        renderFocus();
+      } else {
+        path.push({rank:'order', key, label:key, stats:val});
+        renderFocus();
+      }
+    }
+
+    // ── 대표 사진 찾기 — 콜아웃(호버 하나)·앨범(형제 전부) 공용. ──
+    const photoOf = childRank==='species' ? (key,val)=>window.repOf&&window.repOf({t:group,k:val[0]})
+      : childRank==='genus' ? (key,val)=>repFromSpeciesList(val)
+      : childRank==='family' ? (key,val)=>repFromFamilies(entry.key,[key])
+      : (key,val)=>repFromFamilies(key, Object.keys(val.families));   // childRank==='order'
+
+    // 링을 통째로 다시 그린다 — 각도 배분에 ringRotation(회전 오프셋)을 그대로 넣으므로, 회전 중에도
+    // 라벨 위/아래 뒤집힘 판정(drawWedgeRing 안, 실제 화면 각도 기준)이 매번 다시 맞게 계산된다.
+    let ringRotation=0;
+    function drawRing(){
+      hideCallout();   // 다시 그리는 동안(회전 드래그 등) 옛 웨지를 가리키던 콜아웃이 남지 않게.
+      ringLayer.innerHTML=''; labelLayer.innerHTML='';
+      const angleSpans=wedgeAngles(childRank, counts, 2*Math.PI, ringRotation);
+      const colorOf = childRank==='species' ? val=>STATE_COLOR[val[2]]||'#8a9a90'
+        : val=>{ const st=statsOf(val); return gapColor(st.n? st.none/st.n : 0); };
+      const titleOf = childRank==='species' ? (key,val)=>`${val[1]} · ${STATE_LABEL[val[2]]||''}`
+        : (key,val)=>{ const st=statsOf(val); return `${key} · ${nf2(st.n)}종`; };
+      const labelText = childRank==='species' ? (key,val)=>val[1] : (key)=>key;
+      const placed=drawWedgeRing(ringLayer, labelLayer, items, angleSpans, rI, rO, colorOf, titleOf, true, labelText, showCallout, hideCallout, photoOf);
+      placed.forEach(({key,val,el})=>{
+        el.classList.add('clickable');
+        el.addEventListener('click',()=>selectChild(key,val));
+      });
+    }
+    drawRing();
+
+    // ── 앨범 — 지금 링(형제들) 중 사진 있는 것만 모아 콜아웃보다 크게 한꺼번에. 호버는 하나씩만 보여
+    // "비교"하려면 기억에 의존해야 한다는 피드백 — 형제 전부를 나란히 놓고 비교하라는 취지. ──
+    function renderAlbum(){
+      const host=document.getElementById('taxaAlbum'); if(!host) return;
+      const cards=[];
+      for(const [key,val] of items){
+        const photo=photoOf(key,val); if(!photo) continue;
+        const name = childRank==='species'? val[1] : key;
+        const sub = childRank==='species'? (STATE_LABEL[val[2]]||'') : `${nf2(statsOf(val).n)}종`;
+        cards.push({photo, name, sub, key, val});
+      }
+      if(!cards.length){ host.innerHTML=''; return; }
+      host.innerHTML=`<h4>사진으로 보기 <span class="muted2">(${nf2(cards.length)}/${nf2(items.length)})</span></h4><div class="ttalbum-grid"></div>`;
+      const grid=host.querySelector('.ttalbum-grid');
+      cards.forEach(c=>{
+        const btn=document.createElement('button');
+        btn.type='button'; btn.className='ttalbum-card';
+        const cred=esc(['© '+(c.photo.by||'국립생물자원관'), c.photo.lic].filter(Boolean).join(' · '));
+        btn.innerHTML=`<img src="${esc(c.photo.url)}" alt="" loading="lazy" title="${cred}" onerror="this.closest('.ttalbum-card').remove()">`+
+          `<div class="tt-cap"><b>${esc(c.name)}</b><span>${esc(c.sub)}</span></div>`;
+        btn.addEventListener('click', ()=>selectChild(c.key,c.val));
+        grid.appendChild(btn);
+      });
+    }
+    albumRefresh=renderAlbum;
+    renderAlbum();
+
+    let zoomLevel=1;
+    const applyZoom=()=>{ svg.style.transform=zoomLevel>1? `scale(${zoomLevel.toFixed(3)})` : ''; };
+
+    // ── 확대 중엔 드래그를 놓으면 가장 가까운 웨지를 12시로 딱 맞춰준다(돌림판이 실제로 걸리는 느낌).
+    // 확대 안 한 기본 상태에선 링 전체가 다 보이므로 굳이 안 맞춘다.
+    const angDiff=(a,b)=>{ let d=(a-b)%(2*Math.PI); if(d>Math.PI) d-=2*Math.PI; if(d<-Math.PI) d+=2*Math.PI; return d; };
+    function snapToNearestWedge(){
+      if(!counts.length) return;
+      const localMids=wedgeAngles(childRank, counts, 2*Math.PI, 0).map(([a0,a1])=>(a0+a1)/2);
+      let best=0, bestDist=Infinity;
+      localMids.forEach((m,i)=>{
+        const dist=Math.abs(angDiff(0, ringRotation+m));
+        if(dist<bestDist){ bestDist=dist; best=i; }
+      });
+      const target=ringRotation + angDiff(-localMids[best], ringRotation);
+      const from=ringRotation, delta=target-from, t0=performance.now(), dur=220;
+      (function step(t){
+        const k=Math.min(1,(t-t0)/dur), ease=1-Math.pow(1-k,3);
+        ringRotation=from+delta*ease;
+        drawRing();
+        if(k<1) requestAnimationFrame(step);
+      })(t0);
+    }
+
+    // ── 드래그로 회전(돌림판) — 화면 좌표만으로 중심 기준 각도차를 구하므로 확대 배율과 무관하게 동작한다.
+    // 클릭과 구분하려고 일정 거리(6px) 넘게 움직여야 회전으로 인정한다(그 전엔 웨지 클릭이 정상 동작).
+    const angleAt=(cx,cy)=>{ const r=svg.getBoundingClientRect(); return Math.atan2(cy-(r.top+r.height/2), cx-(r.left+r.width/2)); };
+    let dragArmed=false, dragging=false, downX=0, downY=0, dragBase=0, rafId=0, pid=0;
+    svg.addEventListener('pointerdown', e=>{
+      dragArmed=true; dragging=false; downX=e.clientX; downY=e.clientY; pid=e.pointerId;
+      dragBase=angleAt(e.clientX,e.clientY)-ringRotation;
+      // 포인터 캡처는 실제 드래그로 확정된 뒤(아래 pointermove)에만 건다 — 처음부터 걸면 단순 클릭까지
+      // svg로 리타깃되어 웨지 자신의 click 리스너가 안 불림(자식 요소로 전파되지 않음).
+    });
+    svg.addEventListener('pointermove', e=>{
+      if(!dragArmed) return;
+      if(!dragging){
+        if(Math.hypot(e.clientX-downX,e.clientY-downY)<6) return;
+        dragging=true; svg.classList.add('grabbing'); svg.setPointerCapture(pid);
+      }
+      ringRotation=angleAt(e.clientX,e.clientY)-dragBase;
+      if(!rafId) rafId=requestAnimationFrame(()=>{ rafId=0; drawRing(); });
+    });
+    const endDrag=()=>{
+      const wasDragging=dragging;
+      dragArmed=false; dragging=false; svg.classList.remove('grabbing');
+      if(wasDragging && zoomLevel>1) snapToNearestWedge();
+    };
+    svg.addEventListener('pointerup', endDrag);
+    svg.addEventListener('pointercancel', endDrag);
+
+    // ── 휠로 확대 — 기본은 컨테이너에 맞춰 축소된 상태(CSS max-width:100%, 확대는 안 함)라 여기서만 키운다.
+    svg.addEventListener('wheel', e=>{
+      e.preventDefault();
+      zoomLevel=Math.min(6, Math.max(1, zoomLevel*(e.deltaY<0?1.12:1/1.12)));
+      applyZoom();
+    }, {passive:false});
+
+    renderCrumbs();
+    renderOverview();
+  }
+
+  // ── 검색 색인: 목·과는 taxa_tree.js 로 바로(항상 있음), 속·종은 taxatree_sp_<T>.js 로드가 끝나야 채워진다.
+  // 분류군을 고르는 즉시 그 파일을 미리 당겨 오므로(과를 눌러야만 불러오던 것에서 바뀜), 검색창은 그때부터
+  // 속·종까지 바로 찾을 수 있다 — 로드 전엔 목·과만, 끝나면 자동으로 다시 지어진다.
+  let searchIndex=[];
+  function buildSearchIndex(){
+    const idx=[];
+    const orderEntries=Object.entries(g.orders).sort((a,b)=>a[0].localeCompare(b[0]));
+    for(const [oname,onode] of orderEntries){
+      idx.push({rank:'order', label:oname, searchKey:oname.toLowerCase(),
+        path:[{rank:'order',key:oname,label:oname,stats:onode}]});
+      const famEntries=Object.entries(onode.families).sort((a,b)=>a[0].localeCompare(b[0]));
+      for(const [fname,fnode] of famEntries){
+        idx.push({rank:'family', label:fname, searchKey:fname.toLowerCase(),
+          path:[{rank:'order',key:oname,label:oname,stats:onode},
+                {rank:'family',key:fname,label:fname,stats:fnode,order:oname}]});
+      }
+    }
+    const spByGroup=(window.__TAXATREE_SP__||{})[group];
+    if(spByGroup){
+      for(const [ofKey, spAll] of Object.entries(spByGroup)){
+        const bar=ofKey.indexOf('|'), oname=ofKey.slice(0,bar), fname=ofKey.slice(bar+1);
+        const onode=g.orders[oname], fnode=onode&&onode.families[fname];
+        if(!onode||!fnode) continue;
+        const byGenus=new Map();
+        for(const s of spAll){ const gn=s[3]||'(미분류)'; if(!byGenus.has(gn)) byGenus.set(gn,[]); byGenus.get(gn).push(s); }
+        const genusEntries=[...byGenus.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+        for(const [gname,list] of genusEntries){
+          const gpath=[{rank:'order',key:oname,label:oname,stats:onode},
+                       {rank:'family',key:fname,label:fname,stats:fnode,order:oname},
+                       {rank:'genus',key:gname,label:gname,stats:genusStatsOf(list),list}];
+          idx.push({rank:'genus', label:gname, searchKey:gname.toLowerCase(), path:gpath});
+          for(const s of list){
+            // 종 튜플엔 학명이 없다([ktsn,한글명,상태코드,속명]) — 한글명 + 부모 속 라틴명으로 찾는다.
+            idx.push({rank:'species', label:s[1], searchKey:(s[1]+' '+gname).toLowerCase(), path:gpath, sp:s});
+          }
+        }
+      }
+    }
+    searchIndex=idx;
+  }
+  function jumpToSearchResult(r){
+    path=[path[0], ...r.path];
+    renderFocus();
+    if(r.rank==='species' && info){
+      const s=r.sp;
+      info.innerHTML=`<b>${esc(s[1])}</b>(종) — <span style="color:${STATE_COLOR[s[2]]||'#333'}">${STATE_LABEL[s[2]]||''}</span>`;
+    }
+  }
+
+  renderFocus();
+  buildSearchIndex();
+  // 앨범(대표 사진)은 목·과 단계에서 taxatree_sp_<T>.js(과별 종 목록)와 rep_<T>.js(사진) 둘 다 있어야
+  // 채워진다 — 서로 다른 두 비동기 로드라 어느 쪽이 늦게 와도 그 콜백에서 다시 그려 줘야 한다(하나만
+  // 걸어 두면 나머지 하나가 늦게 도착하는 경우 앨범이 계속 비어 있는 경합이 실제로 있었다).
+  loadTaxaTreeSp(group, ()=>{ buildSearchIndex(); if(albumRefresh) albumRefresh(); });
+  // 콜아웃·앨범 대표 사진용(종 상세 화면과 같은 자료) — 미리 당겨 둔다. 콜아웃은 호버 시점에 매번 새로
+  // 찾으니 늦게 도착해도 상관없지만, 앨범은 렌더 시점에 한 번 굳혀 두는 값이라 사진이 도착한 뒤 한 번
+  // 다시 그려 줘야 한다(첫 렌더는 이 로드보다 먼저 돈다) — 그때 이미 다른 화면으로 넘어갔으면
+  // albumRefresh 가 그 최신 화면의 renderAlbum 을 가리키고 있어 항상 지금 보는 화면이 다시 그려진다.
+  if(window.loadRep) window.loadRep(group, ()=>{ if(albumRefresh) albumRefresh(); });
+
+
+  // ── 검색창 배선 ──
+  const searchInput=document.getElementById('taxaSearchInput'), searchResults=document.getElementById('taxaSearchResults');
+  if(searchInput && searchResults){
+    const doSearchTaxa=()=>{
+      const q=searchInput.value.trim().toLowerCase();
+      if(!q){ searchResults.style.display='none'; searchResults.innerHTML=''; return; }
+      const starts=[], contains=[];
+      for(const row of searchIndex){
+        if(row.searchKey.startsWith(q)){ if(starts.length<8) starts.push(row); }
+        else if(starts.length<8 && row.searchKey.includes(q)){ if(contains.length<8) contains.push(row); }
+        if(starts.length>=8 && contains.length>=8) break;
+      }
+      const results=starts.concat(contains).slice(0,8);
+      if(!results.length){ searchResults.innerHTML='<div class="r"><span class="muted2">검색 결과가 없습니다.</span></div>'; searchResults.style.display=''; return; }
+      searchResults.innerHTML=results.map((r,i)=>
+        `<div class="r" data-i="${i}"><span class="nm">${esc(r.label)}</span><span class="tg">${RANK_LABEL[r.rank]}</span></div>`).join('');
+      searchResults.style.display='';
+      searchResults.querySelectorAll('[data-i]').forEach(el=>el.addEventListener('click',()=>{
+        jumpToSearchResult(results[+el.dataset.i]);
+        searchResults.style.display='none'; searchInput.value='';
+      }));
+    };
+    searchInput.oninput=doSearchTaxa;
+    searchInput.onkeydown=e=>{ if(e.key==='Escape'){ searchResults.style.display='none'; searchInput.blur(); } };
+    document.addEventListener('click',e=>{
+      if(e.target!==searchInput && !searchResults.contains(e.target)) searchResults.style.display='none';
+    });
+  }
+}
+function nf2(n){ return (n||0).toLocaleString('ko-KR'); }
+window.renderTaxaTree=renderTaxaTree;
 </script>
 
 <!-- 대화형 도우미 — 질문을 Supabase Edge Function(chat)으로 보내고 답을 받는다.
