@@ -360,10 +360,10 @@
   .badge{font-size:11px;font-weight:700;border-radius:999px;padding:1px 6px;white-space:nowrap}
   .st{display:inline-flex;align-items:center;gap:4px;font-size:12px}
   .dot{width:7px;height:7px;border-radius:999px;display:inline-block}
-  .dot-pt{width:9px;height:9px;background:#FF8F00;border:1px solid rgba(74,40,0,.85)}     /* 발견 지점 */
+  .dot-pt{width:9px;height:9px;background:#FF2E63;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}     /* 발견 지점 */
   /* 서식지 후보 표식 — 지도에 별표로 그리므로 범례·표에서도 같은 모양이라야 지도와 이어진다.
      .dot 의 border-radius 를 되돌리지 않으면 clip-path 와 겹쳐 별 끝이 뭉개진다(뒤에 두어 덮는다). */
-  .starmk{border-radius:0;background:#A85A00;border:0;
+  .starmk{border-radius:0;background:#4B3FD6;border:0;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
     clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
   .dot-cand{width:11px;height:11px}
   .num{font-variant-numeric:tabular-nums;text-align:right}
@@ -609,7 +609,7 @@
     border:1px solid #cdd5d1;border-radius:8px;background:#fff;color:#5a665f;cursor:pointer;
     font:600 12px 'Pretendard Variable',system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.14)}
   .gap-ctrl .gapbtn i{width:12px;height:12px;display:inline-block;flex:none;opacity:.5}
-  .gap-ctrl .gapbtn[aria-pressed="true"]{background:#A85A00;border-color:#8c4b00;color:#fff}
+  .gap-ctrl .gapbtn[aria-pressed="true"]{background:#4B3FD6;border-color:#372ca8;color:#fff}
   .gap-ctrl .gapbtn[aria-pressed="true"] i{background:#fff;opacity:1}
   .gap-ctrl .gapbtn:disabled{opacity:.5;cursor:default}
   .gap-ctrl .qtip{margin-left:0;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.14)}
@@ -1534,7 +1534,7 @@ let ENVM=null, WMASK=null, AQSET=null;                                 // 모형
 let gapLayer=null, gapSource=null, gapBtnEl=null;                      // 후보셀 Canvas2D Vector 레이어(모드 B)
 let cellLayer=null, cellSource=null, CELLN=0;                          // 발견 1km 격자 중심점(모드 B·일반종)
 let meLayer=null, meSource=null;                                       // 내 위치 표시점
-const GAP_COL='#A85A00';                                               // 서식지 후보 — 발견 지점(#FF8F00)과 섞이지 않는 짙은 주황
+const GAP_COL='#4B3FD6';                                               // 서식지 후보 — 남보라(발견 지점 핑크와 색상 자체가 갈린다)
 const GAP_OPA=0.85;
 const _hexA=(h,a)=>{ const n=parseInt(h.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; };
 /* 교차검증 AUC → 신뢰 등급. 등급을 함께 보이지 않으면 전국에 고루 사는 종에서 "후보 4만칸" 이
@@ -1911,7 +1911,8 @@ function renderSpView(){
 /* ═══════ 공유 지도(모드 A·B 재사용, setTarget 전환) ═══════ */
 /* 밀도 램프: 옅은 노랑(낮음)→연두(중간)→진초록(높음). 값의 크기를 그대로 읽으므로
    발견이든 미발견이든 짙을수록 많다 — 지표에 따라 방향이 뒤집히지 않는다.
-   지점·후보는 이 초록 계열과 겹치지 않는 주황을 써서 배경 위에서 바로 구분된다. */
+   지점(핑크)·후보(남보라)는 이 초록 계열에도, 배경지도의 시가지 베이지·분홍에도 없는 색을 쓰고
+   흰 테두리를 둘러 배경에서 떼어 놓는다 — 예전엔 둘 다 주황 계열이라 시가지 위에서 묻혔다. */
 const DENS=[[255,245,157],[124,179,66],[30,86,49]];    // #FFF59D · #7CB342 · #1E5631
 function dens(s,a){                                     // s:0 낮음 → .5 중간 → 1 높음
   s=s<0?0:s>1?1:s; const i=s<0.5?0:1, u=s<0.5?s/0.5:(s-0.5)/0.5, c=DENS[i], d=DENS[i+1], L=(x,y)=>Math.round(x+(y-x)*u);
@@ -1975,15 +1976,16 @@ function initMap(){
      별 모양은 범례·표의 표식과 같게 맞춘 것이고, 원인 발견 지점과 형태만으로도 갈린다. */
   gapSource=new ol.source.Vector();                      // WebGLPoints 는 이 지도서 미합성 → Canvas2D Vector
   const _gapSty=new ol.style.Style({image:new ol.style.RegularShape({
-    points:5, radius:4.4, radius2:1.9, angle:0,
-    fill:new ol.style.Fill({color:_hexA(GAP_COL, GAP_OPA)})})});
+    points:5, radius:5.4, radius2:2.3, angle:0,
+    fill:new ol.style.Fill({color:_hexA(GAP_COL, GAP_OPA)}),
+    stroke:new ol.style.Stroke({color:'rgba(255,255,255,0.95)', width:1.1})})});
   gapLayer=new ol.layer.Vector({source:gapSource, visible:false, style:_gapSty});
   layers.push(gapLayer);
   cellSource=new ol.source.Vector();                     // 발견 격자 — 경계 채움에 가려지므로 경계보다 위에 얹는다
   cellLayer=new ol.layer.Vector({source:cellSource, visible:false,
     style:new ol.style.Style({image:new ol.style.Circle({radius:3.2,
-      fill:new ol.style.Fill({color:'rgba(255,143,0,0.92)'}),
-      stroke:new ol.style.Stroke({color:'rgba(74,40,0,0.85)',width:0.8})})})});
+      fill:new ol.style.Fill({color:'rgba(255,46,99,0.95)'}),
+      stroke:new ol.style.Stroke({color:'rgba(255,255,255,0.95)',width:1.1})})})});
   layers.push(cellLayer);
   meSource=new ol.source.Vector();                       // 내 위치 — 무엇에도 가려지지 않게 맨 위
   meLayer=new ol.layer.Vector({source:meSource, visible:false,
