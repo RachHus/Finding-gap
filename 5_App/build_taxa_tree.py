@@ -5,6 +5,10 @@
      + 5_App/demo/data/taxatree_sp_<T>.js (과→종 목록, 분류군별 지연 로드 — 계통수에서 과를 눌러 펼칠 때만)
 입력: 7_MCP/data/fg_mcp.sqlite (species.order_la/family_la, species_region.maxyear)
 
+KTSN이 정명으로 인정한 아종은 속한 종으로 접지 않고 자기 계급 그대로 잎에 놓는다 — 표범
+Panthera pardus orientalis 처럼 보호 등급이 아종에 붙는 경우가 있어, 종으로 접으면 그 등급이
+어디에 걸린 것인지 사라진다. 아종 잎에는 튜플 5번째 자리에 1을 실어 화면이 계급을 밝힐 수 있게 한다.
+
 taxon_group(9, 서비스가 이미 쓰는 개념) → order_la → family_la 3단 계층에 각 노드의
 종수·발견/휴면/미발견 건수를 매긴다. class_la(문·강)는 안 씀 — taxon_group이 이미
 그 역할을 서비스 어휘로 하고 있어 중복. 발견 상태 계산은 finding_gap_mcp/tools.py의
@@ -59,12 +63,13 @@ def build():
 
     STATE_CODE = {"found": "f", "dormant": "d", "none": "n"}
     tree = {}
-    sp_by_group = {}                           # group -> "order|family" -> [[ktsn, korean_name, code, genus_la], ...]
-    n_species = n_orders = n_families = 0
+    sp_by_group = {}                           # group -> "order|family" -> [[ktsn, korean_name, code, genus_la, 아종이면 1], ...]
+    n_species = n_subspecies = n_orders = n_families = 0
     seen_orders, seen_families, seen_genera = set(), set(), set()
     seen_order_genus, seen_family_genus = set(), set()
-    for ktsn, korean_name, group, order_la, family_la, genus_la in con.execute(
-            "select ktsn, korean_name, taxon_group, order_la, family_la, genus_la from species where rank='종'"):
+    for ktsn, korean_name, group, order_la, family_la, genus_la, rank in con.execute(
+            "select ktsn, korean_name, taxon_group, order_la, family_la, genus_la, rank "
+            "from species where rank in ('종', '아종')"):
         order_la = (order_la or "").strip() or "(미분류)"
         family_la = (family_la or "").strip() or "(미분류)"
         genus_la = (genus_la or "").strip() or "(미분류)"
@@ -83,10 +88,13 @@ def build():
         # 그룹은 여전히 이 종 목록(genus_la)에서 브라우저가 즉석에서 묶는다. 다만 "이 목/과 아래
         # 속이 몇 개인지" 개수(genus_n)만은 분류군·목·과 세 단계 모두 미리 세어 둔다 — 계통도를
         # 드릴다운할 때마다(종 목록이 아직 지연 로드되기 전에도) 바로 보여줘야 해서.
-        sp_by_group.setdefault(group, {}).setdefault(f"{order_la}|{family_la}", []).append(
-            [ktsn, korean_name or "", STATE_CODE[st], genus_la])
+        row = [ktsn, korean_name or "", STATE_CODE[st], genus_la]
+        if rank == "아종":
+            row.append(1)
+        sp_by_group.setdefault(group, {}).setdefault(f"{order_la}|{family_la}", []).append(row)
 
         n_species += 1
+        n_subspecies += (rank == "아종")
         seen_orders.add((group, order_la))
         seen_families.add((group, order_la, family_la))
         seen_genera.add((group, genus_la))
@@ -118,7 +126,8 @@ def build():
                    encoding="utf-8")
     kb = OUT.stat().st_size / 1024
     n_genera = len(seen_genera)
-    print(f"생성 {OUT.relative_to(BASE)} · 분류군 {len(tree)} · 목 {n_orders} · 과 {n_families} · 속 {n_genera} · 종 {n_species} · {kb:.1f} KB")
+    print(f"생성 {OUT.relative_to(BASE)} · 분류군 {len(tree)} · 목 {n_orders} · 과 {n_families} · 속 {n_genera} · "
+          f"잎 {n_species}(아종 {n_subspecies}) · {kb:.1f} KB")
 
     OUT_SP_DIR.mkdir(parents=True, exist_ok=True)
     for g, by_key in sorted(sp_by_group.items()):
@@ -128,7 +137,8 @@ def build():
             + json.dumps(by_key, ensure_ascii=False, separators=(",", ":")) + ";\n",
             encoding="utf-8")
         n_sp = sum(len(v) for v in by_key.values())
-        print(f"  taxatree_sp_{_txfile(g)}.js: 과 {len(by_key)} · 종 {n_sp} · {p.stat().st_size/1024:.1f} KB")
+        n_sub = sum(1 for v in by_key.values() for r in v if len(r) > 4)
+        print(f"  taxatree_sp_{_txfile(g)}.js: 과 {len(by_key)} · 잎 {n_sp}(아종 {n_sub}) · {p.stat().st_size/1024:.1f} KB")
 
 
 if __name__ == "__main__":

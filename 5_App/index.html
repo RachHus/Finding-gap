@@ -960,7 +960,7 @@
     <div class="dashpanel">
       <h3>분류 체계도 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이 분류군의 목→과→속→종 분류 체계를 나무로 그립니다. 웨지가 클수록 그 무리의 종수가 많다는 뜻이고, 색이 붉을수록 조사자료에 아직 기록이 없는 비율(발견공백)이 높다는 뜻입니다. 웨지를 누르면 그 하위 분류로 들어갑니다 — 왼쪽 경로를 눌러 이전 단계로 돌아갈 수 있습니다.">?</button></h3>
       <div class="ttsearch">
-        <input type="search" id="taxaSearchInput" placeholder="과·속·종 이름으로 찾기 (예: Cyprinidae)" autocomplete="off" aria-label="분류군 내 검색">
+        <input type="search" id="taxaSearchInput" placeholder="목·과·속·종 이름으로 찾기 (한글·학명, 예: 잉어과 · Cyprinidae)" autocomplete="off" aria-label="분류군 내 검색">
         <div class="sresults ttsearch-results" id="taxaSearchResults" style="display:none"></div>
       </div>
       <div id="taxaTreeHost"></div>
@@ -1216,6 +1216,7 @@
   .ttlabels text{font-size:10px;fill:#fff;font-weight:600;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:2.4px;stroke-linejoin:round}
   .ttfocus circle{stroke:var(--ink);stroke-width:1.6}
   .ttfocus text{font-size:11px;fill:var(--ink);pointer-events:none;text-anchor:middle}
+  .ttfocus text.la{font-size:9.5px;fill:var(--muted);font-style:italic}
   .ttfocus.clickable{cursor:pointer}
   .ttfocus.clickable:hover circle{stroke-width:2.6}
   .ttoverview{border-left:1px solid var(--line);padding-left:16px}
@@ -1225,6 +1226,15 @@
   .ttsearch input:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
   .ttsearch-results{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;max-height:280px}
   .ttsearch-results .r .tg{margin-left:auto;color:var(--muted);font-size:11px}
+  .ttsearch-results .r .nm .tt-la{margin-left:5px;font-size:11.5px}
+  /* 학명은 한글 이름 옆에 항상 같이 둔다. 속·종은 학명을 기울여 쓰는 표기 관례를 따르고(.it),
+     목·과는 바로 세워 쓴다. */
+  .tt-la{color:var(--muted);font-weight:400}
+  .tt-la.it{font-style:italic}
+  .ttcrumb .tt-nm{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+  .ttcrumb .tt-nm .tt-la{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ttcrumb.on .tt-la{color:rgba(255,255,255,.82)}
+  .ttalbum-card .tt-cap .tt-la{display:block;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   @media(max-width:880px){ .ttlayout{grid-template-columns:1fr} .ttcrumbs{flex-direction:row;flex-wrap:wrap}
     .ttoverview{border-left:none;border-top:1px solid var(--line);padding-left:0;padding-top:12px} }
   @media(max-width:880px){ .rpt-overlay{padding:0;align-items:flex-end} .rpt-modal{max-width:none;max-height:94vh;border-radius:14px 14px 0 0} }
@@ -1391,6 +1401,7 @@ function ensureTaxonomy(cb){
     document.head.appendChild(s);
   }
 }
+window.fgEnsureTaxonomy=ensureTaxonomy;               // 분류 체계도(module 스코프)에서도 같은 자산을 쓴다
 function buildTaxonIndex(){
   const co=TAXTREE.co||{}, of=TAXTREE.of||{}, fg=TAXTREE.fg||{};
   const uniq=(keys,vals)=>[...new Set(keys.concat(...vals))];
@@ -4897,6 +4908,30 @@ const STATE_COLOR={f:'#015543', d:'#9a7b2f', n:'#b5482f'};
 const STATE_LABEL={f:'발견', d:'휴면', n:'미발견'};
 const RANK_LABEL={group:'분류군', order:'목', family:'과', genus:'속', species:'종'};
 
+// ── 이름 — 화면에는 한글과 학명을 함께 내보낸다. 목·과·속의 한글명은 taxon_ko.js(라틴명→한글 룩업,
+// 지연 로드), 종·아종의 학명은 화면 전체가 이미 쓰는 종 인덱스(window.__SPIDX__)에서 ktsn 으로 꺼낸다.
+// 둘 중 하나만 있으면 있는 쪽만 쓴다 — 한글명이 없는 목·과가 아직 남아 있다.
+const TAXON_KO_KEY={order:'ord', family:'fam', genus:'gen'};
+function koOf(rank, la){
+  const dict=(window.__TAXON_KO__||{})[TAXON_KO_KEY[rank]];
+  const ko=dict&&dict[la];
+  return ko&&ko!==la ? ko : '';
+}
+let _sciSrc=null, _sciMap=null;
+function sciOf(ktsn){
+  const src=window.__SPIDX__||[];
+  if(_sciSrc!==src){ _sciSrc=src; _sciMap=new Map(src.map(sp=>[sp.k, sp.s||''])); }
+  return _sciMap.get(ktsn)||'';
+}
+function nodeNames(rank, key){ return {ko:koOf(rank,key), la:key}; }
+function spNames(sp){ return {ko:sp[1]||'', la:sciOf(sp[0])}; }
+function bothNames(nm){ return nm.ko&&nm.la ? `${nm.ko} ${nm.la}` : (nm.ko||nm.la||''); }
+// 학명을 기울여 쓰는 표기 관례는 속 이하에만 적용된다.
+const LA_ITALIC={genus:1, species:1};
+function laHTML(rank, nm, sep){ return nm.ko&&nm.la ? `${sep||''}<span class="tt-la${LA_ITALIC[rank]?' it':''}">${esc(nm.la)}</span>` : ''; }
+// KTSN이 정명으로 인정한 아종은 종과 같은 잎에 놓이므로, 어느 계급인지는 이름 옆에 밝힌다.
+const spRankLabel=sp=>sp[4]?'아종':'종';
+
 // ── 웨지 각도 배분: 종수에 비례하되, 항목마다 최소폭을 보장한다(1종짜리가 1000종짜리 옆에서 안 사라지게).
 // 최소폭 예약 총합이 전체 각도의 60%를 넘지 못하게 캡을 둬서, n이 아무리 커져도(실측 목 259개까지 확인)
 // 절대 원을 넘치지 않는다 — n이 아주 크면 캡이 걸려 자동으로 최소폭이 줄어드는 방식.
@@ -4945,12 +4980,15 @@ function ringRadii(childRank, counts, focusR){
 // 라벨 — 실제 캔버스로 글자 폭을 재서, 웨지 호 길이에 맞으면 그대로/줄임표/그마저 안 되면 생략(호버·클릭으로 대체).
 const _mctx=document.createElement('canvas').getContext('2d');
 const BODY_FONT=`'Pretendard Variable',system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif`;
-function fitLabel(str, fontPx, arcLenPx){
+// 후보를 넣고 싶은 순서대로(한글+학명 → 한글 → 학명) 넘기면 웨지에 들어가는 첫 후보를 쓴다.
+function fitLabel(cands, fontPx, arcLenPx){
   _mctx.font=`${fontPx}px ${BODY_FONT}`;
   const budget=arcLenPx*0.86;
-  if(_mctx.measureText(str).width<=budget) return str;
-  if(budget<14) return null;
-  for(let n=str.length-1;n>=1;n--){ const cand=str.slice(0,n)+'…'; if(_mctx.measureText(cand).width<=budget) return cand; }
+  const list=(Array.isArray(cands)?cands:[cands]).filter(Boolean);
+  for(const str of list){ if(_mctx.measureText(str).width<=budget) return str; }
+  if(budget<14 || !list.length) return null;
+  const short=list.reduce((a,b)=>_mctx.measureText(b).width<_mctx.measureText(a).width?b:a);
+  for(let n=short.length-1;n>=1;n--){ const cand=short.slice(0,n)+'…'; if(_mctx.measureText(cand).width<=budget) return cand; }
   return null;
 }
 
@@ -5071,11 +5109,16 @@ function renderTaxaTree(group, hostId, infoId){
     return null;
   }
 
+  // path 원소의 표시 이름 — 분류군은 서비스 어휘(한글)뿐이고, 목·과·속은 한글명과 라틴명을 함께 쓴다.
+  function entryNames(p){ return p.rank==='group' ? {ko:p.label, la:''} : nodeNames(p.rank, p.key); }
+
   function renderCrumbs(){
     crumbHost.innerHTML=path.map((p,i)=>{
       const total=p.stats.n||0, pct=total?p.stats.none/total:0, cur=i===path.length-1;
+      const nm=entryNames(p);
       return `<button type="button" class="ttcrumb${cur?' on':''}" data-i="${i}"${cur?' disabled':''}>`+
-        `<i class="dot" style="background:${gapColor(pct)}"></i>${esc(p.label)}</button>`;
+        `<i class="dot" style="background:${gapColor(pct)}"></i>`+
+        `<span class="tt-nm"><span>${esc(nm.ko||nm.la)}</span>${laHTML(p.rank,nm)}</span></button>`;
     }).join('');
     crumbHost.querySelectorAll('.ttcrumb:not(.on)').forEach(b=>
       b.addEventListener('click',()=>{ path.length=+b.dataset.i+1; renderFocus(); }));
@@ -5105,7 +5148,8 @@ function renderTaxaTree(group, hostId, infoId){
       el.style.setProperty('--nx',nx.toFixed(3)); el.style.setProperty('--ny',ny.toFixed(3));
       const [mcx,mcy]=pointRadial(mid,(rI_o+rO_o)/2);
       el.setAttribute('data-cx',mcx.toFixed(2)); el.setAttribute('data-cy',mcy.toFixed(2));
-      const title=document.createElementNS(SVGNS,'title'); title.textContent=`${oname} · ${nf2(onode.n)}종`; el.appendChild(title);
+      const title=document.createElementNS(SVGNS,'title');
+      title.textContent=`${bothNames(nodeNames('order',oname))} · ${nf2(onode.n)}종`; el.appendChild(title);
       el.addEventListener('click',()=>{ path=[path[0], {rank:'order', key:oname, label:oname, stats:onode}]; renderFocus(); });
       orderLayer.appendChild(el);
 
@@ -5119,7 +5163,8 @@ function renderTaxaTree(group, hostId, infoId){
         fel.classList.add('ttwedge');
         const fmid=(fa0+fa1)/2, [fnx,fny]=pointRadial(fmid,1);
         fel.style.setProperty('--nx',fnx.toFixed(3)); fel.style.setProperty('--ny',fny.toFixed(3));
-        const ftitle=document.createElementNS(SVGNS,'title'); ftitle.textContent=`${fname} · ${nf2(fnode.n)}종`; fel.appendChild(ftitle);
+        const ftitle=document.createElementNS(SVGNS,'title');
+        ftitle.textContent=`${bothNames(nodeNames('family',fname))} · ${nf2(fnode.n)}종`; fel.appendChild(ftitle);
         famLayer.appendChild(fel);
       });
     });
@@ -5140,7 +5185,8 @@ function renderTaxaTree(group, hostId, infoId){
         below=[`속 ${nf2(entry.stats.genus_n||0)}`];
       }
       const belowHTML=below.length? below.join(' · ')+' · ' : '';
-      info.innerHTML=`<b>${esc(entry.label)}</b>${rl?`(${rl})`:''} — ${belowHTML}총 ${nf2(entry.stats.n)}종 · `+
+      const enm=entryNames(entry);
+      info.innerHTML=`<b>${esc(enm.ko||enm.la)}</b>${laHTML(entry.rank,enm,' ')}${rl?`(${rl})`:''} — ${belowHTML}총 ${nf2(entry.stats.n)}종 · `+
         `<span style="color:#015543">발견 ${nf2(entry.stats.found)}</span> · <span style="color:#9a7b2f">휴면 ${nf2(entry.stats.dormant)}</span> · `+
         `<span style="color:#b5482f">미발견 ${nf2(entry.stats.none)}</span>`;
     }
@@ -5205,15 +5251,22 @@ function renderTaxaTree(group, hostId, infoId){
     const fTotal=entry.stats.n||0, fPct=fTotal?entry.stats.none/fTotal:0;
     const fc=document.createElementNS(SVGNS,'circle');
     fc.setAttribute('r',fr); fc.setAttribute('fill',gapColor(fPct));
+    const fnm=entryNames(entry);
     const ftitle=document.createElementNS(SVGNS,'title');
-    ftitle.textContent=`${entry.label} · ${nf2(fTotal)}종 · 발견 ${nf2(entry.stats.found)}·휴면 ${nf2(entry.stats.dormant)}·미발견 ${nf2(entry.stats.none)}`+
+    ftitle.textContent=`${bothNames(fnm)} · ${nf2(fTotal)}종 · 발견 ${nf2(entry.stats.found)}·휴면 ${nf2(entry.stats.dormant)}·미발견 ${nf2(entry.stats.none)}`+
       (path.length>1? ' · 눌러서 상위 분류로 이동':'');
     fc.appendChild(ftitle);
     focusLayer.appendChild(fc);
     const flabel=document.createElementNS(SVGNS,'text');
     flabel.setAttribute('y', fr+13);
-    flabel.textContent=entry.label;
+    flabel.textContent=fnm.ko||fnm.la;
     focusLayer.appendChild(flabel);
+    if(fnm.ko&&fnm.la){                                  // 한글 아래 학명 한 줄
+      const fla=document.createElementNS(SVGNS,'text');
+      fla.setAttribute('y', fr+25); fla.setAttribute('class','la');
+      fla.textContent=fnm.la;
+      focusLayer.appendChild(fla);
+    }
     // 가운데(초점)를 눌러 위로도 갈 수 있게 — 자식 웨지를 눌러 내려가는 것의 반대 동작.
     if(path.length>1){
       focusLayer.classList.add('clickable');
@@ -5225,7 +5278,7 @@ function renderTaxaTree(group, hostId, infoId){
     function selectChild(key, val){
       if(childRank==='species'){
         if(!info) return;
-        info.innerHTML=`<b>${esc(val[1])}</b>(종) — <span style="color:${STATE_COLOR[val[2]]||'#333'}">${STATE_LABEL[val[2]]||''}</span>`;
+        info.innerHTML=speciesInfoHTML(val);
       } else if(childRank==='family'){
         if(info) info.textContent='속 정보를 불러오는 중…';
         loadTaxaTreeSp(group, ()=>{
@@ -5256,9 +5309,12 @@ function renderTaxaTree(group, hostId, infoId){
       const angleSpans=wedgeAngles(childRank, counts, 2*Math.PI, ringRotation);
       const colorOf = childRank==='species' ? val=>STATE_COLOR[val[2]]||'#8a9a90'
         : val=>{ const st=statsOf(val); return gapColor(st.n? st.none/st.n : 0); };
-      const titleOf = childRank==='species' ? (key,val)=>`${val[1]} · ${STATE_LABEL[val[2]]||''}`
-        : (key,val)=>{ const st=statsOf(val); return `${key} · ${nf2(st.n)}종`; };
-      const labelText = childRank==='species' ? (key,val)=>val[1] : (key)=>key;
+      const namesOf = childRank==='species' ? (key,val)=>spNames(val) : (key)=>nodeNames(childRank,key);
+      const titleOf = childRank==='species'
+        ? (key,val)=>`${bothNames(namesOf(key,val))} · ${spRankLabel(val)} · ${STATE_LABEL[val[2]]||''}`
+        : (key,val)=>{ const st=statsOf(val); return `${bothNames(namesOf(key,val))} · ${nf2(st.n)}종`; };
+      // 웨지 폭이 좁으면 한글만, 한글이 없으면 학명만 — 넣을 수 있는 만큼 넣는다(콜아웃엔 늘 둘 다).
+      const labelText = (key,val)=>{ const nm=namesOf(key,val); return [bothNames(nm), nm.ko, nm.la]; };
       const placed=drawWedgeRing(ringLayer, labelLayer, items, angleSpans, rI, rO, colorOf, titleOf, true, labelText, showCallout, hideCallout, photoOf);
       placed.forEach(({key,val,el})=>{
         el.classList.add('clickable');
@@ -5274,9 +5330,10 @@ function renderTaxaTree(group, hostId, infoId){
       const cards=[];
       for(const [key,val] of items){
         const photo=photoOf(key,val); if(!photo) continue;
-        const name = childRank==='species'? val[1] : key;
-        const sub = childRank==='species'? (STATE_LABEL[val[2]]||'') : `${nf2(statsOf(val).n)}종`;
-        cards.push({photo, name, sub, key, val});
+        const nm = childRank==='species'? spNames(val) : nodeNames(childRank,key);
+        const sub = childRank==='species'? [spRankLabel(val), STATE_LABEL[val[2]]].filter(Boolean).join(' · ')
+          : `${nf2(statsOf(val).n)}종`;
+        cards.push({photo, nm, sub, key, val});
       }
       if(!cards.length){ host.innerHTML=''; return; }
       host.innerHTML=`<h4>사진으로 보기 <span class="muted2">(${nf2(cards.length)}/${nf2(items.length)})</span></h4><div class="ttalbum-grid"></div>`;
@@ -5286,7 +5343,7 @@ function renderTaxaTree(group, hostId, infoId){
         btn.type='button'; btn.className='ttalbum-card';
         const cred=esc(['© '+(c.photo.by||'국립생물자원관'), c.photo.lic].filter(Boolean).join(' · '));
         btn.innerHTML=`<img src="${esc(c.photo.url)}" alt="" loading="lazy" title="${cred}" onerror="this.closest('.ttalbum-card').remove()">`+
-          `<div class="tt-cap"><b>${esc(c.name)}</b><span>${esc(c.sub)}</span></div>`;
+          `<div class="tt-cap"><b>${esc(c.nm.ko||c.nm.la)}</b>${laHTML(childRank,c.nm)}<span>${esc(c.sub)}</span></div>`;
         btn.addEventListener('click', ()=>selectChild(c.key,c.val));
         grid.appendChild(btn);
       });
@@ -5360,17 +5417,22 @@ function renderTaxaTree(group, hostId, infoId){
   // 분류군을 고르는 즉시 그 파일을 미리 당겨 오므로(과를 눌러야만 불러오던 것에서 바뀜), 검색창은 그때부터
   // 속·종까지 바로 찾을 수 있다 — 로드 전엔 목·과만, 끝나면 자동으로 다시 지어진다.
   let searchIndex=[];
+  // 한글 이름과 학명을 각각 따로 키로 둔다 — 하나로 이어 붙이면 학명으로 찾을 때 늘 "앞에서 맞는" 쪽에
+  // 밀려 뒤로 간다. 어느 쪽으로 쳐도 앞머리가 맞으면 위로 올라온다.
+  function idxRow(rank, nm, path, sp){
+    return {rank, ko:nm.ko, la:nm.la, keys:[nm.ko, nm.la].filter(Boolean).map(t=>t.toLowerCase()), path, sp};
+  }
   function buildSearchIndex(){
     const idx=[];
     const orderEntries=Object.entries(g.orders).sort((a,b)=>a[0].localeCompare(b[0]));
     for(const [oname,onode] of orderEntries){
-      idx.push({rank:'order', label:oname, searchKey:oname.toLowerCase(),
-        path:[{rank:'order',key:oname,label:oname,stats:onode}]});
+      idx.push(idxRow('order', nodeNames('order',oname),
+        [{rank:'order',key:oname,label:oname,stats:onode}]));
       const famEntries=Object.entries(onode.families).sort((a,b)=>a[0].localeCompare(b[0]));
       for(const [fname,fnode] of famEntries){
-        idx.push({rank:'family', label:fname, searchKey:fname.toLowerCase(),
-          path:[{rank:'order',key:oname,label:oname,stats:onode},
-                {rank:'family',key:fname,label:fname,stats:fnode,order:oname}]});
+        idx.push(idxRow('family', nodeNames('family',fname),
+          [{rank:'order',key:oname,label:oname,stats:onode},
+           {rank:'family',key:fname,label:fname,stats:fnode,order:oname}]));
       }
     }
     const spByGroup=(window.__TAXATREE_SP__||{})[group];
@@ -5386,27 +5448,31 @@ function renderTaxaTree(group, hostId, infoId){
           const gpath=[{rank:'order',key:oname,label:oname,stats:onode},
                        {rank:'family',key:fname,label:fname,stats:fnode,order:oname},
                        {rank:'genus',key:gname,label:gname,stats:genusStatsOf(list),list}];
-          idx.push({rank:'genus', label:gname, searchKey:gname.toLowerCase(), path:gpath});
-          for(const s of list){
-            // 종 튜플엔 학명이 없다([ktsn,한글명,상태코드,속명]) — 한글명 + 부모 속 라틴명으로 찾는다.
-            idx.push({rank:'species', label:s[1], searchKey:(s[1]+' '+gname).toLowerCase(), path:gpath, sp:s});
-          }
+          idx.push(idxRow('genus', nodeNames('genus',gname), gpath));
+          for(const s of list) idx.push(idxRow('species', spNames(s), gpath, s));
         }
       }
     }
     searchIndex=idx;
   }
+  function speciesInfoHTML(sp){
+    const nm=spNames(sp);
+    return `<b>${esc(nm.ko||nm.la)}</b>${laHTML('species',nm,' ')}(${spRankLabel(sp)}) — `+
+      `<span style="color:${STATE_COLOR[sp[2]]||'#333'}">${STATE_LABEL[sp[2]]||''}</span>`;
+  }
   function jumpToSearchResult(r){
     path=[path[0], ...r.path];
     renderFocus();
-    if(r.rank==='species' && info){
-      const s=r.sp;
-      info.innerHTML=`<b>${esc(s[1])}</b>(종) — <span style="color:${STATE_COLOR[s[2]]||'#333'}">${STATE_LABEL[s[2]]||''}</span>`;
-    }
+    if(r.rank==='species' && info) info.innerHTML=speciesInfoHTML(r.sp);
   }
 
   renderFocus();
   buildSearchIndex();
+  // 목·과·속의 한글명은 taxon_ko.js 에 있다 — 도착하면 이름을 붙여 한 번 다시 그린다(이미 있으면 그대로).
+  if(window.fgEnsureTaxonomy){
+    const koReady=!!window.__TAXON_KO__;
+    window.fgEnsureTaxonomy(()=>{ if(!koReady){ renderFocus(); buildSearchIndex(); } });
+  }
   // 앨범(대표 사진)은 목·과 단계에서 taxatree_sp_<T>.js(과별 종 목록)와 rep_<T>.js(사진) 둘 다 있어야
   // 채워진다 — 서로 다른 두 비동기 로드라 어느 쪽이 늦게 와도 그 콜백에서 다시 그려 줘야 한다(하나만
   // 걸어 두면 나머지 하나가 늦게 도착하는 경우 앨범이 계속 비어 있는 경합이 실제로 있었다).
@@ -5426,14 +5492,17 @@ function renderTaxaTree(group, hostId, infoId){
       if(!q){ searchResults.style.display='none'; searchResults.innerHTML=''; return; }
       const starts=[], contains=[];
       for(const row of searchIndex){
-        if(row.searchKey.startsWith(q)){ if(starts.length<8) starts.push(row); }
-        else if(starts.length<8 && row.searchKey.includes(q)){ if(contains.length<8) contains.push(row); }
+        let hit=0;
+        for(const k of row.keys){ if(k.startsWith(q)){ hit=1; break; } if(k.includes(q)) hit=2; }
+        if(hit===1){ if(starts.length<8) starts.push(row); }
+        else if(hit===2){ if(contains.length<8) contains.push(row); }
         if(starts.length>=8 && contains.length>=8) break;
       }
       const results=starts.concat(contains).slice(0,8);
       if(!results.length){ searchResults.innerHTML='<div class="r"><span class="muted2">검색 결과가 없습니다.</span></div>'; searchResults.style.display=''; return; }
       searchResults.innerHTML=results.map((r,i)=>
-        `<div class="r" data-i="${i}"><span class="nm">${esc(r.label)}</span><span class="tg">${RANK_LABEL[r.rank]}</span></div>`).join('');
+        `<div class="r" data-i="${i}"><span class="nm">${esc(r.ko||r.la)}${laHTML(r.rank,r)}</span>`+
+        `<span class="tg">${r.rank==='species'?spRankLabel(r.sp):RANK_LABEL[r.rank]}</span></div>`).join('');
       searchResults.style.display='';
       searchResults.querySelectorAll('[data-i]').forEach(el=>el.addEventListener('click',()=>{
         jumpToSearchResult(results[+el.dataset.i]);
