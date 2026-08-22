@@ -88,7 +88,14 @@ export async function submitReport(r) {
     lat: r.lat,
     lon: r.lon,
     observed_date: r.observed_date,
-    note: (r.note && r.note.trim()) || null
+    note: (r.note && r.note.trim()) || null,
+    /* sigungu·fills_gap 은 원래 "관리자 검토·배치에서 산정"으로 비워 뒀는데 그 배치가 없어서
+       계속 NULL 이었다 — 그 결과 제보 리더보드의 '채운 공백'이 늘 0이고, approved_discoveries()
+       는 sigungu is not null 조건 때문에 한 행도 안 돌려줬다. 제보하는 순간 브라우저가 두 값을
+       다 알고 있으므로(시군구 경계는 지도에 이미 떠 있고, 발견 상태는 species_state 자산에 있다)
+       여기서 실어 보낸다. 값은 호출자가 계산해 넘긴다 — 이 모듈은 지도·자산을 모르기 때문. */
+    sigungu: (typeof r.sigungu === 'string' && /^\d{5}$/.test(r.sigungu)) ? r.sigungu : null,
+    fills_gap: (typeof r.fills_gap === 'boolean') ? r.fills_gap : null
   });
 }
 // 내 제보 이력(본인 행 — RLS)
@@ -133,6 +140,16 @@ export async function leaderboard(limit = 20) {
   const { data, error } = await sb.rpc('report_leaderboard', { lim: limit });
   if (error) throw error;
   return (data || []).map(r => ({ reporter: r.reporter, reports: Number(r.reports) || 0, gaps: Number(r.gaps_filled) || 0 }));
+}
+/* 승인된 제보를 (종×시군구) 로 익명 집계 — 지역 클럽 리그의 "제보로 더한 점수". RPC 는 예전부터
+   있었는데 sigungu is not null 조건이 걸려 있어, 그 칸을 아무도 채우지 않는 동안은 늘 빈 결과였다
+   (submitReport 참조). 좌표는 안 나온다 — 종·시군구·건수·마지막 연도만. */
+export async function approvedDiscoveries() {
+  if (!sb) return [];
+  const { data, error } = await sb.rpc('approved_discoveries');
+  if (error) throw error;
+  return (data || []).map(r => ({ ktsn: r.ktsn, sigungu: r.sigungu,
+                                  cnt: Number(r.cnt) || 0, last_year: r.last_year }));
 }
 // 리더보드에서 내 줄을 찾기 위한 표시 이름(profiles.display_name) — 본인 행만 RLS 로 보인다.
 export async function myDisplayName() {

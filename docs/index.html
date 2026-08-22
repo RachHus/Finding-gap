@@ -972,20 +972,45 @@
       <a class="btn cta" id="reportCta" href="#report">＋ 발견 제보하기</a>
       <button type="button" class="qtip" aria-label="제보 안내" data-tip="관찰한 종을 위치·근거 URL과 함께 제보해 발견공백을 메웁니다. 로그인이 필요합니다.">?</button>
     </div>
-    <!-- 분류군별 관측 리더보드 — 제보 기반 카드(최근 제보·제보 리더보드·많이 추가된 종)는 사람이 쓰기
-         전까지 비어 있어서 탭이 텅 비어 보였다. 조사자료로 이미 채울 수 있는 것을 앞에 세운다. -->
-    <div class="authcard" id="obsLbCard" style="max-width:none">
-      <h3 style="margin:0 0 12px">분류군별 관측 리더보드 <button type="button" class="qtip" aria-label="설명 보기" data-tip="국내 조사자료에 관측 기록이 가장 많이 쌓인 종입니다. 분류군을 고르면 그 분류군의 상위 종을 보여줍니다. 기록이 많다는 것은 그만큼 자주 마주치거나 조사가 많이 된 종이라는 뜻이고, 반대로 기록이 없는 종이 발견공백입니다.">?</button></h3>
-      <div class="taxatabpick obslbpick" id="obsLbPick"></div>
-      <ol class="wl lblist" id="obsLbList"><li class="muted2">불러오는 중…</li></ol>
+    <!-- 지역 클럽 리그 — 시군구가 클럽, 제보자가 선수. 순위는 사람·지역이 갖고, 아래 현상금 보드는
+         "무엇을 메울 수 있나" 목록 역할만 한다. 리그 표는 조사자료(region_gaps)로 오늘부터 가득 차 있고,
+         승인된 제보(approved_discoveries)가 그 위에 얹힌다 — 제보 기반 카드처럼 텅 비지 않는다. -->
+    <div class="authcard" id="leagueCard" style="max-width:none">
+      <h3 style="margin:0 0 12px">지역 클럽 리그 <button type="button" class="qtip" aria-label="설명 보기" data-tip="시군구를 클럽으로 보고, 그 지역에서 지금까지 밝혀진 종 수로 줄 세운 표입니다. 조사자료로 계산한 값이라 처음부터 채워져 있고, 시민과학 제보가 승인되면 그 지역 점수에 더해집니다. 마이페이지에서 활동지역을 정하면 내 클럽이 강조됩니다.">?</button></h3>
+      <div class="lgbar">
+        <div class="lgseg" id="lgLevel" role="group" aria-label="리그 단위">
+          <button type="button" data-lv="sido" class="on">시도</button>
+          <button type="button" data-lv="sigungu">시군구</button>
+        </div>
+        <select id="lgTaxon" aria-label="분류군"><option value="">전 분류군</option></select>
+        <span class="lgnote muted2" id="lgNote"></span>
+      </div>
+      <ol class="wl lblist lgtbl" id="lgList"><li class="muted2">불러오는 중…</li></ol>
+    </div>
+    <!-- 공백 현상금 — 무엇을 메울 수 있나. 등급으로 줄 세우지 않는다(멸종위기 지정은 분류군 편중이
+         심해 공백 규모와 무관하다) — 등급은 배지로만 달고, 순위가 실제로 존재하는 것은 '무기록 연수'뿐이라
+         재발견(휴면) 칸만 순위를 매긴다. 기록 0건은 전부 동점이라 개수와 검색으로 다룬다.
+         적색목록 RE(지역절멸)는 자동 제외 — 국내에서 이미 사라진 종을 찾아보라고 걸 수는 없다. -->
+    <div class="authcard" id="bountyCard" style="max-width:none">
+      <h3 style="margin:0 0 12px">공백 현상금 <button type="button" class="qtip" aria-label="설명 보기" data-tip="국내 조사자료에서 아직 메워지지 않은 공백입니다. '재발견'은 과거 기록은 있으나 10년 넘게 기록이 끊긴 종이라 무기록 연수로 줄 세울 수 있고, '미기록'은 기록이 한 번도 없는 종이라 서로 우열이 없어 검색으로 찾습니다. 멸종위기·적색목록 등급은 사실 표시일 뿐 순위 기준이 아닙니다. 지역절멸(RE)로 분류된 종은 제외했습니다.">?</button></h3>
+      <div class="taxatabpick gappick" id="bountyPick"></div>
+      <div class="lgbar">
+        <div class="lgseg" id="bountyKind" role="group" aria-label="공백 종류">
+          <button type="button" data-kind="dormant" class="on">재발견</button>
+          <button type="button" data-kind="never">미기록</button>
+        </div>
+        <input type="search" id="bountyQ" placeholder="종 이름·학명 검색" aria-label="종 검색">
+        <span class="lgnote muted2" id="bountyNote"></span>
+      </div>
+      <ol class="wl lblist bntlist" id="bountyList"><li class="muted2">불러오는 중…</li></ol>
+    </div>
+    <div class="authcard" id="lbCard" style="max-width:none">
+      <h3 style="margin:0 0 12px">개인 기여 순위 <button type="button" class="qtip" aria-label="설명 보기" data-tip="공백을 많이 메운 시민과학자입니다 — 익명 집계(개인 정보 없이 합계만). 표시 이름은 마이페이지에서 정할 수 있고, 정하지 않으면 '익명'으로 집계됩니다.">?</button></h3>
+      <ol class="wl lblist" id="lbList"><li class="muted2">불러오는 중…</li></ol>
     </div>
     <div class="authcard" id="feedCard" style="max-width:none">
       <h3 style="margin:0 0 12px">최근 제보 <button type="button" class="qtip" aria-label="설명 보기" data-tip="시민과학자가 올린 최근 관찰 제보입니다 — 검토를 거쳐 재발견 후보로 반영됩니다. 정확한 위치는 공개되지 않습니다.">?</button></h3>
       <ol class="wl feedlist" id="feedList"><li class="muted2">불러오는 중…</li></ol>
-    </div>
-    <div class="authcard" id="lbCard" style="max-width:none">
-      <h3 style="margin:0 0 12px">제보 리더보드 <button type="button" class="qtip" aria-label="설명 보기" data-tip="발견공백을 많이 메운 시민과학자입니다 — 익명 집계(개인 정보 없이 합계만).">?</button></h3>
-      <ol class="wl lblist" id="lbList"><li class="muted2">불러오는 중…</li></ol>
     </div>
     <div class="authcard" id="trendCard" style="max-width:none" hidden>
       <h3 style="margin:0 0 12px">관심 종 리더보드 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이용자들이 관심 종(☆)으로 가장 많이 추가한 종입니다 — 종별 익명 집계(개인 정보 없이 합계만). 위의 관측 리더보드는 조사자료에 쌓인 기록 수이고, 이쪽은 사람들이 무엇을 눈여겨보는지입니다.">?</button></h3>
@@ -1121,11 +1146,36 @@
   .btn.cta.sm{padding:7px 12px;font-size:13px}
   .feedlist .fmeta{color:var(--muted);font-size:12px}
   .feedlist .fnote{flex-basis:100%;color:#4a4f4c;font-size:13px;margin-top:2px;background:#f6f9f7;border-radius:6px;padding:6px 9px}
-  /* 관측 리더보드의 분류군 고르개 — 분류 체계도 탭의 타일(.taxatabpick)을 그대로 쓰되, 카드 안이라
+  /* 현상금 보드의 분류군 고르개 — 분류 체계도 탭의 타일(.taxatabpick)을 그대로 쓰되, 카드 안이라
      타일을 작게 줄인다(그 탭은 화면 전체를 쓰는 진입점이고 여기는 카드 한 칸이다). */
-  .obslbpick{grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:7px;margin:0 0 12px}
-  .obslbpick button{min-height:70px;gap:5px;padding:8px 5px;font-size:11px}
-  .obslbpick button .chip{width:26px;height:26px;border-radius:8px}
+  .gappick{grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:7px;margin:0 0 12px}
+  .gappick button{min-height:70px;gap:5px;padding:8px 5px;font-size:11px}
+  .gappick button .chip{width:26px;height:26px;border-radius:8px}
+  /* 카드 안 조작 줄(리그 단위·분류군·공백 종류·검색) — 좁아지면 줄바꿈되고 설명은 맨 뒤로 밀린다 */
+  .lgbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  .lgbar select,.lgbar input[type=search]{font:inherit;font-size:12px;padding:6px 9px;border:1px solid var(--line);
+    border-radius:8px;background:var(--card);color:var(--ink);min-height:32px}
+  .lgbar input[type=search]{min-width:150px}
+  .lgbar .lgnote{font-size:12px;margin-left:auto;text-align:right}
+  .lgseg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
+  .lgseg button{font:inherit;font-size:12px;font-weight:600;padding:6px 12px;min-height:32px;border:0;
+    background:var(--card);color:var(--muted);cursor:pointer}
+  .lgseg button+button{border-left:1px solid var(--line)}
+  .lgseg button.on{background:var(--accent);color:#fff}
+  /* 순위표에서 내 줄(내 클럽·나)은 배경으로 찾아낼 수 있게 한다 — 리그 표와 개인 기여 순위 공용 */
+  .lblist li.me{background:#f2f8f5;border-color:#bcd9cd}
+  .lblist li.me .nm{color:#015543}
+  .lgtbl .club{color:var(--muted);font-size:12px}
+  .lgtbl .add{color:#2f7d5f;font-size:12px;font-weight:600;white-space:nowrap}
+  .lblist .gbadge{font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 7px;white-space:nowrap;flex:none}
+  /* 현상금 행: 무기록 연수를 숫자 자리에 세우고, 등급은 배지로만 */
+  .bntlist .yrs{margin-left:auto;font-weight:700;color:#96301A;white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums}
+  .bntlist .gbadge{font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 7px;white-space:nowrap;flex:none}
+  .bntlist .act{border:1px solid var(--line);background:var(--card);color:var(--accent);font:inherit;font-size:11.5px;
+    font-weight:600;border-radius:7px;padding:3px 9px;cursor:pointer;white-space:nowrap}
+  .bntlist .act:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+  /* 미기록 칸에는 오른쪽 숫자가 없어(모든 행이 같은 값) 제보 단추가 행의 끝이 된다 — 그때만 오른쪽으로 붙인다 */
+  .bntlist .act:last-child{margin-left:auto}
   .lblist li{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .lblist .rank{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:#eef3f1;color:#015543;border-radius:50%;font-size:12px;font-weight:700;flex:none}
   .lblist .cnt{margin-left:auto;font-weight:600;color:#015543;white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums}
@@ -1359,7 +1409,8 @@
 <script src="demo/data/obs_meta.js"></script>
 <script src="demo/data/species_interest.js"></script>
 <script src="demo/data/env_meta.js"></script>
-<script src="demo/data/species_obs.js" onerror="window.__SPOBS__=window.__SPOBS__||{}"></script>
+<!-- species_obs.js(종별 관측 합계, 354KB)는 미리 안 받는다 — 시민과학 탭 현상금 보드의 "과거 N건"
+     주석에만 쓰이므로 그 카드를 그릴 때 지연 로드한다(renderBounty). -->
 <script src="demo/data/region_gaps.js" onerror="window.__REGGAP__=window.__REGGAP__||null"></script>
 <script src="demo/data/taxa_tree.js" onerror="window.__TAXATREE__=window.__TAXATREE__||null"></script>
 <script>
@@ -2514,6 +2565,19 @@ function setRegLevel(l){
 /* 내 주변: 현재 위치(geolocation) → 포함 시군구 폴리곤 판정 → 해당 시군구 미발견(공백) 표출.
    위치는 클라이언트에서만 사용(전송·저장 없음), 기존 시군구 레벨/선택/확대 기계 재사용. */
 function nearbyMsg(t,ok){ if(t) toast(t); if(locateBtnEl) locateBtnEl.classList.toggle('on',!!ok); }
+/* 좌표 → 포함 시군구 코드. '내 주변'과 제보 등록이 같은 판정을 쓴다 — 제보의 sigungu 칸은
+   원래 "관리자 검토·배치에서 산정"으로 비워 뒀는데 그 배치가 없어 계속 NULL 이었다. 시군구
+   경계는 이미 지도에 떠 있으니 제보하는 순간 브라우저가 바로 짚을 수 있다. 경계 밖이면 null. */
+function sggFeatureAt(coord){
+  if(!LAYERS.sigungu) return null;
+  const fs=LAYERS.sigungu.getSource().getFeatures();
+  return fs.length ? (fs.find(f=>{ const g=f.getGeometry(); return g && g.intersectsCoordinate(coord); })||null) : null;
+}
+function sggAtLonLat(lon, lat){
+  const f=sggFeatureAt(ol.proj.fromLonLat([lon, lat]));
+  return f ? (f.get('code')||null) : null;
+}
+window.fgSggAtLonLat=sggAtLonLat;
 function showMeDot(coord){
   if(!meSource||!meLayer) return;
   meSource.clear();
@@ -2529,7 +2593,7 @@ function locateNearby(){
     if(btn) btn.disabled=false;
     const coord=ol.proj.fromLonLat([pos.coords.longitude, pos.coords.latitude]);
     showMeDot(coord);                                       // 경계 밖이어도 위치는 찍어 준다 — 왜 결과가 없는지 보이도록
-    const hit=LAYERS.sigungu.getSource().getFeatures().find(f=>{ const g=f.getGeometry(); return g && g.intersectsCoordinate(coord); });
+    const hit=sggFeatureAt(coord);
     if(!hit){ nearbyMsg('현재 위치가 국내 시군구 경계 밖입니다.'); return; }
     const code=hit.get('code');
     setRegLevel('sigungu');                                 // 시군구 레벨(이미면 no-op)
@@ -3533,6 +3597,10 @@ function switchAxis(ax){
   // 숨김 상태에서는 지도 크기가 0으로 잡히므로, 조사정보로 돌아올 때 다시 계산한다.
   if(ax==='survey' && window.fgMapResize) window.fgMapResize();
   if(ax==='taxa' && !taxaTabInited){ taxaTabInited=true; renderTaxaTab(); }   // 처음 들어올 때만 그린다(비용이 있는 SVG)
+  /* 시민과학 탭도 들어올 때 그린다 — 현상금 보드가 관측 합계 자산(354KB)을 받으므로, 이 탭을 안 여는
+     사람에게 미리 내려보내지 않는다. 실제 함수는 아래 모듈 스크립트에 있고(fgCitizenInit), 모듈이 늦게
+     실행돼 이 호출을 놓쳤을 때를 대비해 눌렸다는 사실만 남긴다. */
+  if(ax==='community'){ window.__fgCitizenSeen=true; if(window.fgCitizenInit) window.fgCitizenInit(); }
 }
 
 /* ── 바로가기 띠(오른쪽 끝) — 세 도구의 입구를 한 자리에 모았다. 새 진입 경로를 만들지 않고 각 도구가
@@ -3661,7 +3729,7 @@ else Promise.all([
 
 <!-- 마이페이지(로그인·알림·활동 지역·관심 종·내 제보) — Supabase 설정(config.js)이 있을 때만 활성, 없으면 정적 안내 유지 -->
 <script type="module">
-import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, adminPendingTaxonRefs, setTaxonRefStatus, myTaxonReferences, submitFeedback, siteFeedback, adminPendingFeedback, setFeedbackStatus, deleteFeedback } from './fg_supabase.js';
+import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, approvedDiscoveries, myDisplayName, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, adminPendingTaxonRefs, setTaxonRefStatus, myTaxonReferences, submitFeedback, siteFeedback, adminPendingFeedback, setFeedbackStatus, deleteFeedback } from './fg_supabase.js';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const view=document.getElementById('view-my');
 const spName=k=>{ const sp=(window.__SPIDX__||[]).find(x=>x.k===k); return sp?{n:sp.n||sp.s,s:sp.s||'',t:sp.t||''}:{n:k,s:'',t:''}; };
@@ -3797,56 +3865,188 @@ async function fbDoSubmit(){
 }
 document.getElementById('fbSubmit')?.addEventListener('click', fbDoSubmit);
 
-/* ── ③ 분류군별 관측 리더보드(정적 자산 __SPOBS__) ──
-   종별 관측 수는 분류군별 관측 자산(obs_<T>.js)에도 있지만 그 파일은 관측 하나하나를 다 실어
-   무겁다(곤충류·관속식물 각 13MB). 리더보드는 종당 합계만 필요하므로 그것만 뽑은 가벼운 자산
-   (species_obs.js, 354KB)을 쓴다 — build_species_obs.py 가 만든다.
-   순위 기준을 관심도(관심도 자산)로 하지 않은 이유: 그 값은 원값이 아니라 분류군·희소도 층 안의
-   백분위라, 상위권이 100 동점으로 몰린다(곤충류 10종·무척추동물 11종이 전부 최고값). 관측 수는
-   정수라 동점이 없고 "가장 많이 관측된 종"이라는 뜻도 분명하다. */
-let obsLbGroup='';
-function renderObsLb(){
-  const pick=document.getElementById('obsLbPick'), host=document.getElementById('obsLbList');
+/* ── ③ 공백 현상금 보드 ──
+   "무엇을 메울 수 있나" 목록. 순위는 사람(개인 기여 순위)·지역(지역 클럽 리그)이 갖고 이 카드는
+   할 일 쪽을 맡는다 — 등급으로 종을 줄 세우지 않는다. 멸종위기 지정은 분류군 편중이 심해
+   (실측: I·II급 277종 중 곤충류 12종 대 관속식물 23종, 실제 공백 규모와 무관) "찾을 가치"의
+   기준으로 쓸 수 없다. 등급은 배지로만 달고, 순위가 실제로 존재하는 것은 무기록 연수뿐이다.
+     · 재발견(dormant) — 과거 기록은 있으나 기준연도보다 오래됐다. 연수로 줄 세운다(2,641종).
+     · 미기록(never)   — 기록이 한 번도 없다. 전부 동점이라 순위 없이 이름순 + 검색(19,648종).
+   적색목록 RE(지역절멸)는 제외 — 국내에서 이미 사라진 종을 찾아보라고 걸 수는 없다. 실측으로
+   호랑이·표범·스라소니·늑대·대륙사슴이 여기 걸리고, 복원 중인 여우(CR)·반달가슴곰(EN)은 남는다. */
+const CUTYEAR=new Date().getFullYear()-10;                  // discState 와 같은 기준(10년)
+/* 등급은 종 목록 자산(species_index.js)에 이미 실려 있다 — sp.g = 멸종위기 등급(I·II), sp.r = 국가
+   적색목록 범주. 따로 자산을 만들 필요가 없다(실측으로 sqlite 와 분포가 정확히 같다: I 67·II 210·RE 17). */
+const _RLLABEL={CR:'위급',EN:'위기',VU:'취약',NT:'준위협',LC:'관심대상',DD:'정보부족',NA:'미적용',RE:'지역절멸'};
+function gapBadges(sp){
+  let h='';
+  if(sp.g) h+=`<span class="gbadge" style="background:#f7e7e2;color:#96301A">멸종위기 ${esc(sp.g)}급</span>`;
+  if(sp.r && sp.r!=='LC' && sp.r!=='NA') h+=`<span class="gbadge" style="background:#f5eede;color:#8a6d1f">적색목록 ${esc(_RLLABEL[sp.r]||sp.r)}</span>`;
+  return h;
+}
+let bountyGroup='', bountyKind='dormant';
+/* 관측 합계 자산(354KB)은 재발견 칸의 "과거 N건" 한 줄에만 쓰인다 — 모든 방문자에게 미리 내려보낼
+   이유가 없어 이 카드를 그릴 때 한 번만 받는다. 받는 동안에도 목록은 그대로 뜨고, 도착하면 다시 그린다. */
+let obsLoading=false;
+function loadSpObs(cb){
+  if(window.__SPOBS__){ cb&&cb(); return; }
+  if(obsLoading) return;
+  obsLoading=true;
+  const s=document.createElement('script');
+  s.src='demo/data/species_obs.js';
+  const done=()=>{ window.__SPOBS__=window.__SPOBS__||{}; cb&&cb(); };
+  s.onload=done; s.onerror=()=>{ console.warn('로드 실패', s.src); done(); };
+  document.head.appendChild(s);
+}
+function bountyRows(group, kind){
+  const MY=(window.__SPSTATE__||{}).maxyear||{};
+  return (window.__SPIDX__||[]).filter(sp=>{
+    if(sp.t!==group) return false;
+    if(sp.r==='RE') return false;                            // 지역절멸 — 찾아보라고 걸 수 없다
+    const y=MY[sp.k];
+    return kind==='never' ? (y===undefined||y===null) : (y!==undefined&&y!==null&&y<CUTYEAR);
+  }).map(sp=>({sp, y:MY[sp.k]}));
+}
+function renderBounty(){
+  const pick=document.getElementById('bountyPick'), host=document.getElementById('bountyList'),
+        note=document.getElementById('bountyNote'), seg=document.getElementById('bountyKind'),
+        qEl=document.getElementById('bountyQ');
   if(!pick||!host) return;
   /* 이 블록은 type="module" 이라 classic 스크립트의 const(SP_BY_TAX·nf 등)가 안 보인다 —
-     window 에 올라가는 것(__SPIDX__·__TAXA__·chipHTML)과 이 모듈 안의 것(spName·discBadge)만 쓴다. */
-  const OB=window.__SPOBS__||{};
+     window 에 올라가는 것(__SPIDX__·__TAXA__·chipHTML)과 이 모듈 안의 것만 쓴다. */
   const all=(window.__TAXA__||[]).filter(t=>t.has_data);
   if(!all.length){ host.innerHTML='<li class="muted2">분류군 정보를 불러오지 못했습니다.</li>'; return; }
-  if(!obsLbGroup || !all.some(t=>t.group===obsLbGroup)) obsLbGroup=all[0].group;
-  pick.innerHTML=all.map(t=>`<button type="button" data-g="${t.group}" class="${t.group===obsLbGroup?'on':''}">`+
+  if(!bountyGroup || !all.some(t=>t.group===bountyGroup)) bountyGroup=all[0].group;
+  pick.innerHTML=all.map(t=>`<button type="button" data-g="${t.group}" class="${t.group===bountyGroup?'on':''}">`+
     `${chipHTML(t.group,17)}<span>${t.kor}</span></button>`).join('');
   pick.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{
-    if(b.dataset.g===obsLbGroup) return;
-    obsLbGroup=b.dataset.g; renderObsLb();
+    if(b.dataset.g===bountyGroup) return;
+    bountyGroup=b.dataset.g; renderBounty();
   });
-  if(!Object.keys(OB).length){ host.innerHTML='<li class="muted2">관측 자산을 불러오지 못했습니다.</li>'; return; }
-  const rows=(window.__SPIDX__||[]).filter(x=>x.t===obsLbGroup)
-    .map(sp=>({sp, c:OB[sp.k]||0})).filter(x=>x.c>0)
-    .sort((a,b)=>b.c-a.c).slice(0,15);
-  if(!rows.length){ host.innerHTML='<li class="muted2">이 분류군에는 아직 관측 기록이 없습니다.</li>'; return; }
-  /* 발견 상태 배지는 안 붙인다 — 관측 수가 1회 이상이라 목록에 오른 종은 정의상 전부 '발견'이다
-     (9개 분류군 135행 전수 확인). 모든 행에 같은 배지가 붙으면 뜻은 없고 눈만 어지럽다. */
-  const top=rows[0].c||1;
-  host.innerHTML=rows.map((x,i)=>
-    `<li><span class="rank">${i+1}</span><span class="nm">${esc(x.sp.n||x.sp.s)}</span> `+
-    `<span class="sci">${esc(x.sp.s||'')}</span>`+
-    `<a class="muted2" href="#" onclick="fgShowSpecies('${x.sp.k}');return false" style="margin-left:8px">지도 →</a>`+
-    `<span class="cnt">${Number(x.c).toLocaleString('ko-KR')}회</span>`+
-    `<span class="lbbar"><i style="--w:${Math.max(2,Math.round(x.c/top*100))}%"></i></span></li>`).join('');
+  if(seg) seg.querySelectorAll('[data-kind]').forEach(b=>{
+    b.classList.toggle('on', b.dataset.kind===bountyKind);
+    b.onclick=()=>{ if(b.dataset.kind===bountyKind) return; bountyKind=b.dataset.kind; renderBounty(); };
+  });
+  const dorm=bountyRows(bountyGroup,'dormant'), never=bountyRows(bountyGroup,'never');
+  if(note) note.textContent=`재발견 ${dorm.length.toLocaleString('ko-KR')}종 · 미기록 ${never.length.toLocaleString('ko-KR')}종`;
+  const q=((qEl&&qEl.value)||'').trim().toLowerCase();
+  let rows=(bountyKind==='never'?never:dorm);
+  if(q) rows=rows.filter(x=>String(x.sp.n||'').toLowerCase().includes(q)||String(x.sp.s||'').toLowerCase().includes(q));
+  rows = bountyKind==='never'
+    ? rows.slice().sort((a,b)=>String(a.sp.n||a.sp.s).localeCompare(String(b.sp.n||b.sp.s),'ko'))
+    : rows.slice().sort((a,b)=>a.y-b.y);                      // 오래된 기록이 위로
+  if(!rows.length){
+    host.innerHTML=`<li class="muted2">${q?'검색 결과가 없습니다.':(bountyKind==='never'
+      ?'이 분류군에는 기록이 한 번도 없는 종이 없습니다 — 공백이 다 메워졌습니다.'
+      :'이 분류군에는 기록이 끊긴 종이 없습니다.')}</li>`;
+    return;
+  }
+  /* 아직 안 받았을 때만 부른다 — 가드 없이 부르면 콜백이 renderBounty 를 다시 불러 무한 재귀가 된다
+     (이미 받은 상태에서는 loadSpObs 가 콜백을 그 자리에서 실행하므로). 도착하면 "과거 N건"이 붙어 다시 그려진다. */
+  if(bountyKind==='dormant' && !window.__SPOBS__) loadSpObs(()=>renderBounty());
+  const shown=rows.slice(0,15), yr=new Date().getFullYear(), OB=window.__SPOBS__||{};
+  host.innerHTML=shown.map((x,i)=>{
+    /* 미기록 칸에는 순위를 안 매긴다 — 전부 동점인데 번호를 붙이면 없는 우열을 만든다. */
+    const head = bountyKind==='never' ? '' : `<span class="rank">${i+1}</span>`;
+    /* 재발견 칸에는 과거 기록 건수를 함께 적는다 — "정말 여기 있던 종인가"를 알려 주는 신호다
+       (관측 수 자산 species_obs.js. 기록이 끊긴 종이라 이 값은 과거 누적이다).
+       미기록 칸에는 오른쪽에 아무것도 안 적는다 — 모든 행이 "기록 0건"이라 칸 이름과 겹치기만 한다. */
+    const past = OB[x.sp.k] ? ` · 과거 ${Number(OB[x.sp.k]).toLocaleString('ko-KR')}건` : '';
+    const tail = bountyKind==='never' ? ''
+      : `<span class="yrs">${yr-x.y}년째 · 마지막 ${x.y}${past}</span>`;
+    return `<li>${head}<span class="nm">${esc(x.sp.n||x.sp.s)}</span> `+
+      `<span class="sci">${esc(x.sp.s||'')}</span>${gapBadges(x.sp)}`+
+      `<a class="muted2" href="#" onclick="fgShowSpecies('${x.sp.k}');return false">지도 →</a>`+
+      `<button type="button" class="act" data-rpt="${x.sp.k}">제보</button>${tail}</li>`;
+  }).join('')+(rows.length>shown.length
+    ? `<li class="muted2">이 조건에 ${rows.length.toLocaleString('ko-KR')}종이 있습니다 — 위 검색으로 찾아 보세요.</li>` : '');
+  host.querySelectorAll('[data-rpt]').forEach(b=>b.onclick=()=>{
+    const sp=(window.__SPIDX__||[]).find(x=>x.k===b.dataset.rpt);
+    if(window.fgReport && window.fgReport.configured) window.fgReport.open(sp||null);
+    else location.hash='#report';
+  });
+}
+document.getElementById('bountyQ')?.addEventListener('input',()=>renderBounty());
+
+/* ── ③-2 지역 클럽 리그 ──
+   시군구·시도를 클럽으로 보고 밝혀진 종 수로 줄 세운다. 바탕은 조사자료(region_gaps.js)라 처음부터
+   가득 차 있고, 그 위에 승인된 제보(approved_discoveries RPC)를 얹어 "제보로 더한 점수"를 따로 보여준다.
+   제보 쪽이 오랫동안 0으로만 나왔던 이유는 자료가 없어서가 아니라 reports.sigungu 가 아무도 채우지
+   않아 그 RPC 가 한 행도 안 돌려줬기 때문이다 — 이제 제보할 때 함께 저장한다(submitReport 참조). */
+let lgLevel='sido', lgTx='', lgAdd=null, myRegs=[];           // myRegs: 마이페이지 활동지역(=내 클럽). 아래 onAuth 에서 채운다.
+function myClubs(){ return myRegs; }
+async function loadLeagueAdds(){
+  if(lgAdd) return lgAdd;
+  lgAdd={sido:{}, sigungu:{}};
+  try{
+    const rows=await approvedDiscoveries();
+    rows.forEach(r=>{ const c=String(r.sigungu||''); if(!/^\d{5}$/.test(c)) return;
+      lgAdd.sigungu[c]=(lgAdd.sigungu[c]||0)+1;
+      const sd=c.slice(0,2); lgAdd.sido[sd]=(lgAdd.sido[sd]||0)+1; });
+  }catch(e){ /* 로그인·설정 없으면 조용히 0 — 리그 표 자체는 조사자료로 뜬다 */ }
+  return lgAdd;
+}
+async function renderLeague(){
+  const host=document.getElementById('lgList'), seg=document.getElementById('lgLevel'),
+        sel=document.getElementById('lgTaxon'), note=document.getElementById('lgNote');
+  if(!host) return;
+  const G=window.__REGGAP__;
+  if(!G){ host.innerHTML='<li class="muted2">지역 자료를 불러오지 못했습니다.</li>'; return; }
+  if(seg) seg.querySelectorAll('[data-lv]').forEach(b=>{
+    b.classList.toggle('on', b.dataset.lv===lgLevel);
+    b.onclick=()=>{ if(b.dataset.lv===lgLevel) return; lgLevel=b.dataset.lv; renderLeague(); };
+  });
+  if(sel && sel.options.length<=1){
+    sel.innerHTML='<option value="">전 분류군</option>'+Object.keys(G.tx||{})
+      .map(c=>`<option value="${c}">${esc(G.tx[c][0])}</option>`).join('');
+    sel.onchange=()=>{ lgTx=sel.value; renderLeague(); };
+  }
+  const add=await loadLeagueAdds();
+  const isSido=lgLevel==='sido';
+  const found=isSido?(G.foundSido||{}):(G.found||{});
+  const sum=o=>lgTx?(o[lgTx]||0):Object.values(o||{}).reduce((a,b)=>a+b,0);
+  const nameOf=c=>isSido?(G.sido||{})[c]:(((G.sg||{})[c]||[])[0]||c);
+  const clubOf=c=>isSido?'':((G.sido||{})[((G.sg||{})[c]||[])[1]]||'');
+  const mine=new Set(myClubs().map(String));
+  const rows=Object.keys(found).map(c=>({c, n:sum(found[c]), a:(add[lgLevel]||{})[c]||0}))
+    .sort((x,y)=>y.n-x.n||nameOf(x.c).localeCompare(nameOf(y.c),'ko'));
+  if(!rows.length){ host.innerHTML='<li class="muted2">지역 자료가 비어 있습니다.</li>'; return; }
+  const txName=lgTx?((G.tx||{})[lgTx]||[''])[0]:'전 분류군';
+  const total=lgTx?((G.tx||{})[lgTx]||[0,0])[1]:Object.values(G.tx||{}).reduce((a,v)=>a+v[1],0);
+  if(note) note.textContent=`${txName} 전국 ${total.toLocaleString('ko-KR')}종 · ${isSido?'시도':'시군구'} ${rows.length}곳`;
+  /* 내 클럽이 15위 밖이면 잘려서 안 보인다 — 상위 15 + 내 클럽 줄을 따로 이어 붙인다(축구 순위표처럼). */
+  const top=rows.slice(0,15);
+  const extra=isSido ? [] : rows.map((r,i)=>({...r,i})).filter(r=>mine.has(r.c) && r.i>=15);
+  const line=(r,i)=>`<li class="${mine.has(r.c)?'me':''}"><span class="rank">${i+1}</span>`+
+    `<span class="nm">${esc(nameOf(r.c))}</span>${clubOf(r.c)?`<span class="club">${esc(clubOf(r.c))}</span>`:''}`+
+    (mine.has(r.c)?'<span class="gbadge" style="background:#e7f1ee;color:#015543">내 클럽</span>':'')+
+    (r.a?`<span class="add">제보 +${r.a}</span>`:'')+
+    `<span class="cnt">${r.n.toLocaleString('ko-KR')}종</span>`+
+    `<span class="lbbar"><i style="--w:${Math.max(2,Math.round(r.n/(rows[0].n||1)*100))}%"></i></span></li>`;
+  host.innerHTML=top.map((r,i)=>line(r,i)).join('')
+    + (extra.length?'<li class="muted2">…</li>'+extra.map(r=>line(r,r.i)).join(''):'')
+    + (mine.size?'':'<li class="muted2">마이페이지에서 활동지역을 정하면 내 클럽이 이 표에서 강조됩니다.</li>');
 }
 
-// ── ④ 제보 리더보드(report_leaderboard RPC) ──
+// ── ④ 개인 기여 순위(report_leaderboard RPC) ──
 async function renderLeaderboard(){
   const host=document.getElementById('lbList'); if(!host) return;
   try{
     const rows=await leaderboard(15);
-    if(!rows.length){ host.innerHTML='<li class="muted2">아직 제보가 없습니다. 첫 제보의 주인공이 되어 보세요.</li>'; return; }
-    host.innerHTML='';
-    rows.forEach((r,i)=>{ const li=document.createElement('li');
-      li.innerHTML=`<span class="rank">${i+1}</span><span class="nm">${esc(r.reporter)}</span>`+
-        `<span class="cnt">공백 ${r.gaps} · 제보 ${r.reports}</span>`;
-      host.appendChild(li); });
+    if(!rows.length){ host.innerHTML='<li class="muted2">아직 제보가 없습니다. 첫 제보의 주인공이 되어 보세요 — 위 공백 현상금에서 노릴 종을 고를 수 있습니다.</li>'; return; }
+    /* 내 줄을 찾아 강조한다 — 순위표에서 정작 내가 어디 있는지 모르면 올라갈 마음이 안 생긴다.
+       표시 이름으로 맞춰 보는데(RPC 가 익명 집계라 user_id 를 안 준다), 이름을 안 정했으면 '익명'으로
+       여러 사람이 한 줄에 합쳐지므로 그때는 강조하지 않는다. */
+    let me=null;
+    try{ me=await myDisplayName(); }catch(e){ /* 비로그인 등 — 강조 없이 표만 보여준다 */ }
+    const mine=(me&&me.trim())||null;
+    const top=rows[0].reports||1;
+    host.innerHTML=rows.map((r,i)=>
+      `<li class="${mine&&r.reporter===mine?'me':''}"><span class="rank">${i+1}</span>`+
+      `<span class="nm">${esc(r.reporter)}</span>`+
+      (mine&&r.reporter===mine?'<span class="gbadge" style="background:#e7f1ee;color:#015543">나</span>':'')+
+      `<span class="cnt">공백 ${r.gaps} · 제보 ${r.reports}</span>`+
+      `<span class="lbbar"><i style="--w:${Math.max(2,Math.round(r.reports/top*100))}%"></i></span></li>`).join('');
   }catch(err){ host.innerHTML=`<li class="muted2">리더보드를 불러오지 못했습니다 (${esc(err.message||String(err))}).</li>`; }
 }
 
@@ -4300,7 +4500,11 @@ async function myPage(user){
   if(ks && (!prof.onboarded || !prof.sgg || !ks.length)) onboard(user, ks);
 }
 
-renderObsLb();                                             // 정적 자산 — Supabase 무관
+/* 현상금 보드·지역 리그는 시민과학 탭에 처음 들어올 때 그린다 — switchAxis 가 부른다.
+   미리 그리면 현상금 보드가 관측 합계 자산(354KB)을 첫 화면에서 받아 버린다. */
+let citizenInited=false;
+window.fgCitizenInit=()=>{ if(citizenInited) return; citizenInited=true; renderBounty(); renderLeague(); };
+if(window.__fgCitizenSeen) window.fgCitizenInit();          // 모듈보다 탭 진입이 먼저였던 경우
 // 로그인 성공은 인증 이벤트가 SIGNED_IN 일 때만 센다 — 페이지를 다시 열어 세션이 살아난 것은 로그인이 아니다.
 // 한 화면에서 같은 이벤트가 두 번 올 수 있어 한 번만 보낸다.
 let loginSent=false;
@@ -4309,7 +4513,17 @@ function trackLogin(u, ev){
   loginSent=true;
   window.fgTrack&&fgTrack('login_success',{method:(u.app_metadata&&u.app_metadata.provider)||'email'});
 }
-if(configured){ onAuth((user,ev)=>{ trackLogin(user,ev); fbUser=user; fbToggleName(); return user ? myPage(user) : loginCard(); }); renderTrending(); renderFeed(); renderLeaderboard(); renderFeedback(); }
+if(configured){
+  onAuth((user,ev)=>{
+    trackLogin(user,ev); fbUser=user; fbToggleName();
+    /* 활동지역이 곧 리그의 '내 클럽'이다 — 로그인 상태가 바뀌면 표에서 강조할 줄도 바뀌므로 다시 그린다.
+       onAuth 는 토큰 갱신·탭 복귀에도 불리지만 리그 표는 상태를 담지 않아(입력값이 없다) 다시 그려도 잃을 것이 없다. */
+    const next=(user?(readProfile(user).sggs||[]):[]).map(String);
+    if(next.join(',')!==myRegs.join(',')){ myRegs=next; if(citizenInited) renderLeague(); }
+    return user ? myPage(user) : loginCard();
+  });
+  renderTrending(); renderFeed(); renderLeaderboard(); renderFeedback();
+}
 </script>
 
 <!-- 머리말 계정·알림 — 로그인 상태를 페이지 전역(비-module 스크립트 포함)에 알리고, 알림을 모아 보여준다.
@@ -4815,10 +5029,17 @@ async function doSubmit(){
       photo_path=path;
     }
     su.textContent='등록 중…';
+    /* 지역(시군구)과 "이 제보가 공백을 메우는가"를 여기서 계산해 함께 보낸다 — 지역 클럽 리그와
+       개인 기여 순위가 이 두 값으로 돌아간다. 공백 판정 기준은 화면 곳곳의 발견 상태와 같게
+       맞춘다: 관측 연도가 아예 없으면 기록 0건, 기준연도보다 오래됐으면 휴면 — 둘 다 메울 공백. */
+    const sgg=window.fgSggAtLonLat ? window.fgSggAtLonLat(latlon.lon, latlon.lat) : null;
+    const my=((window.__SPSTATE__||{}).maxyear||{})[selSp.k];
+    const fills=(my===undefined||my===null) ? true : (my < new Date().getFullYear()-10);
     const { error } = await submitReport({ ktsn:selSp.k, scientific_name:selSp.s, korean_name:selSp.n, taxon_group:selSp.t,
-      url: url || null, photo_path, lat:latlon.lat, lon:latlon.lon, observed_date:date, note });
+      url: url || null, photo_path, lat:latlon.lat, lon:latlon.lon, observed_date:date, note,
+      sigungu:sgg, fills_gap:fills });
     if(error) throw error;
-    window.fgTrack&&fgTrack('report_submitted',{taxon:selSp.t, photo:!!photo_path});
+    window.fgTrack&&fgTrack('report_submitted',{taxon:selSp.t, photo:!!photo_path, gap:fills, sgg:sgg||''});
     msg.className='rpt-msg ok';
     msg.textContent='제보가 등록되었습니다. 검토 후 반영됩니다. 마이페이지에서 내 제보 이력을 볼 수 있어요.';
     su.textContent='닫기'; su.disabled=false; su.onclick=close;
