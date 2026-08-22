@@ -3144,6 +3144,15 @@ function boot(){
 window.fgMapResize=function(){ if(!map) return;
   setTimeout(()=>{ map.updateSize(); map.renderSync(); sidoLayer&&sidoLayer.changed(); },30); };
 
+/* 딥링크로 받은 지역 코드로 화면을 옮긴다 — 지역 선택(모드 A)과 종 상세(모드 B) 양쪽에서 쓴다.
+   경계 자료가 아직 안 왔으면(콜드 로드) 조용히 건너뛴다 — 선택·표는 부르는 쪽이 이미 맞춰 놨다. */
+function zoomToRegionCode(sido, sigungu){
+  const rcode = (sigungu&&/^\d{5}$/.test(sigungu)) ? sigungu : ((sido&&/^\d{2}$/.test(sido)) ? sido : null);
+  if(!rcode) return;
+  const lyr=LAYERS[rcode.length===5?'sigungu':'sido'];
+  const f=lyr&&lyr.getSource().getFeatures().find(x=>x.get('code')===rcode);
+  if(f) zoomToFeature(f,true);
+}
 /* ── 런타임 딥링크 적용 — 대화형 답변의 '지도에서 보기' 등에서 호출 ── */
 window.fgApplyDeepLink=function(p){
   const tx=p.get('taxon');
@@ -3153,7 +3162,18 @@ window.fgApplyDeepLink=function(p){
   const spk=p.get('sp');
   if(spk){ const sp=SPIDX.find(x=>x.k===spk);
     if(sp){ setMode('B'); sTaxon.value=''; sTax=''; q.value=sp.n||sp.s; doSearch(); showSpecies(sp);
-      if(p.get('report')==='1' && window.fgReport && window.fgReport.open) window.fgReport.open(sp); }
+      if(p.get('report')==='1' && window.fgReport && window.fgReport.open) window.fgReport.open(sp);
+      /* 종 질문에 지역이 함께 왔으면 그 지역으로 확대한다 — "무주군에 구상나무 있어?"에 종 화면만
+         전국으로 열리면 물어본 지역이 어디인지 알 수 없다. 경계 단계도 그 지역에 맞춰 둔다(시군구를
+         물었는데 시도 경계만 그려져 있으면 확대해도 무엇을 보고 있는지 흐리다).
+         setMode 가 지도 대상(mapB)을 옮긴 뒤 크기를 다시 재므로(30ms), 그 뒤에 맞춘다 — 크기가
+         아직 옛 것이면 fit 이 엉뚱한 범위로 잡힌다. */
+      const bsg=p.get('sigungu'), bsd=p.get('sido');
+      if((bsg&&/^\d{5}$/.test(bsg)) || (bsd&&/^\d{2}$/.test(bsd))){
+        if(bsg&&/^\d{5}$/.test(bsg)) setRegLevel('sigungu'); else setRegLevel('sido');
+        setTimeout(()=>zoomToRegionCode(bsd,bsg), 60);
+      }
+    }
     return; }
   if(p.get('metric')) setMetric(p.get('metric')==='gap'?'gap':'found');
   const qs=p.get('sido'), qsg=p.get('sigungu');
@@ -3163,14 +3183,8 @@ window.fgApplyDeepLink=function(p){
   setMode('A');
   /* 고른 지역으로 화면도 옮긴다 — 선택만 바꾸고 지도를 그대로 두면 "종로구 알려줘"에 종로구가
      칠해지기만 하고 화면은 전국에 남아, 어디가 칠해졌는지 눈으로 찾아야 했다. 지역 검색(pickRegion)과
-     후보 표 행 클릭(zoomSigungu)은 이미 그 지역으로 움직인다 — 같은 규칙으로 맞춘다.
-     경계 자료가 아직 안 왔으면(콜드 로드) 조용히 건너뛴다 — 선택·표는 위에서 이미 맞춰 놨다. */
-  const rcode = (qsg&&/^\d{5}$/.test(qsg)) ? qsg : ((qs&&/^\d{2}$/.test(qs)) ? qs : null);
-  if(rcode){
-    const lyr=LAYERS[rcode.length===5?'sigungu':'sido'];
-    const f=lyr&&lyr.getSource().getFeatures().find(x=>x.get('code')===rcode);
-    if(f) zoomToFeature(f,true);
-  }
+     후보 표 행 클릭(zoomSigungu)은 이미 그 지역으로 움직인다 — 같은 규칙으로 맞춘다. */
+  zoomToRegionCode(qs, qsg);
 };
 
 boot();
@@ -5670,6 +5684,10 @@ function mapHref(m){
   if(m.mode==='B'){
     if(!/^[A-Za-z0-9]{1,16}$/.test(String(m.sp||''))) return '';
     p.set('sp', String(m.sp));
+    // 종 질문에 지역이 함께 있으면("무주군에 구상나무 있어?") 그 지역도 실어 보낸다 — 종 화면에서
+    // 그 지역으로 확대해 보여주려는 것. 지역이 없는 종 질문이면 예전처럼 sp 하나만 간다.
+    if(m.sigungu && /^\d{5}$/.test(String(m.sigungu))) p.set('sigungu', String(m.sigungu));
+    else if(m.sido && /^\d{2}$/.test(String(m.sido))) p.set('sido', String(m.sido));
   } else {
     if(m.taxon && /^-?[A-Z]{1,3}$/.test(m.taxon)) p.set('taxon', m.taxon);
     if(m.sigungu && /^\d{5}$/.test(String(m.sigungu))) p.set('sigungu', String(m.sigungu));

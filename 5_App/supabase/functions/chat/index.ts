@@ -557,6 +557,7 @@ Deno.serve(async (req) => {
        남아 있던 분류군(첫 화면 기본값 포유류)으로 열려 답변과 어긋났다 — 관속식물인 구상나무를
        물었는데 지도는 "무주군 · 포유류 · 미발견"이 됐다. 그때 메울 값으로 들고 다닌다. */
     let oneTaxon: string | null = null;
+    let oneKtsn: string | null = null;   // 이름까지 확실히 특정된 종 — 있으면 그 종 화면으로 연다
     for (let step = 0; step < MAX_STEPS; step++) {
       if (Date.now() - started > BUDGET_MS) break;
       const data = await callGemini(contents);
@@ -564,9 +565,17 @@ Deno.serve(async (req) => {
       const calls = parts.filter((p: Record<string, unknown>) => p.functionCall);
       if (!calls.length) {
         const text = parts.filter((p: Record<string, unknown>) => p.text).map((p: Record<string, string>) => p.text).join("").trim();
-        /* 지역 힌트에 분류군이 비어 있으면 이번 대화에서 특정된 종의 분류군으로 메운다. 도구를 도는
-           중간이 아니라 답을 내보내는 이 자리에서 채우는 이유는 호출 순서에 안 걸리게 하기 위함이다
-           — 지역 도구가 종 검색보다 먼저 처리되는 경우에도 결과가 같아야 한다. */
+        /* 힌트 마무리 — 도구를 도는 중간이 아니라 이 자리에서 하는 이유는 호출 순서에 안 걸리게
+           하기 위함이다(지역 도구가 종 검색보다 먼저 처리돼도 결과가 같아야 한다).
+           ① 종이 특정됐으면 그 종 화면(mode B)으로 연다 — species_detail 을 안 거쳐도 이름이
+              정확히 맞은 경우가 있다("무주군에 구상나무 있어?"는 search_species 로만 끝난다).
+              이때 물어본 지역을 같이 실어 보내, 종 화면에서 그 지역으로 확대해 함께 보여준다.
+           ② 지역 힌트만 남는 경우엔 분류군이 비었으면 특정된 종의 분류군으로 메운다. */
+        if (!spHint && oneKtsn) spHint = { mode: "B", sp: oneKtsn };
+        if (spHint && regHint) {
+          if (regHint.sigungu) spHint.sigungu = regHint.sigungu;
+          else if (regHint.sido) spHint.sido = regHint.sido;
+        }
         if (regHint && !regHint.taxon && oneTaxon) regHint.taxon = oneTaxon;
         return json({ reply: text || "답변을 생성하지 못했습니다. 질문을 바꿔 다시 시도해 주세요.", used_tools: usedTools, map: spHint ?? regHint });
       }
@@ -591,21 +600,23 @@ Deno.serve(async (req) => {
              3) 그마저 없으면 걸린 종이 모두 한 분류군일 때만 그 분류군.
              셋 다 아니면 비워 둔다(예전 동작 — 화면에 남아 있던 분류군이 쓰인다). */
           const sps = Array.isArray(r.species) ? r.species as Record<string, unknown>[] : null;
+          let one: Record<string, unknown> | null = null;   // 종까지 특정된 경우(1·2단계)
           let tgOne: unknown;
           if (typeof r.ktsn === "string" || typeof r.ktsn === "number") {
-            tgOne = r.taxon_group;
+            one = r; tgOne = r.taxon_group;
           } else if (sps && sps.length) {
             const qn = String(args.query ?? "").trim().toLowerCase();
             const exact = qn ? sps.find((s) =>
               String(s.korean_name ?? "").toLowerCase() === qn ||
               String(s.scientific_name ?? "").toLowerCase() === qn) : undefined;
-            if (exact) tgOne = exact.taxon_group;
+            if (exact) { one = exact; tgOne = exact.taxon_group; }
             else {
               const gs = new Set(sps.map((s) => String(s.taxon_group ?? "")));
-              if (gs.size === 1) tgOne = [...gs][0];
+              if (gs.size === 1) tgOne = [...gs][0];   // 분류군만 확실 — 종은 모른다
             }
           }
           if (typeof tgOne === "string" && TAXA_CODES.has(tgOne)) oneTaxon = tgOne;
+          if (one && (typeof one.ktsn === "string" || typeof one.ktsn === "number")) oneKtsn = String(one.ktsn);
 
           if (name === "species_detail" && r.ktsn) {
             spHint = { mode: "B", sp: String(r.ktsn) };
