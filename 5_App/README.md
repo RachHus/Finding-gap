@@ -40,7 +40,7 @@
 | `build_region_gaps.py`* | 시군구×분류군 발견/공백 요약 — 활동지역·알림용 | 7_MCP/data/fg_mcp.sqlite | demo/data/region_gaps.js | **손으로 따로 실행** (run_pipeline.py 미포함, 하지만 배포본 O) |
 | `build_species_interest.py`* | 종별 관심도 지수(웹 인코딩) — 지도 투명도·상세 화면 | 7_MCP/data/fg_mcp.sqlite | demo/data/species_interest.js | **손으로 따로 실행** (run_pipeline.py 미포함, 하지만 배포본 O) |
 | `build_taxon_assets.py`* | 강·목·과·속 라틴명 → 한글 룩업 + 강→목→과→속 포함 관계 (종 카드 분류 체계·계층명 검색·퀴즈 범위) | 1_Data/processed/ktsn_master.csv + 1_Data/raw/nibr/ktsn_*.ndjson | demo/data/{taxon_ko.js, taxon_tree.js} | **손으로 따로 실행** (run_pipeline.py 미포함, 하지만 배포본 O) |
-| `build_species_obs.py`* | 종별 관측 수 합계 — 시민과학 분류군별 관측 리더보드 | 7_MCP/data/fg_mcp.sqlite | demo/data/species_obs.js | **손으로 따로 실행** (run_pipeline.py 미포함, 하지만 배포본 O) |
+| `build_species_obs.py`* | 종별 관측 수 합계 — 시민과학 공백 현상금 보드의 "과거 N건" 주석. 시민과학 탭에 처음 들어올 때 지연 로드된다(첫 화면에서는 안 받는다) | 7_MCP/data/fg_mcp.sqlite | demo/data/species_obs.js | **손으로 따로 실행** (run_pipeline.py 미포함, 하지만 배포본 O) |
 | ~~`build_missions.py`~~ | 유망 공백 미션보드 — **화면에서 제거됨**(카드가 화면을 차지하는 데 비해 쓰임이 적었다). 스크립트·자산은 남아 있으나 배포본·화면에 안 들어간다 | 7_MCP/data/fg_mcp.sqlite | demo/data/missions.js | 쓰지 않음 |
 
 > `*` 표식: `build_dist.py` 의 `DATA_FILES` 리스트에 있어서 배포본에 자동 포함되지만, `3_ETL/run_pipeline.py` 에는 포함되지 않는다. 즉, 6개월 갱신 파이프라인을 돌려도 이 네 스크립트의 산출물은 갱신되지 않는다. **자료(sqlite 등)를 갱신한 후 이 스크립트들을 **손으로 따로** 실행해야 배포본에 반영된다.**
