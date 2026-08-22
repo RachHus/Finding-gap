@@ -321,14 +321,6 @@
   .repshot>.ph{display:block;width:100%;height:100%}
   /* 판을 꽉 채우는 것은 사진뿐이다. 버튼 안의 마크까지 잡으면 상자만큼 늘어난다 */
   .repshot>.ph>img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
-  /* 사진 위에 얹히는 버튼이라 바닥이 사진마다 다르다. 흰 판을 깔아 글자 대비를 고정하고,
-     판 자체는 그림자로 사진에서 떼어 놓는다. 크기는 img 의 width/height 속성이 정한다. */
-  .repshot .quiz{position:absolute;top:10px;left:10px;z-index:2;display:inline-flex;align-items:center;gap:8px;
-    min-height:44px;padding:0 16px 0 12px;border-radius:999px;background:#fff;color:var(--accent);
-    font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.28)}
-  .repshot .quiz img{display:block;flex:none}
-  .repshot .quiz:hover{background:#f1f6f0}
-  .repshot .quiz:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
   .repshot figcaption{position:absolute;left:0;right:0;bottom:0;padding:14px 10px 5px;text-align:right;
     font-size:11px;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.66))}
   .ramp{height:10px;width:120px;border-radius:3px;border:1px solid rgba(0,0,0,.14);
@@ -1085,13 +1077,30 @@
   </div>
 </div>
 
-<!-- 대화형 도우미 — 우하단 고정 버튼으로 열고, 지도를 가리지 않게 옆(모바일: 하단)에 패널이 뜬다 -->
-<button id="chatToggle" class="chatfab" type="button" title="발견공백 도우미에게 물어보기" aria-label="발견공백 도우미 열기" onclick="fgChatDrawer.toggle()">
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M20.5 11.4c0 3.9-3.8 7.1-8.5 7.1-1 0-1.9-.13-2.8-.38L4.2 19.8l1.4-3.6c-1.3-1.3-2.1-2.9-2.1-4.8 0-3.9 3.8-7.1 8.5-7.1s8.5 3.2 8.5 7.1Z"/>
-    <path d="M8.6 11.4h.01M12 11.4h.01M15.4 11.4h.01"/>
-  </svg>
-</button>
+<!-- 바로가기 — 화면 오른쪽 끝(스크롤바 옆)에 붙어 스크롤과 함께 따라다니는 세로 띠.
+     대화형·동정·제보는 어느 화면에서든 쓰는 도구인데 입구가 화면마다 흩어져 있어서
+     (우하단에 떠 있던 도우미 단추, 대표 사진 위에 겹친 동정 단추, 탭 안쪽 제보 CTA)
+     어수선했다. 한 자리에 모아 늘 같은 손동작으로 닿게 한다.
+     각 항목은 그 도구가 이미 가진 진입점을 그대로 부르고, 화면이 달라 바로 열 수 없는 것만
+     그 화면으로 먼저 옮긴다(qrGo). 예전 우하단 도우미 단추(.chatfab)는 이 띠가 대신한다. -->
+<nav class="quickrail" id="quickRail" aria-label="바로가기">
+  <button type="button" class="qr-item" data-qr="chat" title="발견공백 도우미에게 물어보기" aria-label="대화형 도우미 열기">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M20.5 11.4c0 3.9-3.8 7.1-8.5 7.1-1 0-1.9-.13-2.8-.38L4.2 19.8l1.4-3.6c-1.3-1.3-2.1-2.9-2.1-4.8 0-3.9 3.8-7.1 8.5-7.1s8.5 3.2 8.5 7.1Z"/>
+      <path d="M8.6 11.4h.01M12 11.4h.01M15.4 11.4h.01"/>
+    </svg><span>대화형</span>
+  </button>
+  <button type="button" class="qr-item" data-qr="quiz" title="유사종 사진으로 종 익히기" aria-label="동정 연습 열기">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4 21 21"/><path d="M8 10.5h5"/>
+    </svg><span>동정</span>
+  </button>
+  <button type="button" class="qr-item" data-qr="report" title="발견한 종을 사진·위치와 함께 제보하기" aria-label="발견 제보 열기">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 21s6.5-6.1 6.5-10.5A6.5 6.5 0 0 0 5.5 10.5C5.5 14.9 12 21 12 21Z"/><path d="M12 7.6v5.2M9.4 10.2h5.2"/>
+    </svg><span>제보</span>
+  </button>
+</nav>
 <aside id="chatDrawer" aria-hidden="true">
   <div class="chathd"><h3>발견공백 도우미</h3><button class="x" id="chatClose" type="button" aria-label="닫기">&times;</button></div>
   <div class="vintro"><p>지역·분류군·멸종위기 기준으로 <b>아직 기록이 없는 종</b>을 대화로 물어보세요. 답변의 지도 버튼을 누르면 옆의 지도가 바로 갱신됩니다.</p></div>
@@ -1171,7 +1180,6 @@
   .fb-hp{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden}
   .rpt-photo-prev button{border:1px solid #d7ded9;background:#fff;border-radius:7px;padding:6px 10px;font-size:12px;cursor:pointer}
   .rpt-url-toggle{display:inline-block;margin-top:6px;font-size:12px;color:var(--faint);cursor:pointer;text-decoration:underline}
-  .report-lk{cursor:pointer}
   .ttlayout{display:grid;grid-template-columns:180px 1fr 260px;gap:16px;align-items:start}
   .ttcrumbs{display:flex;flex-direction:column;gap:6px}
   .ttcrumb{display:flex;align-items:center;gap:7px;border:1px solid #d7e3df;background:#eef3f1;
@@ -1288,14 +1296,29 @@
   .lnkbtn:hover{color:#0f3a1e}
   @media(max-width:880px){ .gradebtn{min-height:44px;padding:4px 12px} }
 
-  /* 도우미 여는 버튼 — 채팅 서비스에서 통용되는 우하단 고정 자리. 패널이 열리면 그 아래 깔리므로 숨긴다. */
-  .chatfab{position:fixed;right:20px;bottom:20px;z-index:190;width:56px;height:56px;padding:0;border-radius:50%;
-    border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.22)}
-  .chatfab:hover{filter:brightness(1.1)}
-  .chatfab svg{display:block;flex:none}
-  body.chatopen .chatfab,.chatfab[hidden]{display:none}
-  @media(max-width:880px){ .chatfab{right:14px;bottom:14px} }
+  /* 바로가기 띠 — 오른쪽 끝(스크롤바 옆)에 붙는다. fixed 라 스크롤과 무관하게 늘 같은 자리에 있어
+     어느 화면에서든 같은 손동작으로 닿는다. 화면 세로 가운데에 두어 지도의 네 귀퉁이 컨트롤
+     (좌상단 분류군·우상단 경계 토글·좌하단 확대·우하단 내 위치)과 자리가 겹치지 않게 한다.
+     도우미 패널이 열리면 그 패널이 오른쪽을 차지하므로 띠는 숨긴다(예전 우하단 단추와 같은 규칙). */
+  .quickrail{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:190;
+    display:flex;flex-direction:column;gap:1px;background:var(--line);
+    border:1px solid var(--line);border-right:0;border-radius:12px 0 0 12px;overflow:hidden;
+    box-shadow:-2px 0 14px rgba(0,0,0,.13)}
+  .quickrail .qr-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    width:62px;padding:11px 4px;border:0;background:var(--card);color:var(--ink);cursor:pointer;
+    font:600 10.5px/1.25 'Pretendard Variable',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  .quickrail .qr-item svg{display:block;flex:none}
+  .quickrail .qr-item:hover{background:var(--accent);color:#fff}
+  .quickrail .qr-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  body.chatopen .quickrail{display:none}
+  /* 좁은 화면에서는 본문이 폭을 다 쓰므로 오른쪽 끝에 세로로 세우면 그 자리의 조작부를 가린다
+     (실측: 390px 폭에서 '미발견 종' 단추가 띠 뒤로 들어갔다). 그래서 아래쪽 가운데로 눕힌다 —
+     지도 컨트롤은 네 귀퉁이에 있어 가운데 아래가 비어 있고, 스크롤을 따라다니는 성질은 그대로다. */
+  @media(max-width:880px){
+    .quickrail{top:auto;bottom:12px;right:50%;transform:translateX(50%);flex-direction:row;
+      border-radius:12px;border-right:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.18)}
+    .quickrail .qr-item{width:auto;min-width:64px;padding:8px 12px;font-size:10px}
+  }
 
   /* 대화형 도우미 슬라이드 패널 — 지도를 가리지 않고 옆(모바일: 하단)에 뜨는 패널.
      도우미 버튼(190)보다 위, .rpt-overlay(1000)·.toast보다는 아래(제보모달이 패널 위에 뜨도록). */
@@ -2966,10 +2989,6 @@ function renderSpecies(sp){
     `<a class="lk" href="${href}" target="_blank" rel="noopener noreferrer" title="${name} — ${what}" aria-label="${name} ${label}(새 창)"><span class="mk"><img src="${file}" width="${w}" height="${h}" alt=""></span><span class="t">${label}</span></a>`;
   const reportLink=brand(ECOBANK,'logo_ecobank.png',100,17,'EcoBank','시민참여 게시판','국립생태원 생태정보 제보')
     +(eg?brand(NATURING,'logo_naturing.png',61,26,'네이처링','멸종위기종 발견 제보','시민과학 멸종위기종 관찰 제보'):'');
-  // 동정 연습은 대표 사진 위 버튼이 기본이다. 사진이 없는 종에서는 입구가 사라지므로
-  // 카드 안의 글 버튼을 남겨 두고, 사진이 뜨면 그때 감춘다(renderRepShot).
-  const quizLink=quizOn(sp)
-    ? `<a class="lk quiz-lk" href="quiz.html?mode=species&ktsn=${sp.k}"><span class="mk"><img src="logo_quiz.png" width="23" height="26" alt=""></span><span class="t">동정 연습</span></a>` : '';
   sCard.innerHTML=`<div class="scard">
     <div style="display:flex;align-items:flex-start;gap:10px">
       <div style="min-width:0"><h3>${sp.n||sp.s}</h3><div class="sci">${sp.s}</div></div>
@@ -2984,15 +3003,9 @@ function renderSpecies(sp){
     <div class="row"><div class="k khead">분포 · ${sy0}–${sy1}</div>
       <div id="spViewHost"></div></div>
     ${envRow}
-    <div class="row"><div class="k">상세 정보</div>
+    <div class="row"><div class="k">이 종 자료 · 다른 곳에 제보</div>
       <div class="links">
         ${brand(NIBR(sp.k),'logo_nibr.png',90,26,'한반도의 생물다양성','종 상세 정보','국립생물자원관 종 상세')}
-        ${quizLink}
-      </div>
-    </div>
-    <div class="row"><div class="k">발견 제보</div>
-      <div class="links">
-        <a class="lk report-lk" data-k="${sp.k}" role="button" tabindex="0" hidden><span class="mk"><img src="logo_report.png" width="23" height="26" alt=""></span><span class="t">Finding gap에 제보하기</span></a>
         ${reportLink}
       </div>
     </div>
@@ -3005,7 +3018,6 @@ function renderSpecies(sp){
   syncGapBtn();                                          // 종을 골랐으니 지도 안 서식지 후보 토글을 쓸 수 있다
   renderSpView();                                        // 우측 표(+ 후보를 켰으면 적합지 비율)
   if(window.fgWatch) window.fgWatch.decorate(sp.k);     // 관심 종 ☆ 버튼(로그인 시 활성)
-  if(window.fgReport) window.fgReport.decorateCard(sp); // 발견 제보 버튼(Supabase 설정 시 노출)
   if(window.fgTaxonRef) window.fgTaxonRef.decorateCard(sp); // 분류 이력 제보 버튼(Supabase 설정 시 노출)
   clearRepShot();                                       // 앞 종의 사진이 남아 있지 않게 먼저 비운다
   loadRep(sp.t, ()=>renderRepShot(sp));                 // 지도 아래 대표 사진(분류군별 지연 로드)
@@ -3020,22 +3032,22 @@ function renderSpecies(sp){
 }
 function quizOn(sp){ return (((window.__SPMEDIA_META__||{}).taxa||{})[sp.t]||0)>=4; }
 function clearRepShot(){ const h=document.getElementById('repShot'); if(h){ h.hidden=true; h.innerHTML=''; } }
-function renderRepShot(sp){                               // 지도 아래 빈 자리 = 종 대표 이미지 + 동정 연습 버튼
+/* 지도 아래 빈 자리 = 종 대표 이미지. 사진 위에 겹쳐 놓았던 '동정연습' 단추는 오른쪽 바로가기 띠로
+   옮겼다 — 사진 있는 종에만 뜨는 입구여서 어디에 있는지 종마다 달랐고, 사진 위에 글자를 얹어
+   어수선했다. 띠의 '동정'은 지금 고른 종을 그대로 넘기므로 같은 자리로 간다. */
+function renderRepShot(sp){
   const host=document.getElementById('repShot'); if(!host) return;
   if(!selSpecies||selSpecies.k!==sp.k) return;            // 로드 중 다른 종을 골랐으면 버린다
-  const r=repOf(sp); if(!r) return;                       // 이미지 없는 종 — 카드의 글 버튼이 그대로 입구가 된다
+  const r=repOf(sp); if(!r) return;
   const nm=sp.n||sp.s;
   // by 에 이미 기관명이 들어 있는 경우가 대부분이라 앞에 또 붙이면 같은 말이 두 번 나온다
   const cred=['© '+(r.by||'국립생물자원관'), r.lic].filter(Boolean).join(' · ');
   host.innerHTML=`<a class="ph" href="${NIBR(sp.k)}" target="_blank" rel="noopener noreferrer"
       title="${nm} — 한반도의 생물다양성 종 상세"><img src="${r.url}" alt="${nm} ${r.kind}"></a>`
-    +(quizOn(sp)?`<a class="quiz" href="quiz.html?mode=species&ktsn=${sp.k}"><img src="logo_quiz.png" width="23" height="26" alt="">동정연습</a>`:'')
     +`<figcaption>${r.kind} · ${cred}</figcaption>`;
   host.hidden=false;
-  const q=sCard.querySelector('.quiz-lk');
-  if(q) q.hidden=true;                                    // 같은 입구가 둘이 되지 않게 글 버튼은 접는다
   const im=host.querySelector('img');
-  im.onerror=()=>{ clearRepShot(); if(q) q.hidden=false; };  // 원본이 안 열리면 판을 접고 글 버튼을 되살린다
+  im.onerror=()=>clearRepShot();                          // 원본이 안 열리면 판을 접는다
 }
 function clearSelSpecies(){ selSpecies=null; selRegions=new Map(); GAPRES=null;
   if(gapLayer)gapLayer.setVisible(false); if(gapSource)gapSource.clear();
@@ -3421,11 +3433,42 @@ function switchAxis(ax){
     const v=document.getElementById('view-'+k); if(v) v.hidden = ax!==k;
   });
   if(ax!=='survey' && window.fgChatDrawer) window.fgChatDrawer.close();
-  { const fab=document.getElementById('chatToggle'); if(fab) fab.hidden = ax!=='survey'; }   // 도우미는 지도 화면의 도구다
   // 숨김 상태에서는 지도 크기가 0으로 잡히므로, 조사정보로 돌아올 때 다시 계산한다.
   if(ax==='survey' && window.fgMapResize) window.fgMapResize();
   if(ax==='taxa' && !taxaTabInited){ taxaTabInited=true; renderTaxaTab(); }   // 처음 들어올 때만 그린다(비용이 있는 SVG)
 }
+
+/* ── 바로가기 띠(오른쪽 끝) — 세 도구의 입구를 한 자리에 모았다. 새 진입 경로를 만들지 않고 각 도구가
+   이미 가진 함수를 그대로 부른다(도우미 fgChatDrawer·제보 fgReport·동정 quiz.html). ── */
+function qrGo(kind){
+  if(kind==='chat'){
+    switchAxis('survey');                                  // 도우미 패널은 지도 옆에 붙는 구조라 지도 화면에서만 뜻이 있다
+    if(window.fgChatDrawer) window.fgChatDrawer.open();
+    window.fgTrack && fgTrack('quickrail',{item:'chat'});
+    return;
+  }
+  if(kind==='quiz'){
+    /* 보고 있는 대상에 맞춰 범위를 좁혀 준다 — 종을 고르고 있으면 그 종, 아니면 지금 분류군, 그마저
+       마땅치 않으면 고르개(quiz.html 무인자). 사진이 4장 미만인 대상은 퀴즈가 성립하지 않아 건너뛴다. */
+    const med=((window.__SPMEDIA_META__||{}).taxa)||{};
+    let href='quiz.html';
+    if(selSpecies && quizOn(selSpecies)) href='quiz.html?mode=species&ktsn='+encodeURIComponent(selSpecies.k);
+    else if((med[curTaxon]||0)>=4) href='quiz.html?mode=taxon&taxon='+encodeURIComponent(curTaxon);
+    window.fgTrack && fgTrack('quickrail',{item:'quiz'});
+    location.href=href;
+    return;
+  }
+  if(kind==='report'){
+    window.fgTrack && fgTrack('quickrail',{item:'report', scoped:selSpecies?'species':'none'});
+    /* 종을 보고 있으면 그 종을 미리 채운다 — 예전에 종 카드 안에 있던 'Finding gap에 제보하기'가
+       하던 일이 이것이다(그 링크는 이 띠로 옮기고 카드에서 뺐다). 종을 안 고른 상태면 빈 폼.
+       로그인 게이트는 제보 모달이 스스로 건다(open→render) — 여기서 따로 막지 않는다. */
+    if(window.fgReport && window.fgReport.configured) window.fgReport.open(selSpecies||null);
+    else { switchAxis('community'); location.hash='#report'; }   // Supabase 미설정 배포본: 시민과학 탭으로만 안내
+  }
+}
+document.querySelectorAll('#quickRail .qr-item').forEach(b=>
+  b.addEventListener('click',()=>qrGo(b.dataset.qr)));
 
 /* ── 분류 체계도 탭 — 지도(모드 A)와 독립된 분류군 선택. 지도의 curTaxon 은 안 건드린다. ── */
 let taxaTabGroup='', taxaTabInited=false;
@@ -4452,15 +4495,6 @@ function todayStr(){ const d=new Date(); return new Date(d.getTime()-d.getTimezo
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 // 종 카드의 'Finding gap에 제보하기' 버튼 노출·배선(Supabase 설정 시)
-function decorateCard(sp){
-  const b=document.querySelector('.report-lk[data-k="'+(window.CSS&&CSS.escape?CSS.escape(sp.k):sp.k)+'"]');
-  if(!b) return;
-  if(!configured){ b.hidden=true; return; }
-  b.hidden=false;
-  b.onclick=()=>open(sp);
-  b.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(sp); } };
-}
-
 function open(prefill){
   selSp = prefill ? {k:prefill.k,n:prefill.n,s:prefill.s,t:prefill.t,g:prefill.g} : null;
   latlon = null;
@@ -4683,14 +4717,12 @@ document.addEventListener('keydown',(e)=>{ if(e.key==='Escape'&&!overlay.hidden)
 function checkHash(){ if(location.hash==='#report' && configured) open(null); }
 window.addEventListener('hashchange',checkHash);
 
-function refreshCardBtn(){                                // 이미 렌더된 종 카드 버튼 재배선(딥링크/인증 확정 후)
-  const b=document.querySelector('.report-lk[data-k]'); if(!b) return;
-  const x=SPIDX.find(s=>s.k===b.dataset.k); if(x) decorateCard(x);
-}
-window.fgReport={ configured, decorateCard, open };
+/* 종 카드 안에 있던 'Finding gap에 제보하기' 버튼(.report-lk)은 오른쪽 바로가기 띠로 옮겼다 —
+   그래서 카드 버튼을 꾸미고 다시 배선하던 decorateCard·refreshCardBtn 이 없어졌다. 띠는 누를 때마다
+   그 시점의 선택 종을 넘기므로(qrGo) 미리 배선해 둘 대상이 없다. 로그인 게이트는 그대로 render 가 건다. */
+window.fgReport={ configured, open };
 if(configured){
-  refreshCardBtn();
-  onAuth(u=>{ user=u; refreshCardBtn(); if(!overlay.hidden) render(); });
+  onAuth(u=>{ user=u; if(!overlay.hidden) render(); });
   checkHash();
   // 챗 딥링크 ?sp=..&report=1 → 해당 종 미리 선택해 제보 모달 자동 오픈(로그인 여부는 render가 게이트)
   const act=window.FG_ACTION;
