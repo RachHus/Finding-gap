@@ -3161,6 +3161,16 @@ window.fgApplyDeepLink=function(p){
   else if(qs&&/^\d{2}$/.test(qs)){ setRegLevel('sido'); selSidos.clear(); selSidos.add(qs); }
   if(qs||qsg){ renderSelChips(); recompute(); if(sidoLayer)sidoLayer.changed(); renderTable(); }
   setMode('A');
+  /* 고른 지역으로 화면도 옮긴다 — 선택만 바꾸고 지도를 그대로 두면 "종로구 알려줘"에 종로구가
+     칠해지기만 하고 화면은 전국에 남아, 어디가 칠해졌는지 눈으로 찾아야 했다. 지역 검색(pickRegion)과
+     후보 표 행 클릭(zoomSigungu)은 이미 그 지역으로 움직인다 — 같은 규칙으로 맞춘다.
+     경계 자료가 아직 안 왔으면(콜드 로드) 조용히 건너뛴다 — 선택·표는 위에서 이미 맞춰 놨다. */
+  const rcode = (qsg&&/^\d{5}$/.test(qsg)) ? qsg : ((qs&&/^\d{2}$/.test(qs)) ? qs : null);
+  if(rcode){
+    const lyr=LAYERS[rcode.length===5?'sigungu':'sido'];
+    const f=lyr&&lyr.getSource().getFeatures().find(x=>x.get('code')===rcode);
+    if(f) zoomToFeature(f,true);
+  }
 };
 
 boot();
