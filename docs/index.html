@@ -5692,7 +5692,18 @@ if (!configured) {
   view.innerHTML = `<div class="authcard"><h3>곧 제공됩니다</h3>
     <p>발견공백 데이터를 바탕으로 대화하는 도우미를 준비하고 있습니다. 지도는 계속 옆에서 보실 수 있어요 — <a href="#" onclick="window.fgChatDrawer&&window.fgChatDrawer.close();return false" style="color:var(--accent)">패널 닫기</a></p></div>`;
 } else {
-  onAuth(user => user ? chatView(user) : loginCard());
+  /* onAuth 는 로그인하는 순간만 부르는 것이 아니다 — 토큰이 갱신되거나 다른 탭을 만졌다 돌아와
+     세션이 살아날 때도 다시 부른다. 그때마다 chatView 를 다시 그리면 innerHTML 이 통째로 갈려
+     오가던 대화가 사라진다. 대화는 어디에도 저장하지 않으므로 한 번 지워지면 되살릴 방법이 없다.
+     그래서 이미 그려 둔 사람이 그대로면 아무것도 하지 않고, 로그인·로그아웃처럼 사람이 바뀔 때만
+     새로 그린다(제보·분류이력 모달이 "열려 있을 때만 다시 그린다"로 같은 문제를 피하는 것과 같은 취지). */
+  let drawn=false, drawnFor=null;
+  onAuth(user => {
+    const who = user ? (user.id || user.email || 'user') : null;
+    if(drawn && drawnFor===who) return;
+    drawn=true; drawnFor=who;
+    user ? chatView(user) : loginCard();
+  });
 }
 
 function loginCard(){
