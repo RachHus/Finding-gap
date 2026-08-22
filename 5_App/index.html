@@ -972,9 +972,12 @@
       <a class="btn cta" id="reportCta" href="#report">＋ 발견 제보하기</a>
       <button type="button" class="qtip" aria-label="제보 안내" data-tip="관찰한 종을 위치·근거 URL과 함께 제보해 발견공백을 메웁니다. 로그인이 필요합니다.">?</button>
     </div>
-    <div class="authcard" id="missionCard" style="max-width:none">
-      <h3 style="margin:0 0 12px">유망 공백 미션 <button type="button" class="qtip" aria-label="설명 보기" data-tip="특정 지역에서 아직 기록되지 않은 멸종위기종입니다 — 찾아서 제보하면 발견공백을 메웁니다.">?</button></h3>
-      <div class="missions" id="missionList"></div>
+    <!-- 분류군별 관측 리더보드 — 제보 기반 카드(최근 제보·제보 리더보드·많이 추가된 종)는 사람이 쓰기
+         전까지 비어 있어서 탭이 텅 비어 보였다. 조사자료로 이미 채울 수 있는 것을 앞에 세운다. -->
+    <div class="authcard" id="obsLbCard" style="max-width:none">
+      <h3 style="margin:0 0 12px">분류군별 관측 리더보드 <button type="button" class="qtip" aria-label="설명 보기" data-tip="국내 조사자료에 관측 기록이 가장 많이 쌓인 종입니다. 분류군을 고르면 그 분류군의 상위 종을 보여줍니다. 기록이 많다는 것은 그만큼 자주 마주치거나 조사가 많이 된 종이라는 뜻이고, 반대로 기록이 없는 종이 발견공백입니다.">?</button></h3>
+      <div class="taxatabpick obslbpick" id="obsLbPick"></div>
+      <ol class="wl lblist" id="obsLbList"><li class="muted2">불러오는 중…</li></ol>
     </div>
     <div class="authcard" id="feedCard" style="max-width:none">
       <h3 style="margin:0 0 12px">최근 제보 <button type="button" class="qtip" aria-label="설명 보기" data-tip="시민과학자가 올린 최근 관찰 제보입니다 — 검토를 거쳐 재발견 후보로 반영됩니다. 정확한 위치는 공개되지 않습니다.">?</button></h3>
@@ -985,7 +988,7 @@
       <ol class="wl lblist" id="lbList"><li class="muted2">불러오는 중…</li></ol>
     </div>
     <div class="authcard" id="trendCard" style="max-width:none" hidden>
-      <h3 style="margin:0 0 12px">많이 추가된 종 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이용자들이 관심 종으로 가장 많이 추가한 종입니다 — 종별 익명 집계(개인 정보 없이 합계만).">?</button></h3>
+      <h3 style="margin:0 0 12px">관심 종 리더보드 <button type="button" class="qtip" aria-label="설명 보기" data-tip="이용자들이 관심 종(☆)으로 가장 많이 추가한 종입니다 — 종별 익명 집계(개인 정보 없이 합계만). 위의 관측 리더보드는 조사자료에 쌓인 기록 수이고, 이쪽은 사람들이 무엇을 눈여겨보는지입니다.">?</button></h3>
       <ol class="wl trendlist" id="trendList"><li class="muted2">불러오는 중…</li></ol>
     </div>
 
@@ -1118,16 +1121,22 @@
   .btn.cta.sm{padding:7px 12px;font-size:13px}
   .feedlist .fmeta{color:var(--muted);font-size:12px}
   .feedlist .fnote{flex-basis:100%;color:#4a4f4c;font-size:13px;margin-top:2px;background:#f6f9f7;border-radius:6px;padding:6px 9px}
-  .missions{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
-  .mission{display:block;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card);color:inherit}
-  .mission:hover{border-color:#9ec3b2;background:#f6f9f7}
-  .mission .mrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .mission .mnm{font-weight:600;font-size:13px}
-  .mission .msci{font-style:italic;color:var(--muted);font-size:12px;margin:2px 0 4px}
-  .mission .mreg{font-size:12px;color:#4f6f61}
+  /* 관측 리더보드의 분류군 고르개 — 분류 체계도 탭의 타일(.taxatabpick)을 그대로 쓰되, 카드 안이라
+     타일을 작게 줄인다(그 탭은 화면 전체를 쓰는 진입점이고 여기는 카드 한 칸이다). */
+  .obslbpick{grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:7px;margin:0 0 12px}
+  .obslbpick button{min-height:70px;gap:5px;padding:8px 5px;font-size:11px}
+  .obslbpick button .chip{width:26px;height:26px;border-radius:8px}
   .lblist li{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .lblist .rank{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:#eef3f1;color:#015543;border-radius:50%;font-size:12px;font-weight:700;flex:none}
   .lblist .cnt{margin-left:auto;font-weight:600;color:#015543;white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums}
+  .lblist li:nth-child(-n+3) .rank{background:#015543;color:#fff}
+  /* 1위 대비 길이 막대 — 숫자만으로는 격차가 안 와닿는다(고라니 88,971 vs 2위 35,257). li 가 flex-wrap 이라
+     flex-basis:100% 로 두면 저절로 이름줄 아래 한 줄을 차지한다. */
+  .lblist .lbbar{flex:0 0 100%;height:5px;border-radius:3px;background:#eef3f1;margin-top:1px}
+  .lblist .lbbar>i{display:block;width:var(--w,0);height:100%;border-radius:3px;background:linear-gradient(90deg,#4e9c86,#015543)}
+  /* 오른쪽 끝에 붙는 숫자는 우측 고정 바로가기 띠에 가린다(실측: 1180·1300px 폭에서 3행이 덮였다).
+     띠 폭(62px)만큼 행 오른쪽을 비워 둔다. 880px 이하에서는 띠가 아래 가운데로 눕는다(.quickrail). */
+  @media(min-width:881px){ .lblist li{padding-right:74px} }
   .btn.sm{padding:5px 12px;font-size:12px}
   .btn.sm.rej{background:#f3eeee;color:#a03027}
   .admbtns{margin-left:auto;display:inline-flex;gap:6px;flex:none}
@@ -1350,7 +1359,7 @@
 <script src="demo/data/obs_meta.js"></script>
 <script src="demo/data/species_interest.js"></script>
 <script src="demo/data/env_meta.js"></script>
-<script src="demo/data/missions.js" onerror="window.__MISSIONS__=window.__MISSIONS__||[]"></script>
+<script src="demo/data/species_obs.js" onerror="window.__SPOBS__=window.__SPOBS__||{}"></script>
 <script src="demo/data/region_gaps.js" onerror="window.__REGGAP__=window.__REGGAP__||null"></script>
 <script src="demo/data/taxa_tree.js" onerror="window.__TAXATREE__=window.__TAXATREE__||null"></script>
 <script>
@@ -3788,18 +3797,43 @@ async function fbDoSubmit(){
 }
 document.getElementById('fbSubmit')?.addEventListener('click', fbDoSubmit);
 
-// ── ③ 유망 공백 미션보드(정적 자산 __MISSIONS__) ──
-function renderMissions(){
-  const host=document.getElementById('missionList'); if(!host) return;
-  const ms=(window.__MISSIONS__||[]).slice(0,12);
-  if(!ms.length){ host.innerHTML='<div class="muted2">미션 데이터를 불러오지 못했습니다.</div>'; return; }
-  host.innerHTML=ms.map(m=>{
-    const g=m.grade?`<span class="dbadge" style="background:#fbe9e7;color:#b23b2e">멸종위기 ${esc(m.grade)}급</span>`:'';
-    return `<a class="mission" href="#report" title="${esc(m.name)} 제보하기">`+
-      `<div class="mrow"><span class="mnm">${esc(m.name)}</span>${g}</div>`+
-      `<div class="msci">${esc(m.sci)}</div>`+
-      `<div class="mreg">${esc(m.region_name)}에서 미발견 · 찾아서 제보 →</div></a>`;
-  }).join('');
+/* ── ③ 분류군별 관측 리더보드(정적 자산 __SPOBS__) ──
+   종별 관측 수는 분류군별 관측 자산(obs_<T>.js)에도 있지만 그 파일은 관측 하나하나를 다 실어
+   무겁다(곤충류·관속식물 각 13MB). 리더보드는 종당 합계만 필요하므로 그것만 뽑은 가벼운 자산
+   (species_obs.js, 354KB)을 쓴다 — build_species_obs.py 가 만든다.
+   순위 기준을 관심도(관심도 자산)로 하지 않은 이유: 그 값은 원값이 아니라 분류군·희소도 층 안의
+   백분위라, 상위권이 100 동점으로 몰린다(곤충류 10종·무척추동물 11종이 전부 최고값). 관측 수는
+   정수라 동점이 없고 "가장 많이 관측된 종"이라는 뜻도 분명하다. */
+let obsLbGroup='';
+function renderObsLb(){
+  const pick=document.getElementById('obsLbPick'), host=document.getElementById('obsLbList');
+  if(!pick||!host) return;
+  /* 이 블록은 type="module" 이라 classic 스크립트의 const(SP_BY_TAX·nf 등)가 안 보인다 —
+     window 에 올라가는 것(__SPIDX__·__TAXA__·chipHTML)과 이 모듈 안의 것(spName·discBadge)만 쓴다. */
+  const OB=window.__SPOBS__||{};
+  const all=(window.__TAXA__||[]).filter(t=>t.has_data);
+  if(!all.length){ host.innerHTML='<li class="muted2">분류군 정보를 불러오지 못했습니다.</li>'; return; }
+  if(!obsLbGroup || !all.some(t=>t.group===obsLbGroup)) obsLbGroup=all[0].group;
+  pick.innerHTML=all.map(t=>`<button type="button" data-g="${t.group}" class="${t.group===obsLbGroup?'on':''}">`+
+    `${chipHTML(t.group,17)}<span>${t.kor}</span></button>`).join('');
+  pick.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{
+    if(b.dataset.g===obsLbGroup) return;
+    obsLbGroup=b.dataset.g; renderObsLb();
+  });
+  if(!Object.keys(OB).length){ host.innerHTML='<li class="muted2">관측 자산을 불러오지 못했습니다.</li>'; return; }
+  const rows=(window.__SPIDX__||[]).filter(x=>x.t===obsLbGroup)
+    .map(sp=>({sp, c:OB[sp.k]||0})).filter(x=>x.c>0)
+    .sort((a,b)=>b.c-a.c).slice(0,15);
+  if(!rows.length){ host.innerHTML='<li class="muted2">이 분류군에는 아직 관측 기록이 없습니다.</li>'; return; }
+  /* 발견 상태 배지는 안 붙인다 — 관측 수가 1회 이상이라 목록에 오른 종은 정의상 전부 '발견'이다
+     (9개 분류군 135행 전수 확인). 모든 행에 같은 배지가 붙으면 뜻은 없고 눈만 어지럽다. */
+  const top=rows[0].c||1;
+  host.innerHTML=rows.map((x,i)=>
+    `<li><span class="rank">${i+1}</span><span class="nm">${esc(x.sp.n||x.sp.s)}</span> `+
+    `<span class="sci">${esc(x.sp.s||'')}</span>`+
+    `<a class="muted2" href="#" onclick="fgShowSpecies('${x.sp.k}');return false" style="margin-left:8px">지도 →</a>`+
+    `<span class="cnt">${Number(x.c).toLocaleString('ko-KR')}회</span>`+
+    `<span class="lbbar"><i style="--w:${Math.max(2,Math.round(x.c/top*100))}%"></i></span></li>`).join('');
 }
 
 // ── ④ 제보 리더보드(report_leaderboard RPC) ──
@@ -4266,7 +4300,7 @@ async function myPage(user){
   if(ks && (!prof.onboarded || !prof.sgg || !ks.length)) onboard(user, ks);
 }
 
-renderMissions();                                          // 정적 자산 — Supabase 무관
+renderObsLb();                                             // 정적 자산 — Supabase 무관
 // 로그인 성공은 인증 이벤트가 SIGNED_IN 일 때만 센다 — 페이지를 다시 열어 세션이 살아난 것은 로그인이 아니다.
 // 한 화면에서 같은 이벤트가 두 번 올 수 있어 한 번만 보낸다.
 let loginSent=false;

@@ -34,7 +34,7 @@ DATA_FILES = ["taxa_summary.js", "demo_mm.js",
               "env_grid.js", "gap_meta.js",        # 발견공백 A: 전국 1km 격자 + 메타(지연 로드)
               "env_model.js", "model_meta.js",     # 서식지 후보: 모형 전용 환경변수 + 생성 메타(지연 로드)
               "taxon_ko.js", "taxon_tree.js",      # 분류 계층: 라틴→한글 이름과 강→목→과→속 포함 관계
-              "missions.js",                       # 시민과학 B: 유망 공백 미션보드(정적)
+              "species_obs.js",                    # 시민과학: 분류군별 관측 리더보드(종별 관측 합계, build_species_obs.py)
               "region_gaps.js",                    # 시군구×분류군 발견/공백 합계 — 활동지역 선택·알림용(build_region_gaps.py)
               "taxa_tree.js"]                      # 분류군별 목→과 계통수 + 발견률 — 방사형 cladogram(build_taxa_tree.py)
 # 분류군별 관측·점유·미디어·계절·모형·발견공백사유·계통수 과별 종목록은 분할 산출 — 전부 복사(지연 로드)
