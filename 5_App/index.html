@@ -1936,11 +1936,21 @@ function renderSpView(){
    발견이든 미발견이든 짙을수록 많다 — 지표에 따라 방향이 뒤집히지 않는다.
    지점(핑크)·후보(남보라)는 이 초록 계열에도, 배경지도의 시가지 베이지·분홍에도 없는 색을 쓰고
    흰 테두리를 둘러 배경에서 떼어 놓는다 — 예전엔 둘 다 주황 계열이라 시가지 위에서 묻혔다. */
-const DENS=[[255,245,157],[124,179,66],[30,86,49]];    // #FFF59D · #7CB342 · #1E5631
-function dens(s,a){                                     // s:0 낮음 → .5 중간 → 1 높음
-  s=s<0?0:s>1?1:s; const i=s<0.5?0:1, u=s<0.5?s/0.5:(s-0.5)/0.5, c=DENS[i], d=DENS[i+1], L=(x,y)=>Math.round(x+(y-x)*u);
+/* 밀도 램프 두 벌 — 둘 다 옅은 노랑에서 시작해 짙어진다("적음"은 지표가 달라도 같은 색이라야
+   자연스럽다). 뜻을 가르는 것은 짙은 쪽이다: 발견은 초록(있다), 미발견은 붉은(없다 = 찾아가 볼 데).
+   예전에는 두 지표가 같은 초록 하나를 써서, 미발견 종이 가장 많은 곳이 가장 진한 초록으로 칠해졌다 —
+   조사 공백이 큰 곳인데 색만 보면 오히려 좋아 보였고, 색으로 어느 지표를 보는 중인지도 알 수 없었다.
+   붉은 램프의 가운데는 분류 체계도가 "미발견"에 쓰는 색(#b5482f)에 맞춰, 두 화면의 색 의미를 잇는다. */
+const DENS=[[255,245,157],[124,179,66],[30,86,49]];        // #FFF59D · #7CB342 · #1E5631 — 발견·기록
+const DENS_GAP=[[255,245,157],[181,72,47],[122,43,27]];    // #FFF59D · #B5482F · #7A2B1B — 미발견(공백)
+function dens(s,a,ramp){                                // s:0 낮음 → .5 중간 → 1 높음
+  s=s<0?0:s>1?1:s; const R=ramp||DENS;
+  const i=s<0.5?0:1, u=s<0.5?s/0.5:(s-0.5)/0.5, c=R[i], d=R[i+1], L=(x,y)=>Math.round(x+(y-x)*u);
   return `rgba(${L(c[0],d[0])},${L(c[1],d[1])},${L(c[2],d[2])},${a})`;
 }
+/* 램프는 "지금 칠하는 값이 무엇이냐"로 고른다 — metric 을 dens 안에서 읽으면 모드 B 까지 토글에 따라
+   뒤집힌다. 모드 B 가 칠하는 것은 그 종의 기록 수(발견 밀도)라 발견/미발견 토글과 무관하고 항상 초록. */
+function metricRamp(){ return metric==='gap'?DENS_GAP:DENS; }
 function densScale(v){                                  // 값 v(현 metric)→램프 위치 s
   return DOM.max<=DOM.min?0:(v-DOM.min)/(DOM.max-DOM.min);
 }
@@ -1966,7 +1976,8 @@ function styleFn(feature){
   const onDark=s>=0.55;
   return [
     new ol.style.Style({zIndex:0,
-      fill:new ol.style.Fill({color:s<0?'rgba(255,252,235,0.35)':dens(s,0.85)})}),
+      // 모드 B 는 그 종의 기록 밀도라 항상 초록, 모드 A 는 보고 있는 지표(발견/미발견)의 램프.
+      fill:new ol.style.Fill({color:s<0?'rgba(255,252,235,0.35)':dens(s,0.85,mapMode==='B'?DENS:metricRamp())})}),
     new ol.style.Style({zIndex:1,
       stroke:new ol.style.Stroke({color:selA?'#015543':(onDark?'rgba(255,255,255,0.82)':'#4a5a4e'),
         width:selA?2.2:1.1}),
@@ -2612,7 +2623,8 @@ function recompute(){
   legLo.textContent=nf(DOM.min); legHi.textContent=nf(DOM.max);
   const lvl=regLevel==='sido'?'시도별':'시군구별';
   const rampEl=document.querySelector('#modeA .ramp');   // 램프는 항상 좌=작은 값·우=큰 값(좌 legLo·우 legHi 와 같은 방향)
-  if(rampEl) rampEl.style.background=`linear-gradient(90deg,${dens(0,1)},${dens(.5,1)},${dens(1,1)})`;
+  { const R=metricRamp();   // 범례 띠도 지금 지표의 램프로 — 지도와 범례가 다른 색이면 읽을 수가 없다
+    if(rampEl) rampEl.style.background=`linear-gradient(90deg,${dens(0,1,R)},${dens(.5,1,R)},${dens(1,1,R)})`; }
   legCap.textContent= metric==='found'?`${lvl} 발견 종수 — 짙을수록 많음`:`${lvl} 미발견(공백) 종수 — 짙을수록 많음`;
 }
 function renderSelChips(){
