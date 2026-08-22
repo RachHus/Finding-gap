@@ -552,6 +552,11 @@ Deno.serve(async (req) => {
     const usedTools: string[] = [];
     let spHint: Record<string, string> | null = null;    // 지도 딥링크(종별 mode B)
     let regHint: Record<string, string> | null = null;   // 지도 딥링크(지역·분류군 mode A)
+    /* 대화에서 하나로 특정된 종의 분류군. "무주에서 구상나무 발견되나?" 처럼 종 하나를 묻는 질문은
+       모델이 지역 도구를 taxon_group 없이 부르기 때문에, 지역 힌트에 분류군이 비어 지도가 화면에
+       남아 있던 분류군(첫 화면 기본값 포유류)으로 열려 답변과 어긋났다 — 관속식물인 구상나무를
+       물었는데 지도는 "무주군 · 포유류 · 미발견"이 됐다. 그때 메울 값으로 들고 다닌다. */
+    let oneTaxon: string | null = null;
     for (let step = 0; step < MAX_STEPS; step++) {
       if (Date.now() - started > BUDGET_MS) break;
       const data = await callGemini(contents);
@@ -559,6 +564,10 @@ Deno.serve(async (req) => {
       const calls = parts.filter((p: Record<string, unknown>) => p.functionCall);
       if (!calls.length) {
         const text = parts.filter((p: Record<string, unknown>) => p.text).map((p: Record<string, string>) => p.text).join("").trim();
+        /* 지역 힌트에 분류군이 비어 있으면 이번 대화에서 특정된 종의 분류군으로 메운다. 도구를 도는
+           중간이 아니라 답을 내보내는 이 자리에서 채우는 이유는 호출 순서에 안 걸리게 하기 위함이다
+           — 지역 도구가 종 검색보다 먼저 처리되는 경우에도 결과가 같아야 한다. */
+        if (regHint && !regHint.taxon && oneTaxon) regHint.taxon = oneTaxon;
         return json({ reply: text || "답변을 생성하지 못했습니다. 질문을 바꿔 다시 시도해 주세요.", used_tools: usedTools, map: spHint ?? regHint });
       }
       contents.push({ role: "model", parts });
@@ -573,6 +582,13 @@ Deno.serve(async (req) => {
         // 지도 딥링크 힌트: 종 상세(mode B) 우선, 없으면 지역·분류군 choropleth(mode A)
         const r = result as Record<string, unknown>;
         if (r && !r.error) {
+          // 종이 하나로 좁혀진 결과에서만 분류군을 기억한다 — 여러 종이 걸린 검색은 어느 분류군인지
+          // 단정할 수 없으므로 건드리지 않는다(엉뚱한 분류군으로 지도를 열지 않게).
+          const sps = Array.isArray(r.species) ? r.species as Record<string, unknown>[] : null;
+          const tgOne = (typeof r.ktsn === "string" || typeof r.ktsn === "number") ? r.taxon_group
+                      : (sps && sps.length === 1 ? sps[0].taxon_group : undefined);
+          if (typeof tgOne === "string" && TAXA_CODES.has(tgOne)) oneTaxon = tgOne;
+
           if (name === "species_detail" && r.ktsn) {
             spHint = { mode: "B", sp: String(r.ktsn) };
           } else if (name === "region_discovery_summary" || name === "undiscovered_priority_species" || name === "list_protected_species" || name === "taxon_gap_ranking") {
