@@ -976,16 +976,26 @@
          "무엇을 메울 수 있나" 목록 역할만 한다. 리그 표는 조사자료(region_gaps)로 오늘부터 가득 차 있고,
          승인된 제보(approved_discoveries)가 그 위에 얹힌다 — 제보 기반 카드처럼 텅 비지 않는다. -->
     <div class="authcard" id="leagueCard" style="max-width:none">
-      <h3 style="margin:0 0 12px">지역 클럽 리그 <button type="button" class="qtip" aria-label="설명 보기" data-tip="시군구를 클럽으로 보고, 그 지역에서 지금까지 밝혀진 종 수로 줄 세운 표입니다. 조사자료로 계산한 값이라 처음부터 채워져 있고, 시민과학 제보가 승인되면 그 지역 점수에 더해집니다. 마이페이지에서 활동지역을 정하면 내 클럽이 강조됩니다.">?</button></h3>
+      <h3 style="margin:0 0 12px">지역 클럽 리그 <button type="button" class="qtip" aria-label="설명 보기" data-tip="시군구·시도를 클럽으로 보고, 시민과학 제보로만 승점을 매깁니다. 공백을 메운 제보는 3점, 그 밖의 제보는 1점이고 검토를 통과한 제보만 셉니다. 조사자료로 이미 밝혀진 종 수는 점수에 넣지 않습니다 — 그건 사람들이 한 것이 아니라 공식 조사가 한 것이라 경쟁의 출발선이 될 수 없습니다. 모든 클럽은 0점에서 시작합니다.">?</button></h3>
       <div class="lgbar">
         <div class="lgseg" id="lgLevel" role="group" aria-label="리그 단위">
           <button type="button" data-lv="sido" class="on">시도</button>
           <button type="button" data-lv="sigungu">시군구</button>
         </div>
+        <div class="lgseg" id="lgSeason" role="group" aria-label="집계 기간">
+          <button type="button" data-season="all" class="on">통산</button>
+          <button type="button" data-season="year">올해</button>
+        </div>
         <select id="lgTaxon" aria-label="분류군"><option value="">전 분류군</option></select>
         <span class="lgnote muted2" id="lgNote"></span>
       </div>
-      <ol class="wl lblist lgtbl" id="lgList"><li class="muted2">불러오는 중…</li></ol>
+      <div class="scoreboard">
+        <table class="sbtable">
+          <thead><tr><th class="c-rank">순위</th><th class="c-name">클럽</th><th>제보</th><th>공백</th><th>승점</th></tr></thead>
+          <tbody id="lgBody"><tr><td colspan="5" class="sbempty">불러오는 중…</td></tr></tbody>
+        </table>
+      </div>
+      <p class="sbrule">공백을 메운 제보 <b>3점</b> · 그 밖의 제보 <b>1점</b> · 검토를 통과한 제보만 집계</p>
     </div>
     <!-- 공백 현상금 — 무엇을 메울 수 있나. 등급으로 줄 세우지 않는다(멸종위기 지정은 분류군 편중이
          심해 공백 규모와 무관하다) — 등급은 배지로만 달고, 순위가 실제로 존재하는 것은 '무기록 연수'뿐이라
@@ -1005,8 +1015,14 @@
       <ol class="wl lblist bntlist" id="bountyList"><li class="muted2">불러오는 중…</li></ol>
     </div>
     <div class="authcard" id="lbCard" style="max-width:none">
-      <h3 style="margin:0 0 12px">개인 기여 순위 <button type="button" class="qtip" aria-label="설명 보기" data-tip="공백을 많이 메운 시민과학자입니다 — 익명 집계(개인 정보 없이 합계만). 표시 이름은 마이페이지에서 정할 수 있고, 정하지 않으면 '익명'으로 집계됩니다.">?</button></h3>
-      <ol class="wl lblist" id="lbList"><li class="muted2">불러오는 중…</li></ol>
+      <h3 style="margin:0 0 12px">선수 순위 <button type="button" class="qtip" aria-label="설명 보기" data-tip="제보로 공백을 메운 시민과학자 순위입니다 — 익명 집계(개인 정보 없이 합계만). 승점은 클럽 리그와 같은 규칙(공백 메움 3점·그 밖의 제보 1점)이고, 소속은 그 사람이 제보를 가장 많이 올린 지역입니다. 표시 이름은 마이페이지에서 정할 수 있고, 정하지 않으면 '익명'으로 함께 묶입니다.">?</button></h3>
+      <div id="myCardHost"></div>
+      <div class="scoreboard">
+        <table class="sbtable">
+          <thead><tr><th class="c-rank">순위</th><th class="c-name">선수</th><th>제보</th><th>공백</th><th>승점</th></tr></thead>
+          <tbody id="lbBody"><tr><td colspan="5" class="sbempty">불러오는 중…</td></tr></tbody>
+        </table>
+      </div>
     </div>
     <div class="authcard" id="feedCard" style="max-width:none">
       <h3 style="margin:0 0 12px">최근 제보 <button type="button" class="qtip" aria-label="설명 보기" data-tip="시민과학자가 올린 최근 관찰 제보입니다 — 검토를 거쳐 재발견 후보로 반영됩니다. 정확한 위치는 공개되지 않습니다.">?</button></h3>
@@ -1162,11 +1178,63 @@
     background:var(--card);color:var(--muted);cursor:pointer}
   .lgseg button+button{border-left:1px solid var(--line)}
   .lgseg button.on{background:var(--accent);color:#fff}
-  /* 순위표에서 내 줄(내 클럽·나)은 배경으로 찾아낼 수 있게 한다 — 리그 표와 개인 기여 순위 공용 */
-  .lblist li.me{background:#f2f8f5;border-color:#bcd9cd}
-  .lblist li.me .nm{color:#015543}
-  .lgtbl .club{color:var(--muted);font-size:12px}
-  .lgtbl .add{color:#2f7d5f;font-size:12px;font-weight:600;white-space:nowrap}
+  /* ── 순위판(scoreboard) — 클럽 리그·선수 순위 공용 ──
+     이 사이트는 밝은 화면 하나로 되어 있는데 순위판만 짙은 판으로 뒤집는다. 경기장 전광판이
+     그렇게 생겼고, 카드마다 흰 줄이 늘어선 목록으로는 "누가 이기고 있나"가 눈에 안 들어왔다.
+     칸을 맞춰야 숫자를 비교할 수 있으므로 목록(ul)이 아니라 실제 표(table)를 쓴다. */
+  .scoreboard{background:#0f1c16;border-radius:14px;padding:13px 14px 6px;overflow-x:auto;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .sbtable{width:100%;min-width:540px;border-collapse:collapse;color:#e8f1ec}
+  .sbtable th{font-size:10.5px;font-weight:700;letter-spacing:.09em;color:#7fa896;text-align:right;
+    padding:0 8px 9px;border-bottom:1px solid rgba(255,255,255,.10);white-space:nowrap;background:none}
+  .sbtable th.c-rank,.sbtable th.c-name{text-align:left}
+  /* 숫자 칸은 폭을 고정해 오른쪽에 모으고, 남는 폭은 이름 칸이 가져간다 — 칸이 100% 로 고르게
+     벌어지면 순위·이름과 숫자가 화면 양끝으로 흩어져 한 줄로 안 읽힌다. 마지막 세 칸(제보·공백·승점)은
+     두 표가 같은 구성이라 nth-last-child 로 함께 잡힌다. */
+  .sbtable th:first-child,.sbtable td:first-child{text-align:left;width:46px}
+  .sbtable th:nth-last-child(-n+3),.sbtable td:nth-last-child(-n+3){width:68px}
+  .sbtable td{padding:9px 8px;border-bottom:1px solid rgba(255,255,255,.055);text-align:right;
+    white-space:nowrap;font-variant-numeric:tabular-nums;font-size:13px;color:#dbe8e1}
+  .sbtable td.nmc{text-align:left;font-weight:700;font-size:13.5px;color:#fff}
+  .sbtable td.pts{font-weight:800;color:#5ee0a8;font-size:14.5px}
+  .sbtable td.goal{color:#93a89f;font-size:12px}
+  .sbtable tbody tr:last-child td{border-bottom:0}
+  .sbtable tbody tr.me{background:rgba(94,224,168,.12)}
+  .sbtable tbody tr.me td.nmc{color:#8affca}
+  .sbtable td.sbempty{text-align:center;color:#8fae9f;padding:22px 8px;font-size:13px;white-space:normal}
+  /* 줄이 하나도 없을 때는 표 최소폭(540px)을 풀고 머리글도 감춘다 — 안 그러면 좁은 화면에서 가운데
+     정렬된 안내 문구가 가로 스크롤 밖으로 밀려 잘린다(390px 실측). 빈 표의 머리글은 어차피 뜻이 없다. */
+  .scoreboard.empty .sbtable{min-width:0}
+  .scoreboard.empty thead{display:none}
+  .sbsub{display:none}
+  /* 좁은 화면에서는 칸이 다 안 들어가 정작 제일 중요한 승점이 가로 스크롤 밖으로 밀린다(390px 실측).
+     제보·공백 칸을 접고 승점만 남긴 뒤, 접은 값은 이름 아래 작은 줄로 내려 아무것도 잃지 않게 한다. */
+  @media(max-width:560px){
+    .sbtable{min-width:0}
+    .sbtable th:nth-last-child(2),.sbtable th:nth-last-child(3),
+    .sbtable td:nth-last-child(2),.sbtable td:nth-last-child(3){display:none}
+    .sbsub{display:block;font-weight:500;font-size:11px;color:#8fae9f;margin-top:2px}
+    .sbtable td{padding:8px 6px}
+  }
+  /* 상위 3위 메달 — 순위 원 자체에 색을 준다(별도 아이콘 없이 색만으로 등수가 읽힌다) */
+  .sbrank{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border-radius:50%;
+    background:rgba(255,255,255,.09);color:#cfe0d7;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
+  .sbrank.m1{background:linear-gradient(160deg,#F9E39B,#D2A021);color:#3d2c00}
+  .sbrank.m2{background:linear-gradient(160deg,#EDF2F6,#A7B4BE);color:#2b3238}
+  .sbrank.m3{background:linear-gradient(160deg,#EFC08F,#B2703A);color:#3c2110}
+  .sbchip{display:inline-block;margin-left:7px;font-size:10px;font-weight:800;letter-spacing:.04em;
+    border-radius:999px;padding:1px 7px;background:rgba(94,224,168,.20);color:#8affca}
+  .sbrule{margin:9px 2px 0;font-size:11.5px;color:var(--muted)}
+  .sbrule b{color:#015543}
+  /* 내 선수 카드 — 순위표에서 내 줄을 찾기 전에 내 성적이 먼저 보이게 한다 */
+  .mycard{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 11px;padding:11px 14px;
+    border:1px solid #bcd9cd;background:#f2f8f5;border-radius:12px}
+  .mycard .who{font-weight:800;font-size:14px;color:#015543}
+  .mycard .club{font-size:12px;color:var(--muted)}
+  .mycard .stat{margin-left:auto;display:flex;gap:16px}
+  .mycard .stat div{text-align:right}
+  .mycard .stat .v{font-weight:800;font-size:16px;color:#015543;font-variant-numeric:tabular-nums;line-height:1.15}
+  .mycard .stat .l{font-size:10.5px;color:var(--muted);letter-spacing:.04em}
   .lblist .gbadge{font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 7px;white-space:nowrap;flex:none}
   /* 현상금 행: 무기록 연수를 숫자 자리에 세우고, 등급은 배지로만 */
   .bntlist .yrs{margin-left:auto;font-weight:700;color:#96301A;white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums}
@@ -1185,8 +1253,8 @@
   .lblist .lbbar{flex:0 0 100%;height:5px;border-radius:3px;background:#eef3f1;margin-top:1px}
   .lblist .lbbar>i{display:block;width:var(--w,0);height:100%;border-radius:3px;background:linear-gradient(90deg,#4e9c86,#015543)}
   /* 오른쪽 끝에 붙는 숫자는 우측 고정 바로가기 띠에 가린다(실측: 1180·1300px 폭에서 3행이 덮였다).
-     띠 폭(62px)만큼 행 오른쪽을 비워 둔다. 880px 이하에서는 띠가 아래 가운데로 눕는다(.quickrail). */
-  @media(min-width:881px){ .lblist li{padding-right:74px} }
+     띠 폭(62px)만큼 오른쪽을 비워 둔다. 880px 이하에서는 띠가 아래 가운데로 눕는다(.quickrail). */
+  @media(min-width:881px){ .lblist li{padding-right:74px} .scoreboard{padding-right:78px} }
   .btn.sm{padding:5px 12px;font-size:12px}
   .btn.sm.rej{background:#f3eeee;color:#a03027}
   .admbtns{margin-left:auto;display:inline-flex;gap:6px;flex:none}
@@ -3729,7 +3797,7 @@ else Promise.all([
 
 <!-- 마이페이지(로그인·알림·활동 지역·관심 종·내 제보) — Supabase 설정(config.js)이 있을 때만 활성, 없으면 정적 안내 유지 -->
 <script type="module">
-import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, leaderboard, approvedDiscoveries, myDisplayName, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, adminPendingTaxonRefs, setTaxonRefStatus, myTaxonReferences, submitFeedback, siteFeedback, adminPendingFeedback, setFeedbackStatus, deleteFeedback } from './fg_supabase.js';
+import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, myDisplayName, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, adminPendingTaxonRefs, setTaxonRefStatus, myTaxonReferences, submitFeedback, siteFeedback, adminPendingFeedback, setFeedbackStatus, deleteFeedback } from './fg_supabase.js';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const view=document.getElementById('view-my');
 const spName=k=>{ const sp=(window.__SPIDX__||[]).find(x=>x.k===k); return sp?{n:sp.n||sp.s,s:sp.s||'',t:sp.t||''}:{n:k,s:'',t:''}; };
@@ -3968,86 +4036,169 @@ function renderBounty(){
 }
 document.getElementById('bountyQ')?.addEventListener('input',()=>renderBounty());
 
-/* ── ③-2 지역 클럽 리그 ──
-   시군구·시도를 클럽으로 보고 밝혀진 종 수로 줄 세운다. 바탕은 조사자료(region_gaps.js)라 처음부터
-   가득 차 있고, 그 위에 승인된 제보(approved_discoveries RPC)를 얹어 "제보로 더한 점수"를 따로 보여준다.
-   제보 쪽이 오랫동안 0으로만 나왔던 이유는 자료가 없어서가 아니라 reports.sigungu 가 아무도 채우지
-   않아 그 RPC 가 한 행도 안 돌려줬기 때문이다 — 이제 제보할 때 함께 저장한다(submitReport 참조). */
-let lgLevel='sido', lgTx='', lgAdd=null, myRegs=[];           // myRegs: 마이페이지 활동지역(=내 클럽). 아래 onAuth 에서 채운다.
-function myClubs(){ return myRegs; }
-async function loadLeagueAdds(){
-  if(lgAdd) return lgAdd;
-  lgAdd={sido:{}, sigungu:{}};
-  try{
-    const rows=await approvedDiscoveries();
-    rows.forEach(r=>{ const c=String(r.sigungu||''); if(!/^\d{5}$/.test(c)) return;
-      lgAdd.sigungu[c]=(lgAdd.sigungu[c]||0)+1;
-      const sd=c.slice(0,2); lgAdd.sido[sd]=(lgAdd.sido[sd]||0)+1; });
-  }catch(e){ /* 로그인·설정 없으면 조용히 0 — 리그 표 자체는 조사자료로 뜬다 */ }
-  return lgAdd;
+/* ── ③-2 지역 클럽 리그 · 선수 순위 ──
+   승점은 **제보로만** 매긴다. 처음엔 조사자료(region_gaps.js)의 "밝혀진 종 수"로 줄 세웠는데
+   그건 공정하지 않다 — 강원 10,188종 1위는 사람들이 한 것이 아니라 공식 조사가 많이 된 결과라,
+   지금 참여하는 사람이 무엇을 해도 순위가 안 움직인다. 그래서 조사자료는 점수에서 빼고 "남은 공백"
+   (그 클럽이 노릴 수 있는 목표 크기)으로만 옆에 적는다. 모든 클럽은 0점에서 시작한다.
+     승점 = 공백을 메운 제보 3점 + 그 밖의 제보 1점 (축구 승점 방식), 검토를 통과한 제보만.
+   자료는 community_reports RPC 한 번으로 끝난다 — 제보 한 건마다 reporter·sigungu·fills_gap 이
+   같이 오므로 클럽 점수와 선수 점수를 같은 자료에서 뽑아 두 표가 어긋나지 않는다. */
+const WIN_PTS=3, DRAW_PTS=1;
+let lgLevel='sido', lgTx='', lgSeason='all', myRegs=[];       // myRegs: 마이페이지 활동지역(=내 클럽)
+let scoreCache=null;
+function isGapReport(r){
+  /* fills_gap 은 이 개편 전 제보에는 비어 있다 — 그때는 종의 관측 연도로 같은 판정을 다시 한다. */
+  if(typeof r.fills_gap==='boolean') return r.fills_gap;
+  const y=((window.__SPSTATE__||{}).maxyear||{})[r.ktsn];
+  return (y===undefined||y===null) ? true : (y<CUTYEAR);
 }
+async function loadScores(){
+  if(scoreCache) return scoreCache;
+  const out={rows:[], capped:false, pending:0};
+  try{
+    const rows=await communityReports(200);
+    out.capped = rows.length>=200;                            // 상한에 닿으면 합계가 최근 200건 기준이다
+    out.rows=rows;
+    out.pending=rows.filter(r=>r.status!=='approved').length;
+  }catch(e){ /* 로그인·설정 없으면 빈 시즌 — 표는 0점으로 뜬다 */ }
+  scoreCache=out; return out;
+}
+function seasonOK(r){
+  if(lgSeason==='all') return true;
+  const y=String(r.observed_date||r.created_at||'').slice(0,4);
+  return y===String(new Date().getFullYear());
+}
+function scored(rows){                                        // 점수에 넣을 제보만 — 승인 + 기간 + 분류군
+  return rows.filter(r=>r.status==='approved' && seasonOK(r) && (!lgTx || r.taxon_group===lgTx));
+}
+function medal(i){ return `<span class="sbrank${i<3?' m'+(i+1):''}">${i+1}</span>`; }
+// 줄이 없는 표는 '빈 순위판'으로 표시한다(위 CSS 에서 최소폭·머리글을 푼다)
+function sbEmpty(body, on){ const p=body&&body.closest('.scoreboard'); if(p) p.classList.toggle('empty', !!on); }
 async function renderLeague(){
-  const host=document.getElementById('lgList'), seg=document.getElementById('lgLevel'),
-        sel=document.getElementById('lgTaxon'), note=document.getElementById('lgNote');
-  if(!host) return;
+  const body=document.getElementById('lgBody'), seg=document.getElementById('lgLevel'),
+        sea=document.getElementById('lgSeason'), sel=document.getElementById('lgTaxon'),
+        note=document.getElementById('lgNote');
+  if(!body) return;
   const G=window.__REGGAP__;
-  if(!G){ host.innerHTML='<li class="muted2">지역 자료를 불러오지 못했습니다.</li>'; return; }
+  if(!G){ sbEmpty(body,true); body.innerHTML='<tr><td colspan="5" class="sbempty">지역 자료를 불러오지 못했습니다.</td></tr>'; return; }
   if(seg) seg.querySelectorAll('[data-lv]').forEach(b=>{
     b.classList.toggle('on', b.dataset.lv===lgLevel);
     b.onclick=()=>{ if(b.dataset.lv===lgLevel) return; lgLevel=b.dataset.lv; renderLeague(); };
   });
+  if(sea) sea.querySelectorAll('[data-season]').forEach(b=>{
+    b.classList.toggle('on', b.dataset.season===lgSeason);
+    b.onclick=()=>{ if(b.dataset.season===lgSeason) return; lgSeason=b.dataset.season; renderLeague(); renderLeaderboard(); };
+  });
   if(sel && sel.options.length<=1){
     sel.innerHTML='<option value="">전 분류군</option>'+Object.keys(G.tx||{})
       .map(c=>`<option value="${c}">${esc(G.tx[c][0])}</option>`).join('');
-    sel.onchange=()=>{ lgTx=sel.value; renderLeague(); };
+    sel.onchange=()=>{ lgTx=sel.value; renderLeague(); renderLeaderboard(); };
   }
-  const add=await loadLeagueAdds();
+  const S=await loadScores();
   const isSido=lgLevel==='sido';
-  const found=isSido?(G.foundSido||{}):(G.found||{});
-  const sum=o=>lgTx?(o[lgTx]||0):Object.values(o||{}).reduce((a,b)=>a+b,0);
-  const nameOf=c=>isSido?(G.sido||{})[c]:(((G.sg||{})[c]||[])[0]||c);
-  const clubOf=c=>isSido?'':((G.sido||{})[((G.sg||{})[c]||[])[1]]||'');
-  const mine=new Set(myClubs().map(String));
-  const rows=Object.keys(found).map(c=>({c, n:sum(found[c]), a:(add[lgLevel]||{})[c]||0}))
-    .sort((x,y)=>y.n-x.n||nameOf(x.c).localeCompare(nameOf(y.c),'ko'));
-  if(!rows.length){ host.innerHTML='<li class="muted2">지역 자료가 비어 있습니다.</li>'; return; }
-  const txName=lgTx?((G.tx||{})[lgTx]||[''])[0]:'전 분류군';
-  const total=lgTx?((G.tx||{})[lgTx]||[0,0])[1]:Object.values(G.tx||{}).reduce((a,v)=>a+v[1],0);
-  if(note) note.textContent=`${txName} 전국 ${total.toLocaleString('ko-KR')}종 · ${isSido?'시도':'시군구'} ${rows.length}곳`;
-  /* 내 클럽이 15위 밖이면 잘려서 안 보인다 — 상위 15 + 내 클럽 줄을 따로 이어 붙인다(축구 순위표처럼). */
+  const nameOf=c=>isSido?((G.sido||{})[c]||c):(((G.sg||{})[c]||[])[0]||c);
+  const parentOf=c=>isSido?'':((G.sido||{})[((G.sg||{})[c]||[])[1]]||'');
+  const mine=new Set(myRegs.map(String));
+  // 클럽별 집계 — 시군구 코드가 없는 제보(이 개편 전 제보)는 클럽을 정할 수 없어 점수에서 빠진다
+  const tally={}; let orphan=0;
+  scored(S.rows).forEach(r=>{
+    const sg=String(r.sigungu||'');
+    if(!/^\d{5}$/.test(sg)){ orphan++; return; }
+    const key=isSido?sg.slice(0,2):sg;
+    const t=tally[key]||(tally[key]={rep:0,gap:0});
+    t.rep++; if(isGapReport(r)) t.gap++;
+  });
+  /* 득점한 클럽만 표에 올린다. 조사자료로 채운 "남은 공백" 칸을 옆에 두었다가 뺐다 — 그 숫자는
+     결국 조사량을 되비추므로(종로구 39,178종 대 삼척시 35,232종) 점수에서 빼려던 지표가 칸으로
+     되돌아오는 셈이고, 목표치로도 과장이다(어느 시군구도 전국 종을 다 갖지 않는다). 순위표는
+     순위표만 담고, 무엇을 찾을지는 아래 공백 현상금이 맡는다. */
+  const rows=Object.keys(tally).map(c=>{ const t=tally[c];
+    return {c, rep:t.rep, gap:t.gap, pts:t.gap*WIN_PTS+(t.rep-t.gap)*DRAW_PTS}; })
+    .sort((x,y)=>y.pts-x.pts||y.gap-x.gap||nameOf(x.c).localeCompare(nameOf(y.c),'ko'));
+  const regionN=Object.keys(isSido?(G.foundSido||{}):(G.found||{})).length;
+  if(note){
+    const per=lgSeason==='year'?`${new Date().getFullYear()}년`:'통산';
+    const txName=lgTx?((G.tx||{})[lgTx]||[''])[0]:'전 분류군';
+    note.textContent=`${per} · ${txName} · 득점한 클럽 ${rows.length}/${regionN}`
+      + (S.pending?` · 검토 중 ${S.pending}건`:'')
+      + (orphan?` · 지역 미확인 제보 ${orphan}건 제외`:'')
+      + (S.capped?' · 최근 200건 기준':'');
+  }
+  if(!rows.length){
+    /* 0점짜리 252줄을 늘어놓는 것보다 개막 전이라고 말하는 편이 정직하고, 무엇을 하면 되는지도 분명하다. */
+    sbEmpty(body,true);
+    body.innerHTML='<tr><td colspan="5" class="sbempty">아직 득점한 클럽이 없습니다 — <b>첫 제보가 첫 골</b>입니다.<br>'+
+      '아래 <b>공백 현상금</b>에서 노릴 종을 고르면 그 지역 클럽에 승점이 올라갑니다.</td></tr>';
+    return;
+  }
+  sbEmpty(body,false);
   const top=rows.slice(0,15);
-  const extra=isSido ? [] : rows.map((r,i)=>({...r,i})).filter(r=>mine.has(r.c) && r.i>=15);
-  const line=(r,i)=>`<li class="${mine.has(r.c)?'me':''}"><span class="rank">${i+1}</span>`+
-    `<span class="nm">${esc(nameOf(r.c))}</span>${clubOf(r.c)?`<span class="club">${esc(clubOf(r.c))}</span>`:''}`+
-    (mine.has(r.c)?'<span class="gbadge" style="background:#e7f1ee;color:#015543">내 클럽</span>':'')+
-    (r.a?`<span class="add">제보 +${r.a}</span>`:'')+
-    `<span class="cnt">${r.n.toLocaleString('ko-KR')}종</span>`+
-    `<span class="lbbar"><i style="--w:${Math.max(2,Math.round(r.n/(rows[0].n||1)*100))}%"></i></span></li>`;
-  host.innerHTML=top.map((r,i)=>line(r,i)).join('')
-    + (extra.length?'<li class="muted2">…</li>'+extra.map(r=>line(r,r.i)).join(''):'')
-    + (mine.size?'':'<li class="muted2">마이페이지에서 활동지역을 정하면 내 클럽이 이 표에서 강조됩니다.</li>');
+  const extra=rows.map((r,i)=>({...r,i})).filter(r=>mine.has(r.c)&&r.i>=15);   // 내 클럽이 밖으로 밀리면 따로 붙인다
+  const line=(r,i)=>`<tr class="${mine.has(r.c)?'me':''}"><td>${medal(i)}</td>`+
+    `<td class="nmc">${esc(nameOf(r.c))}`+
+    (parentOf(r.c)?` <span style="font-weight:500;font-size:11.5px;color:#8fae9f">${esc(parentOf(r.c))}</span>`:'')+
+    (mine.has(r.c)?'<span class="sbchip">내 클럽</span>':'')+
+    `<span class="sbsub">제보 ${r.rep} · 공백 ${r.gap}</span></td>`+
+    `<td>${r.rep}</td><td>${r.gap}</td><td class="pts">${r.pts}</td></tr>`;
+  body.innerHTML=top.map((r,i)=>line(r,i)).join('')
+    + (extra.length?`<tr><td colspan="5" class="sbempty" style="padding:6px">⋯</td></tr>`+extra.map(r=>line(r,r.i)).join(''):'');
 }
 
-// ── ④ 개인 기여 순위(report_leaderboard RPC) ──
+// ── ④ 선수 순위 — 클럽 리그와 같은 자료(community_reports)·같은 승점 규칙. 소속은 그 사람이 가장 많이 제보한 지역 ──
 async function renderLeaderboard(){
-  const host=document.getElementById('lbList'); if(!host) return;
+  const body=document.getElementById('lbBody'), myHost=document.getElementById('myCardHost');
+  if(!body) return;
   try{
-    const rows=await leaderboard(15);
-    if(!rows.length){ host.innerHTML='<li class="muted2">아직 제보가 없습니다. 첫 제보의 주인공이 되어 보세요 — 위 공백 현상금에서 노릴 종을 고를 수 있습니다.</li>'; return; }
-    /* 내 줄을 찾아 강조한다 — 순위표에서 정작 내가 어디 있는지 모르면 올라갈 마음이 안 생긴다.
-       표시 이름으로 맞춰 보는데(RPC 가 익명 집계라 user_id 를 안 준다), 이름을 안 정했으면 '익명'으로
-       여러 사람이 한 줄에 합쳐지므로 그때는 강조하지 않는다. */
+    const S=await loadScores();
+    const G=window.__REGGAP__||{};
+    // 선수별 집계 — 클럽 리그와 같은 자료·같은 규칙을 쓴다(두 표의 승점이 어긋나지 않게)
+    const byName={};
+    scored(S.rows).forEach(r=>{
+      const nm=(r.reporter&&String(r.reporter).trim())||'익명';
+      const p=byName[nm]||(byName[nm]={rep:0,gap:0,clubs:{}});
+      p.rep++; if(isGapReport(r)) p.gap++;
+      const sg=String(r.sigungu||''); if(/^\d{5}$/.test(sg)) p.clubs[sg]=(p.clubs[sg]||0)+1;
+    });
+    const rows=Object.entries(byName).map(([nm,p])=>{
+      const club=Object.entries(p.clubs).sort((a,b)=>b[1]-a[1])[0];   // 가장 많이 제보한 지역을 소속으로 본다
+      return {nm, rep:p.rep, gap:p.gap, pts:p.gap*WIN_PTS+(p.rep-p.gap)*DRAW_PTS,
+              club: club?(((G.sg||{})[club[0]]||[])[0]||''):''};
+    }).sort((a,b)=>b.pts-a.pts||b.gap-a.gap||a.nm.localeCompare(b.nm,'ko'));
     let me=null;
-    try{ me=await myDisplayName(); }catch(e){ /* 비로그인 등 — 강조 없이 표만 보여준다 */ }
+    try{ me=await myDisplayName(); }catch(e){ /* 비로그인 — 강조 없이 표만 */ }
     const mine=(me&&me.trim())||null;
-    const top=rows[0].reports||1;
-    host.innerHTML=rows.map((r,i)=>
-      `<li class="${mine&&r.reporter===mine?'me':''}"><span class="rank">${i+1}</span>`+
-      `<span class="nm">${esc(r.reporter)}</span>`+
-      (mine&&r.reporter===mine?'<span class="gbadge" style="background:#e7f1ee;color:#015543">나</span>':'')+
-      `<span class="cnt">공백 ${r.gaps} · 제보 ${r.reports}</span>`+
-      `<span class="lbbar"><i style="--w:${Math.max(2,Math.round(r.reports/top*100))}%"></i></span></li>`).join('');
-  }catch(err){ host.innerHTML=`<li class="muted2">리더보드를 불러오지 못했습니다 (${esc(err.message||String(err))}).</li>`; }
+    if(myHost){
+      const my=mine?rows.find(r=>r.nm===mine):null;
+      myHost.innerHTML = my
+        ? `<div class="mycard"><div><div class="who">${esc(my.nm)}</div>`+
+          `<div class="club">${my.club?esc(my.club)+' 소속':'소속 미정 — 제보에 위치를 남기면 정해집니다'}`+
+          ` · 전체 ${rows.findIndex(r=>r.nm===mine)+1}위</div></div>`+
+          `<div class="stat"><div><div class="v">${my.rep}</div><div class="l">제보</div></div>`+
+          `<div><div class="v">${my.gap}</div><div class="l">공백</div></div>`+
+          `<div><div class="v">${my.pts}</div><div class="l">승점</div></div></div></div>`
+        : '';
+    }
+    if(!rows.length){
+      sbEmpty(body,true);
+      body.innerHTML='<tr><td colspan="5" class="sbempty">아직 득점이 없습니다 — 첫 제보가 첫 골입니다.<br>'+
+        '위 <b>공백 현상금</b>에서 노릴 종을 고르면 바로 제보할 수 있습니다.</td></tr>';
+      return;
+    }
+    /* 소속은 별도 칸이 아니라 이름 옆에 붙인다 — 칸으로 두면 이름 칸이 남는 폭을 다 가져가면서
+       소속만 화면 오른쪽으로 떨어져 나가 누가 어디 소속인지 한 줄로 안 읽힌다(리그 표의 시도 표기와 동일). */
+    sbEmpty(body,false);
+    body.innerHTML=rows.slice(0,15).map((r,i)=>
+      `<tr class="${mine&&r.nm===mine?'me':''}"><td>${medal(i)}</td>`+
+      `<td class="nmc">${esc(r.nm)}`+
+      (r.club?` <span style="font-weight:500;font-size:11.5px;color:#8fae9f">${esc(r.club)}</span>`:'')+
+      (mine&&r.nm===mine?'<span class="sbchip">나</span>':'')+
+      `<span class="sbsub">제보 ${r.rep} · 공백 ${r.gap}</span></td>`+
+      `<td>${r.rep}</td><td>${r.gap}</td><td class="pts">${r.pts}</td></tr>`).join('');
+  }catch(err){
+    sbEmpty(body,true);
+    body.innerHTML=`<tr><td colspan="5" class="sbempty">순위를 불러오지 못했습니다 (${esc(err.message||String(err))}).</td></tr>`;
+  }
 }
 
 function loginCard(){
@@ -4503,8 +4654,12 @@ async function myPage(user){
 /* 현상금 보드·지역 리그는 시민과학 탭에 처음 들어올 때 그린다 — switchAxis 가 부른다.
    미리 그리면 현상금 보드가 관측 합계 자산(354KB)을 첫 화면에서 받아 버린다. */
 let citizenInited=false;
-window.fgCitizenInit=()=>{ if(citizenInited) return; citizenInited=true; renderBounty(); renderLeague(); };
+let lbHadUser=false;                                        // 로그인 상태가 실제로 바뀔 때만 선수 순위를 다시 그리기 위한 표시
+window.fgCitizenInit=()=>{ if(citizenInited) return; citizenInited=true; renderBounty(); renderLeague(); renderLeaderboard(); };
 if(window.__fgCitizenSeen) window.fgCitizenInit();          // 모듈보다 탭 진입이 먼저였던 경우
+/* 제보를 하나 올리면 두 순위판이 같이 달라진다(승점은 검토를 통과한 뒤에 붙지만 "검토 중 N건"은 바로
+   바뀐다) — 제보 모달은 다른 모듈이라 여기 갱신 함수를 내놓고 등록이 끝나면 부르게 한다. */
+window.fgScoresChanged=()=>{ scoreCache=null; if(citizenInited){ renderLeague(); renderLeaderboard(); } };
 // 로그인 성공은 인증 이벤트가 SIGNED_IN 일 때만 센다 — 페이지를 다시 열어 세션이 살아난 것은 로그인이 아니다.
 // 한 화면에서 같은 이벤트가 두 번 올 수 있어 한 번만 보낸다.
 let loginSent=false;
@@ -4519,10 +4674,14 @@ if(configured){
     /* 활동지역이 곧 리그의 '내 클럽'이다 — 로그인 상태가 바뀌면 표에서 강조할 줄도 바뀌므로 다시 그린다.
        onAuth 는 토큰 갱신·탭 복귀에도 불리지만 리그 표는 상태를 담지 않아(입력값이 없다) 다시 그려도 잃을 것이 없다. */
     const next=(user?(readProfile(user).sggs||[]):[]).map(String);
+    const whoChanged = (!!user)!==lbHadUser; lbHadUser=!!user;
     if(next.join(',')!==myRegs.join(',')){ myRegs=next; if(citizenInited) renderLeague(); }
+    /* 로그인 상태가 바뀌면 '나' 강조와 내 선수 카드가 달라진다 — 그때만 선수 순위를 다시 그린다
+       (onAuth 는 토큰 갱신·탭 복귀에도 불리므로 매번 다시 그리면 같은 RPC 를 헛되게 반복한다). */
+    if(whoChanged && citizenInited) renderLeaderboard();
     return user ? myPage(user) : loginCard();
   });
-  renderTrending(); renderFeed(); renderLeaderboard(); renderFeedback();
+  renderTrending(); renderFeed(); renderFeedback();
 }
 </script>
 
@@ -5040,6 +5199,7 @@ async function doSubmit(){
       sigungu:sgg, fills_gap:fills });
     if(error) throw error;
     window.fgTrack&&fgTrack('report_submitted',{taxon:selSp.t, photo:!!photo_path, gap:fills, sgg:sgg||''});
+    window.fgScoresChanged&&window.fgScoresChanged();         // 클럽 리그·선수 순위 다시 계산
     msg.className='rpt-msg ok';
     msg.textContent='제보가 등록되었습니다. 검토 후 반영됩니다. 마이페이지에서 내 제보 이력을 볼 수 있어요.';
     su.textContent='닫기'; su.disabled=false; su.onclick=close;

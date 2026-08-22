@@ -141,16 +141,6 @@ export async function leaderboard(limit = 20) {
   if (error) throw error;
   return (data || []).map(r => ({ reporter: r.reporter, reports: Number(r.reports) || 0, gaps: Number(r.gaps_filled) || 0 }));
 }
-/* 승인된 제보를 (종×시군구) 로 익명 집계 — 지역 클럽 리그의 "제보로 더한 점수". RPC 는 예전부터
-   있었는데 sigungu is not null 조건이 걸려 있어, 그 칸을 아무도 채우지 않는 동안은 늘 빈 결과였다
-   (submitReport 참조). 좌표는 안 나온다 — 종·시군구·건수·마지막 연도만. */
-export async function approvedDiscoveries() {
-  if (!sb) return [];
-  const { data, error } = await sb.rpc('approved_discoveries');
-  if (error) throw error;
-  return (data || []).map(r => ({ ktsn: r.ktsn, sigungu: r.sigungu,
-                                  cnt: Number(r.cnt) || 0, last_year: r.last_year }));
-}
 // 리더보드에서 내 줄을 찾기 위한 표시 이름(profiles.display_name) — 본인 행만 RLS 로 보인다.
 export async function myDisplayName() {
   if (!sb) return null;
