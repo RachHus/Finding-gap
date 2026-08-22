@@ -558,6 +558,10 @@ Deno.serve(async (req) => {
        물었는데 지도는 "무주군 · 포유류 · 미발견"이 됐다. 그때 메울 값으로 들고 다닌다. */
     let oneTaxon: string | null = null;
     let oneKtsn: string | null = null;   // 이름까지 확실히 특정된 종 — 있으면 그 종 화면으로 연다
+    /* find_region 으로 확실히 좁혀진 지역 코드. 지역 힌트(regHint)는 region 인자를 받는 네 도구에서만
+       생기는데, 모델이 지역은 find_region 으로 찾고 그 뒤엔 종 도구만 부르는 흐름이 있다 — 그러면
+       사용자가 분명히 지역을 말했는데도 힌트에 지역이 없어 종 화면이 전국으로 열린다. 그 구멍을 막는다. */
+    let oneRegion: string | null = null;
     for (let step = 0; step < MAX_STEPS; step++) {
       if (Date.now() - started > BUDGET_MS) break;
       const data = await callGemini(contents);
@@ -572,9 +576,11 @@ Deno.serve(async (req) => {
               이때 물어본 지역을 같이 실어 보내, 종 화면에서 그 지역으로 확대해 함께 보여준다.
            ② 지역 힌트만 남는 경우엔 분류군이 비었으면 특정된 종의 분류군으로 메운다. */
         if (!spHint && oneKtsn) spHint = { mode: "B", sp: oneKtsn };
-        if (spHint && regHint) {
-          if (regHint.sigungu) spHint.sigungu = regHint.sigungu;
-          else if (regHint.sido) spHint.sido = regHint.sido;
+        if (spHint) {
+          // 지역 도구가 받은 코드가 먼저, 없으면 find_region 으로 좁혀진 코드
+          const rc = regHint?.sigungu ?? regHint?.sido ?? oneRegion ?? "";
+          if (/^\d{5}$/.test(rc)) spHint.sigungu = rc;
+          else if (/^\d{2}$/.test(rc)) spHint.sido = rc;
         }
         if (regHint && !regHint.taxon && oneTaxon) regHint.taxon = oneTaxon;
         return json({ reply: text || "답변을 생성하지 못했습니다. 질문을 바꿔 다시 시도해 주세요.", used_tools: usedTools, map: spHint ?? regHint });
@@ -617,6 +623,16 @@ Deno.serve(async (req) => {
           }
           if (typeof tgOne === "string" && TAXA_CODES.has(tgOne)) oneTaxon = tgOne;
           if (one && (typeof one.ktsn === "string" || typeof one.ktsn === "number")) oneKtsn = String(one.ktsn);
+
+          // 지역도 같은 기준으로 — 한 건이면 그것, 여럿이면 이름이 정확히 같은 것만(종 판정과 같은 취지)
+          if (name === "find_region" && Array.isArray(r.regions)) {
+            const rs = r.regions as Record<string, unknown>[];
+            const rq = String(args.name ?? "").trim().toLowerCase();
+            const pick = rs.length === 1 ? rs[0]
+              : rs.find((x) => String(x.name ?? "").toLowerCase() === rq);
+            const rc = pick ? String(pick.code ?? "") : "";
+            if (/^\d{2}$/.test(rc) || /^\d{5}$/.test(rc)) oneRegion = rc;
+          }
 
           if (name === "species_detail" && r.ktsn) {
             spHint = { mode: "B", sp: String(r.ktsn) };
