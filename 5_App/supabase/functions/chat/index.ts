@@ -582,11 +582,29 @@ Deno.serve(async (req) => {
         // 지도 딥링크 힌트: 종 상세(mode B) 우선, 없으면 지역·분류군 choropleth(mode A)
         const r = result as Record<string, unknown>;
         if (r && !r.error) {
-          // 종이 하나로 좁혀진 결과에서만 분류군을 기억한다 — 여러 종이 걸린 검색은 어느 분류군인지
-          // 단정할 수 없으므로 건드리지 않는다(엉뚱한 분류군으로 지도를 열지 않게).
+          /* 묻는 종이 이 대화에서 확실해진 경우에만 분류군을 기억한다 — 엉뚱한 분류군으로 지도를
+             열지 않으려면 "확실함"의 기준이 중요하다. 세 단계로 본다.
+             1) species_detail 처럼 종 하나가 확정된 결과면 그 분류군.
+             2) 검색어와 이름이 정확히 같은 종이 있으면 그것 — search_species 는 부분일치라
+                "구상나무" 하나로도 한라구상나무좀(곤충)·구상나무먼지응애(무척추)까지 3건이 걸린다.
+                묻는 대상은 이름이 그대로 같은 하나다.
+             3) 그마저 없으면 걸린 종이 모두 한 분류군일 때만 그 분류군.
+             셋 다 아니면 비워 둔다(예전 동작 — 화면에 남아 있던 분류군이 쓰인다). */
           const sps = Array.isArray(r.species) ? r.species as Record<string, unknown>[] : null;
-          const tgOne = (typeof r.ktsn === "string" || typeof r.ktsn === "number") ? r.taxon_group
-                      : (sps && sps.length === 1 ? sps[0].taxon_group : undefined);
+          let tgOne: unknown;
+          if (typeof r.ktsn === "string" || typeof r.ktsn === "number") {
+            tgOne = r.taxon_group;
+          } else if (sps && sps.length) {
+            const qn = String(args.query ?? "").trim().toLowerCase();
+            const exact = qn ? sps.find((s) =>
+              String(s.korean_name ?? "").toLowerCase() === qn ||
+              String(s.scientific_name ?? "").toLowerCase() === qn) : undefined;
+            if (exact) tgOne = exact.taxon_group;
+            else {
+              const gs = new Set(sps.map((s) => String(s.taxon_group ?? "")));
+              if (gs.size === 1) tgOne = [...gs][0];
+            }
+          }
           if (typeof tgOne === "string" && TAXA_CODES.has(tgOne)) oneTaxon = tgOne;
 
           if (name === "species_detail" && r.ktsn) {
