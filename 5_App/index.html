@@ -1951,8 +1951,39 @@ function dens(s,a,ramp){                                // s:0 낮음 → .5 중
 /* 램프는 "지금 칠하는 값이 무엇이냐"로 고른다 — metric 을 dens 안에서 읽으면 모드 B 까지 토글에 따라
    뒤집힌다. 모드 B 가 칠하는 것은 그 종의 기록 수(발견 밀도)라 발견/미발견 토글과 무관하고 항상 초록. */
 function metricRamp(){ return metric==='gap'?DENS_GAP:DENS; }
+/* 분위(quantile) 색칠 — 값을 0~최대 선형으로 칠하면 두 지표 모두 한쪽으로 뭉갠다. 실측(시군구
+   252곳): 미발견은 값이 최대 근처에 몰려 램프의 위쪽 7~13%만 쓰이고(무척추 92.6~100%, 곤충
+   86.7~100%) 전 지역이 같은 진한 색이 된다. 발견은 반대로 최소 근처에 몰려(무척추 중앙값이
+   최대의 5%, 선태류는 0) 대부분이 옅은 쪽에 뭉갠다. 그래서 지역을 값 순으로 다섯 단계로 나눠
+   구간마다 색을 준다 — 값이 몰려 있어도 상대적 차이가 항상 보인다.
+   대신 색은 절대량에 비례하지 않는다: "짙다 = 이 조건에서 상대적으로 많은 편"이다(범례 문구도 그렇게).
+   같은 값은 반드시 같은 구간에 넣으므로 구간별 지역 수는 똑같지 않을 수 있다 — 값이 같은데 색이
+   갈리면 그게 더 이상하다. 지역이 다섯 곳보다 적으면 나눌 것이 없어 예전 선형으로 돌아간다. */
+const DENS_BINS=5;
+let BREAKS=[];                                          // 구간 경계(오름차순·중복 없음). 칸 수 = 경계 수 + 1
+function computeBreaks(vals){
+  const v=[...vals].sort((a,b)=>a-b), n=v.length, out=[];
+  if(n<DENS_BINS) return out;
+  for(let k=1;k<DENS_BINS;k++) out.push(v[Math.floor(n*k/DENS_BINS)]);
+  /* 같은 값이 경계로 겹치면 하나로 합친다 — 선태류 발견처럼 시군구의 40% 넘게가 0종이면 경계가
+     0·0·1·7 로 나와, 안 합쳤을 때 옅은 두 칸이 비고(0·0·107·94·51) 기록이 아예 없는 지역이
+     중간색으로 칠해졌다. 합치면 칸이 줄어드는 대신 남은 칸을 램프 전체에 고르게 쓴다. */
+  return [...new Set(out)];
+}
 function densScale(v){                                  // 값 v(현 metric)→램프 위치 s
+  if(BREAKS.length){
+    // 경계와 같은 값은 아래 칸에 넣는다 — 그래야 0 인 지역이 가장 옅은 색을 받는다.
+    let i=0; while(i<BREAKS.length && v>BREAKS[i]) i++;
+    return i/BREAKS.length;
+  }
   return DOM.max<=DOM.min?0:(v-DOM.min)/(DOM.max-DOM.min);
+}
+/* 채움이 어두운지는 램프에 따라 다르다 — 같은 s 라도 붉은 램프가 초록보다 어둡다(붉은 가운데
+   #B5482F 는 초록 가운데 #7CB342 보다 훨씬 어둡다). 그래서 s 문턱값 대신 실제 색의 밝기로 판단해
+   글자·경계선을 뒤집는다. 안 그러면 붉은 램프 가운데 칸에서 검은 글자가 안 읽힌다. */
+function isDarkFill(s,ramp){
+  const R=ramp||DENS, i=s<0.5?0:1, u=s<0.5?s/0.5:(s-0.5)/0.5, c=R[i], d=R[i+1], L=(x,y)=>x+(y-x)*u;
+  return (0.299*L(c[0],d[0])+0.587*L(c[1],d[1])+0.114*L(c[2],d[2]))<140;   // BT.601 밝기
 }
 function colorFor(v){ return dens(densScale(v),0.82); }
 function regLabel(txt,onDark){                          // 짙은 채움 위에서는 글자를 뒤집어야 읽힌다
@@ -1973,11 +2004,12 @@ function styleFn(feature){
       if(c>0) s=selRegMax>0?Math.min(1,c/selRegMax):0;
     }
   } else s=densScale(METRIC.get(code)||0);
-  const onDark=s>=0.55;
+  // 모드 B 는 그 종의 기록 밀도라 항상 초록, 모드 A 는 보고 있는 지표(발견/미발견)의 램프.
+  const R=mapMode==='B'?DENS:metricRamp();
+  const onDark=s>=0 && isDarkFill(s,R);
   return [
     new ol.style.Style({zIndex:0,
-      // 모드 B 는 그 종의 기록 밀도라 항상 초록, 모드 A 는 보고 있는 지표(발견/미발견)의 램프.
-      fill:new ol.style.Fill({color:s<0?'rgba(255,252,235,0.35)':dens(s,0.85,mapMode==='B'?DENS:metricRamp())})}),
+      fill:new ol.style.Fill({color:s<0?'rgba(255,252,235,0.35)':dens(s,0.85,R)})}),
     new ol.style.Style({zIndex:1,
       stroke:new ol.style.Stroke({color:selA?'#015543':(onDark?'rgba(255,255,255,0.82)':'#4a5a4e'),
         width:selA?2.2:1.1}),
@@ -2620,12 +2652,23 @@ function recompute(){
   const codes=SIDO_NAMES.length?SIDO_NAMES:[...byReg.keys()];
   for(const code of codes){ const f=(byReg.get(code)||new Set()).size; METRIC.set(code, metric==='found'?f:(total-f)); }
   const vals=[...METRIC.values()]; DOM={min:Math.min(0,...vals), max:Math.max(1,...vals)};
-  legLo.textContent=nf(DOM.min); legHi.textContent=nf(DOM.max);
+  BREAKS=computeBreaks(vals);                            // 이 조건(분류군·기간·지역단계)에서의 구간 경계
+  legLo.textContent=nf(Math.min(...vals)); legHi.textContent=nf(Math.max(...vals));   // 실제 최소·최대를 적는다
   const lvl=regLevel==='sido'?'시도별':'시군구별';
   const rampEl=document.querySelector('#modeA .ramp');   // 램프는 항상 좌=작은 값·우=큰 값(좌 legLo·우 legHi 와 같은 방향)
   { const R=metricRamp();   // 범례 띠도 지금 지표의 램프로 — 지도와 범례가 다른 색이면 읽을 수가 없다
-    if(rampEl) rampEl.style.background=`linear-gradient(90deg,${dens(0,1,R)},${dens(.5,1,R)},${dens(1,1,R)})`; }
-  legCap.textContent= metric==='found'?`${lvl} 발견 종수 — 짙을수록 많음`:`${lvl} 미발견(공백) 종수 — 짙을수록 많음`;
+    if(rampEl){
+      if(BREAKS.length){                                 // 지도가 쓰는 칸 수만큼 또렷하게 나눈다(경계 수 + 1)
+        const nb=BREAKS.length+1, st=[];
+        for(let k=0;k<nb;k++){ const c=dens(k/BREAKS.length,1,R);
+          st.push(`${c} ${(k/nb*100).toFixed(1)}%`, `${c} ${((k+1)/nb*100).toFixed(1)}%`); }
+        rampEl.style.background=`linear-gradient(90deg,${st.join(',')})`;
+      } else rampEl.style.background=`linear-gradient(90deg,${dens(0,1,R)},${dens(.5,1,R)},${dens(1,1,R)})`;
+    } }
+  const what= metric==='found'?'발견 종수':'미발견(공백) 종수';
+  // 분위로 칠할 때는 색이 절대량에 비례하지 않으므로 문구로 밝힌다 — "많음"과 "많은 편"은 다른 말이다.
+  legCap.textContent= BREAKS.length?`${lvl} ${what} — 다섯 단계로 나눔(짙을수록 많은 편)`
+                                   :`${lvl} ${what} — 짙을수록 많음`;
 }
 function renderSelChips(){
   if(!selSidos.size){ selChips.innerHTML=`<span class="muted">지도에서 ${regLevel==='sido'?'시도':'시군구'}를 클릭하면 그 지역만 보면서 확대합니다(폴리곤 밖 클릭=전체, 되돌리기는 지도의 ‘전국’)</span>`; return; }
