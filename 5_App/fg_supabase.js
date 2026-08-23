@@ -65,10 +65,28 @@ export function readProfile(user) {
            sggs: list, onboarded: !!m.fg_onboarded,
            photoGeo: (typeof m.fg_photo_geo === 'boolean') ? m.fg_photo_geo : null };
 }
+/* 지금 계정의 user_metadata — 아래 저장 함수들이 "기존 값 위에 덮어쓰기"를 하기 위해 읽는다.
+   updateUser 가 top-level 병합을 해 준다고 알려져 있지만, 그 가정이 틀리면 다른 화면의 저장이
+   남의 칸을 조용히 지운다(활동지역을 저장했더니 사진 동의가 사라지는 식). 통째로 실어 보내면
+   병합이든 치환이든 결과가 같다 — 확인할 수 없는 가정에 기대지 않는다. */
+async function currentMeta() {
+  try { const { data } = await sb.auth.getUser(); return (data && data.user && data.user.user_metadata) || {}; }
+  catch (_) { return {}; }
+}
+// 사진 정보(위치·촬영일) 사용 동의만 따로 저장 — 활동지역 등 다른 칸은 건드리지 않는다.
+export async function savePhotoGeo(on) {
+  if (!sb) throw new Error('not configured');
+  const meta = await currentMeta();
+  const { data, error } = await sb.auth.updateUser({ data: { ...meta, fg_photo_geo: !!on } });
+  if (error) throw error;
+  return data ? data.user : null;
+}
 export async function saveProfile(p) {
   if (!sb) throw new Error('not configured');
   const list = Array.isArray(p.sggs) ? p.sggs.filter(Boolean) : (p.sgg ? [p.sgg] : []);
+  const meta = await currentMeta();
   const { data, error } = await sb.auth.updateUser({ data: {
+    ...meta,
     fg_sggs: list,
     // 목록 첫 곳은 대표 지역으로도 적어 둔다 — 한 곳만 읽던 자리가 그대로 동작한다.
     fg_sgg: list[0] || null, fg_sgg_name: p.sggName || null, fg_sido: p.sido || null, fg_onboarded: true,
