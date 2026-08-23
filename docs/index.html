@@ -1308,7 +1308,9 @@
   .fb-hp{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden}
   .rpt-photo-prev button{border:1px solid #d7ded9;background:#fff;border-radius:7px;padding:6px 10px;font-size:12px;cursor:pointer}
   .rpt-url-toggle{display:inline-block;margin-top:6px;font-size:12px;color:var(--faint);cursor:pointer;text-decoration:underline}
-  .ttlayout{display:grid;grid-template-columns:180px 1fr 260px;gap:16px;align-items:start}
+  /* 오른쪽 개요("전체 모양") 칸을 뺐다 — 작아서 알아보기 어렵다는 피드백이라, 그 폭(260px)을
+     본 다이어그램에 넘겨 크게 보여주는 편이 낫다고 판단. 조작은 원래도 큰 원에서만 했다. */
+  .ttlayout{display:grid;grid-template-columns:180px 1fr;gap:16px;align-items:start}
   .ttcrumbs{display:flex;flex-direction:column;gap:6px}
   .ttcrumb{display:flex;align-items:center;gap:7px;border:1px solid #d7e3df;background:#eef3f1;
     border-radius:999px;padding:5px 10px 5px 8px;font:inherit;font-size:12.5px;cursor:pointer;
@@ -1362,7 +1364,6 @@
   .ttwedge{transition:transform .12s ease,filter .12s ease}
   .ttwedge:hover{transform:translate(calc(var(--nx,0)*6px),calc(var(--ny,0)*6px));filter:brightness(1.08);stroke:var(--ink);stroke-width:1.2}
   .ttwedge.clickable{cursor:pointer}
-  .ttov-order.on{stroke:var(--ink);stroke-width:2}
   .ttlabels{pointer-events:none}
   .ttlabels text{font-size:10px;fill:#fff;font-weight:600;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:2.4px;stroke-linejoin:round}
   .ttfocus circle{stroke:var(--ink);stroke-width:1.6}
@@ -1370,8 +1371,6 @@
   .ttfocus text.la{font-size:9.5px;fill:var(--muted);font-style:italic}
   .ttfocus.clickable{cursor:pointer}
   .ttfocus.clickable:hover circle{stroke-width:2.6}
-  .ttoverview{border-left:1px solid var(--line);padding-left:16px}
-  .ttoverview h4{margin:0 0 6px;font-size:11.5px;font-weight:600;color:var(--muted)}
   .ttsearch{position:relative;margin:10px 0 14px}
   .ttsearch input{width:100%;border:1px solid #d7ded9;border-radius:8px;padding:9px 12px;font:inherit;font-size:13px;box-sizing:border-box}
   .ttsearch input:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
@@ -1386,8 +1385,7 @@
   .ttcrumb .tt-nm .tt-la{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ttcrumb.on .tt-la{color:rgba(255,255,255,.82)}
   .ttalbum-card .tt-cap .tt-la{display:block;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  @media(max-width:880px){ .ttlayout{grid-template-columns:1fr} .ttcrumbs{flex-direction:row;flex-wrap:wrap}
-    .ttoverview{border-left:none;border-top:1px solid var(--line);padding-left:0;padding-top:12px} }
+  @media(max-width:880px){ .ttlayout{grid-template-columns:1fr} .ttcrumbs{flex-direction:row;flex-wrap:wrap} }
   @media(max-width:880px){ .rpt-overlay{padding:0;align-items:flex-end} .rpt-modal{max-width:none;max-height:94vh;border-radius:14px 14px 0 0} }
 
   /* 근거의 세기 설명 — 읽는 글이라 본문보다 넓게 두고 줄간을 늘린다 */
@@ -5556,9 +5554,6 @@ function fitLabel(cands, fontPx, arcLenPx){
   return null;
 }
 
-// 개요("전체 모양") — 목 링 + 그 위에 딱 붙는 과 링, 진짜 2단 중첩 선버스트.
-const OV_HUB_R=10, OV_THICK_ORDER=32, OV_THICK_FAMILY=24, OV_PAD=18;
-
 const _txfile=t=>t.replace(/[^A-Za-z0-9]/g,'_');
 // taxatree_sp_<T>.js 지연 로드 — 분류군을 고르는 즉시(검색이 속·종까지 바로 되게) 미리 받아 둔다.
 // index.html 의 classic-script _loadScript() 는 이 <script type="module"> 블록에서 안 보여서(스코프 분리) 따로 둔다.
@@ -5608,12 +5603,28 @@ function drawWedgeRing(wedgeLayer, labelLayer, items, angleSpans, rI, rO, colorO
     if(wantLabel){
       const arcLen=(ga1-ga0)*((rI+rO)/2);
       const fpx=labelFont||10;
-      const txt=fitLabel(labelText(key,val), fpx, arcLen);
+      /* 넓은 웨지의 이름은 눕히지 않고 바로 세운다. 자식이 몇 개 안 되면 웨지 하나가 90° 가까이
+         차지하는데, 그때 호를 따라 눕히면 옆면의 이름이 세로로 서서 읽기 어렵다(쥐과 → 집쥐속·생쥐속).
+         가로로 쓸 수 있는 폭은 링 안(rI~rO 고리)에 실제로 남는 자리로 잰다. 처음엔 접선·반지름 성분을
+         각도로 섞어 어림했다가 라벨이 가운데 구멍으로 넘쳤다 — 어림이 너무 후했다. 지금은 글자가 놓일
+         점에서 좌우로 뻗을 때 고리를 벗어나는 지점을 직접 푼다: 점 (px,py)에서 가로로 t 만큼 가면
+         반지름²=(px+t)²+py² 이므로, 바깥은 √(rO²−py²)−|px| 까지, 안쪽은 |py|<rI 일 때만 걸리고
+         |px|−√(rI²−py²) 까지다. 가운데 정렬이라 둘 중 좁은 쪽의 두 배가 쓸 수 있는 폭이고,
+         호 길이도 넘을 수 없다. */
+      const label=labelText(key,val);
+      const wide=(ga1-ga0)>=50*DEG;
+      const [px,py]=pointRadial(mid,(rI+rO)/2);
+      const outHalf=Math.sqrt(Math.max(0, rO*rO-py*py))-Math.abs(px);
+      const inHalf =Math.abs(py)>=rI ? Infinity : Math.abs(px)-Math.sqrt(Math.max(0, rI*rI-py*py));
+      const hBudget=Math.min(arcLen, 2*Math.min(outHalf, inHalf));
+      let txt=wide ? fitLabel(label, fpx, hBudget) : null;
+      const upright=!!txt;
+      if(!txt) txt=fitLabel(label, fpx, arcLen);
       if(txt){
         labeled=true;
         const midR=(rI+rO)/2, [lx,ly]=pointRadial(mid,midR);
-        let rot=(mid*180/Math.PI)%360; if(rot<0) rot+=360;
-        if(rot>90 && rot<270) rot+=180;
+        let rot=0;
+        if(!upright){ rot=(mid*180/Math.PI)%360; if(rot<0) rot+=360; if(rot>90 && rot<270) rot+=180; }
         const lbl=document.createElementNS(SVGNS,'text');
         lbl.setAttribute('transform',`translate(${lx.toFixed(2)},${ly.toFixed(2)}) rotate(${rot.toFixed(1)})`);
         lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('dominant-baseline','middle');
@@ -5637,8 +5648,8 @@ function renderTaxaTree(group, hostId, infoId){
   const g=((window.__TAXATREE__||{}).tree||{})[group];
   if(!g || !Object.keys(g.orders||{}).length){ host.innerHTML='<div class="muted2">분류 체계도 자료가 아직 없습니다.</div>'; return; }
 
-  host.innerHTML=`<div class="ttlayout"><div class="ttcrumbs"></div><div class="ttdiagram"></div><div class="ttoverview"></div></div>`;
-  const crumbHost=host.querySelector('.ttcrumbs'), diagHost=host.querySelector('.ttdiagram'), ovHost=host.querySelector('.ttoverview');
+  host.innerHTML=`<div class="ttlayout"><div class="ttcrumbs"></div><div class="ttdiagram"></div></div>`;
+  const crumbHost=host.querySelector('.ttcrumbs'), diagHost=host.querySelector('.ttdiagram');
   let albumRefresh=null;   // renderFocus 가 매번 최신 renderAlbum 을 여기 넣어 둔다 — 사진 자료가 나중에
                             // 도착해도(첫 렌더는 loadRep 콜백보다 먼저 돈다) 지금 보고 있는 화면을 다시 채운다.
 
@@ -5692,51 +5703,6 @@ function renderTaxaTree(group, hostId, infoId){
   }
 
   // 오른쪽 드릴다운과 별개로 항상 그리는 전체(목→과) 개요 — 목 링 위에 과 링이 딱 붙는 2단 중첩 선버스트.
-  // 목은 클릭해서 그 목으로 바로 점프. 과는 색 텍스처 + 호버 툴팁만(목이 아주 많으면 그 안의 과는 눈으로
-  // 구분 안 될 만큼 얇아지는데, 이건 웨지로 바꾼다고 새로 생기는 문제가 아니라 원래부터 감수하던 것).
-  function renderOverview(){
-    const orders=Object.entries(g.orders).sort((a,b)=>a[0].localeCompare(b[0]));
-    const orderSpans=wedgeAngles('order', orders.map(([,o])=>o.n||0));
-    const rI_o=OV_HUB_R, rO_o=OV_HUB_R+OV_THICK_ORDER, rO_f=rO_o+OV_THICK_FAMILY;
-    const half=rO_f+OV_PAD;
-    ovHost.innerHTML=`<h4>전체 모양</h4><svg width="${2*half}" height="${2*half}" viewBox="-${half} -${half} ${2*half} ${2*half}" `+
-      `role="img" aria-label="${esc(g.kor)} 전체 목→과 개요"><g class="ttov-orders"></g><g class="ttov-fams"></g></svg>`;
-    const svg=ovHost.querySelector('svg');
-    const orderLayer=svg.querySelector('.ttov-orders'), famLayer=svg.querySelector('.ttov-fams');
-    const currentOrder=path.length>1 ? path[1].key : null;
-
-    orders.forEach(([oname,onode],i)=>{
-      const [a0,a1]=orderSpans[i], [ga0,ga1]=insetGap(a0,a1), mid=(ga0+ga1)/2;
-      const el=document.createElementNS(SVGNS,'path');
-      el.setAttribute('d', wedgePath(rI_o,rO_o,ga0,ga1));
-      el.setAttribute('fill', gapColor(onode.n? onode.none/onode.n : 0));
-      el.classList.add('ttwedge','clickable','ttov-order'); if(oname===currentOrder) el.classList.add('on');
-      const [nx,ny]=pointRadial(mid,1);
-      el.style.setProperty('--nx',nx.toFixed(3)); el.style.setProperty('--ny',ny.toFixed(3));
-      const [mcx,mcy]=pointRadial(mid,(rI_o+rO_o)/2);
-      el.setAttribute('data-cx',mcx.toFixed(2)); el.setAttribute('data-cy',mcy.toFixed(2));
-      const title=document.createElementNS(SVGNS,'title');
-      title.textContent=`${bothNames(nodeNames('order',oname))} · ${nf2(onode.n)}종`; el.appendChild(title);
-      el.addEventListener('click',()=>{ path=[path[0], {rank:'order', key:oname, label:oname, stats:onode}]; renderFocus(); });
-      orderLayer.appendChild(el);
-
-      const fams=Object.entries(onode.families).sort((a,b)=>a[0].localeCompare(b[0]));
-      const famSpans=wedgeAngles('family', fams.map(([,f])=>f.n||0), a1-a0, a0);   // 부모 목 구간(간격 삽입 전) 안에 채운다
-      fams.forEach(([fname,fnode],j)=>{
-        const [fa0,fa1]=insetGap(famSpans[j][0], famSpans[j][1]);
-        const fel=document.createElementNS(SVGNS,'path');
-        fel.setAttribute('d', wedgePath(rO_o,rO_f,fa0,fa1));                       // rI = 목 링의 rO — 딱 붙임
-        fel.setAttribute('fill', gapColor(fnode.n? fnode.none/fnode.n : 0));
-        fel.classList.add('ttwedge');
-        const fmid=(fa0+fa1)/2, [fnx,fny]=pointRadial(fmid,1);
-        fel.style.setProperty('--nx',fnx.toFixed(3)); fel.style.setProperty('--ny',fny.toFixed(3));
-        const ftitle=document.createElementNS(SVGNS,'title');
-        ftitle.textContent=`${bothNames(nodeNames('family',fname))} · ${nf2(fnode.n)}종`; fel.appendChild(ftitle);
-        famLayer.appendChild(fel);
-      });
-    });
-  }
-
   function renderFocus(){
     const entry=path[path.length-1];
     if(info){
@@ -5807,10 +5773,12 @@ function renderTaxaTree(group, hostId, infoId){
     }
     function hideCallout(){ calloutLine.style.display='none'; calloutBox.style.display='none'; }
 
-    // 컨테이너 폭·최대 높이(둘 다)에 맞춰 기본 크기를 축소한다(확대는 안 함) — 정사각형이라 둘 중 더
-    // 빡빡한 쪽이 기준. 큰 링(목 259개 등)이 화면 밖으로 안 넘치고, 작은 링은 원래 크기 그대로 보인다.
-    const CAP_H=560, native=2*half;
-    const fitScale=Math.min(1, (diagHost.clientWidth||native)/native, CAP_H/native);
+    /* 컨테이너 폭·최대 높이(둘 다)에 맞춰 기본 크기를 정한다 — 정사각형이라 둘 중 더 빡빡한 쪽이 기준.
+       예전에는 원래 크기(1배)를 넘기지 않아, 자식이 몇 개 안 되는 링(포유류 목 등)이 넓어진 칸 한가운데
+       조그맣게 떠 있었다. 이제 남는 자리가 있으면 키운다 — 다만 자식이 두엇뿐일 때 화면을 다 채우도록
+       늘리면 우스꽝스러워지므로 상한을 둔다. 큰 링(목 259개 등)은 여전히 줄여서 화면 안에 넣는다. */
+    const CAP_H=720, MAX_UP=3, native=2*half;
+    const fitScale=Math.min(MAX_UP, (diagHost.clientWidth||native)/native, CAP_H/native);
     svg.style.width=(native*fitScale).toFixed(1)+'px';
     svg.style.height=(native*fitScale).toFixed(1)+'px';
     // 확대 기준점을 중심이 아니라 12시(링의 중간 반지름) 쪽으로 — 중심 기준으로 키우면 정작 보고 싶은
@@ -5848,8 +5816,13 @@ function renderTaxaTree(group, hostId, infoId){
     const statsOf = childRank==='genus' ? genusStatsOf : (v)=>v;    // order·family는 이미 {n,found,dormant,none,...} 형태(species 분기는 안 씀)
     function selectChild(key, val){
       if(childRank==='species'){
-        if(!info) return;
-        info.innerHTML=speciesInfoHTML(val);
+        /* 종은 말단이라 더 내려갈 곳이 없다 — 예전에는 아래 정보 줄에 이름·발견상태만 적고 끝이었는데,
+           여기까지 파고든 사람이 알고 싶은 것은 그 종 자체다. 지도 서비스의 종 상세로 넘긴다
+           (분포·환경·서식지 후보·사진·제보가 다 거기 있다). 넘어가기 전 정보 줄도 채워 둔다 —
+           탭을 되돌아왔을 때 무엇을 눌렀는지 남아 있어야 한다. */
+        if(info) info.innerHTML=speciesInfoHTML(val);
+        const ktsn=val&&val[0];
+        if(ktsn && window.fgShowSpecies) window.fgShowSpecies(String(ktsn));
       } else if(childRank==='family'){
         if(info) info.textContent='속 정보를 불러오는 중…';
         loadTaxaTreeSp(group, ()=>{
@@ -6028,7 +6001,6 @@ function renderTaxaTree(group, hostId, infoId){
     }, {passive:false});
 
     renderCrumbs();
-    renderOverview();
   }
 
   // ── 검색 색인: 목·과는 taxa_tree.js 로 바로(항상 있음), 속·종은 taxatree_sp_<T>.js 로드가 끝나야 채워진다.
@@ -6075,8 +6047,13 @@ function renderTaxaTree(group, hostId, infoId){
   }
   function speciesInfoHTML(sp){
     const nm=spNames(sp);
+    /* 검색으로 종을 고른 경우에는 화면을 옮기지 않고 이 줄만 채운다(분류 체계도를 계속 보고 싶어서
+       검색한 것이므로) — 대신 종 상세로 가는 길을 여기 둔다. 링에서 종 웨지를 직접 누르면 곧바로
+       넘어간다(selectChild 참조). 두 경로가 같은 곳으로 이어지되 성급하게 탭을 뺏지는 않는다. */
+    const go=sp&&sp[0] ? ` <a href="#" onclick="fgShowSpecies('${esc(String(sp[0]))}');return false" `+
+      `style="margin-left:6px;color:var(--accent);font-weight:600">종 상세 →</a>` : '';
     return `<b>${esc(nm.ko||nm.la)}</b>${laHTML('species',nm,' ')}(${spRankLabel(sp)}) — `+
-      `<span style="color:${STATE_COLOR[sp[2]]||'#333'}">${STATE_LABEL[sp[2]]||''}</span>`;
+      `<span style="color:${STATE_COLOR[sp[2]]||'#333'}">${STATE_LABEL[sp[2]]||''}</span>${go}`;
   }
   function jumpToSearchResult(r){
     path=[path[0], ...r.path];
