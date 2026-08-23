@@ -1318,7 +1318,7 @@
   .ttcrumb:hover{border-color:#9ec3b2;background:#e3ede8}
   .ttcrumb.on{background:var(--accent);border-color:var(--accent);color:#fff;cursor:default}
   .ttcrumb .dot{width:9px;height:9px;border-radius:50%;flex:none}
-  .ttdiagram{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .ttdiagram{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
   /* 웨지를 호버하면 이 콜아웃(줄+말풍선)으로 이름·개수를 크게 보여준다 — 안쪽 라벨이 있든 없든 전부(통일).
      네이티브 title 툴팁은 작고 늦게 떠서 답답하다는 불만이 있었다. */
   .ttcallout-line{position:absolute;height:2px;transform-origin:0 50%;pointer-events:none;border-radius:1px}
@@ -1357,8 +1357,15 @@
   .ttzoom button:disabled{opacity:.32;cursor:default}
   .ttzoom button.rs{font-size:12px;padding:0 12px}
   .ttzoom .lv{min-width:46px;text-align:center;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
-  .ttzoom-hint{position:absolute;left:8px;bottom:8px;z-index:4;font-size:11px;color:var(--muted);pointer-events:none;
-    background:rgba(255,255,255,.88);border-radius:999px;padding:3px 9px}
+  /* 안내는 원 바로 아래 가운데 — 왼쪽 끝에 띄워 뒀더니 그림이 커지면서 원과 멀찍이 떨어져 왜 거기
+     있는지 알 수 없는 조각이 됐다. 원 위에 겹치지 않도록 띄우지 않고 흐름 안에 둔다(부모가 세로 flex). */
+  .ttzoom-hint{margin:4px 0 0;font-size:11px;color:var(--muted);pointer-events:none;white-space:nowrap}
+  /* 좁은 화면에서는 링이 칸을 꽉 채워서, 띄워 둔 확대 조작이 원 위에 얹힌다(390px 실측: 오른쪽 위
+     웨지를 덮었다). 흐름 안으로 내려 원 아래에 둔다 — 부모가 세로 flex 라 저절로 가운데에 선다. */
+  @media(max-width:560px){
+    .ttzoom{position:static;margin-top:8px;box-shadow:none;background:var(--card)}
+    .ttzoom button{min-width:40px;height:40px}
+  }
   /* 선버스트 웨지 — 점 대신 종수 비례 폭의 부채꼴. scale()은 부채꼴을 일그러뜨리므로(반지름 방향이 아니라
      그냥 확대라 이웃과 어긋남) 대신 그 웨지의 바깥 방향(--nx/--ny, JS가 심어 둠)으로 살짝 밀어낸다. */
   .ttwedge{transition:transform .12s ease,filter .12s ease}
@@ -5530,13 +5537,23 @@ function wedgePath(rI,rO,a0,a1){
 const BASE_R={group:8, order:6.6, family:5, genus:3.8, species:2.6};
 const FOCUS_SCALE=1.8;
 const L_MIN={order:13, family:10, genus:8, species:5};        // 최소폭 웨지도 이 정도 호 길이(px)는 갖게
-const R_FLOOR={order:72, family:60, genus:50, species:42};    // 방어용 하한
-const THICK={order:44, family:36, genus:29, species:23};      // 링 두께
-const HUB_GAP=6;                                              // 초점 원과 링 사이 최소 여백
-function ringRadii(childRank, counts, focusR){
+const HUB_GAP=10;                                             // 초점 원과 링 사이 최소 여백
+const RING_PAD=16;                                            // 링 바깥과 그림 가장자리 사이 여백
+/* 링 두께는 바깥 반지름에 대한 비율로 잡는다. 예전에는 고정 px(목 44 등)였는데, 그리는 크기를 키우고
+   나니 두께만 그대로여서 가운데가 텅 빈 가느다란 고리가 됐다(곤충류 목: 구멍 지름 440px에 띠 83px).
+   상위 계급일수록 두껍게 두는 원래 의도는 비율로 유지한다. */
+const BAND={order:0.46, family:0.42, genus:0.38, species:0.34};
+/* 링을 "주어진 상자에 맞춰" 그린다 — 예전에는 링을 먼저 작게 그린 뒤 전체를 확대해 맞췄는데,
+   그러면 글자도 같이 확대돼 화면에 보이는 이름 수가 안 늘었다(확대해도 웨지만 커질 뿐 새 이름이
+   안 붙었다). 이제 처음부터 최종 크기로 그리므로 같은 10px 글자가 더 긴 호에 들어가 이름이 더 보인다. */
+function ringRadii(childRank, counts, focusR, box){
+  const rO=Math.max(60, box/2-RING_PAD);
   const floorAngle=wedgeFloorAngle(childRank, counts.length);
-  const rI=Math.max(R_FLOOR[childRank], floorAngle? L_MIN[childRank]/floorAngle : 0, focusR+HUB_GAP);
-  return {rI, rO:rI+THICK[childRank]};
+  // 가장 좁은 웨지도 누를 수 있으려면 중간 반지름이 이보다 커야 한다(호 길이 = 중간반지름 × 각도)
+  const midMin=floorAngle ? L_MIN[childRank]/floorAngle : 0;
+  const rI=Math.min(rO-10,
+    Math.max(rO*(1-BAND[childRank]), focusR+HUB_GAP, 2*midMin-rO));
+  return {rI, rO};
 }
 
 // 라벨 — 실제 캔버스로 글자 폭을 재서, 웨지 호 길이에 맞으면 그대로/줄임표/그마저 안 되면 생략(호버·클릭으로 대체).
@@ -5550,7 +5567,11 @@ function fitLabel(cands, fontPx, arcLenPx){
   for(const str of list){ if(_mctx.measureText(str).width<=budget) return str; }
   if(budget<14 || !list.length) return null;
   const short=list.reduce((a,b)=>_mctx.measureText(b).width<_mctx.measureText(a).width?b:a);
-  for(let n=short.length-1;n>=1;n--){ const cand=short.slice(0,n)+'…'; if(_mctx.measureText(cand).width<=budget) return cand; }
+  /* 줄임표만 남을 바에는 아예 안 쓴다 — 예전엔 한 글자까지 잘라서 "검…"·"E…" 같은 것이 링을 채웠는데,
+     그건 이름이 아니라 잡음이다(무엇인지 알 수 없으면서 자리는 차지한다). 최소 세 글자는 남아야 쓴다.
+     그 아래는 라벨 없이 두고 호버 콜아웃·클릭이 맡는다 — 원래도 좁은 웨지는 그렇게 다뤘다. */
+  const MIN_KEEP=2;
+  for(let n=short.length-1;n>=MIN_KEEP;n--){ const cand=short.slice(0,n)+'…'; if(_mctx.measureText(cand).width<=budget) return cand; }
   return null;
 }
 
@@ -5727,9 +5748,15 @@ function renderTaxaTree(group, hostId, infoId){
     const {childRank, items}=focusChildren(entry);
     const countOf = childRank==='species' ? ()=>1 : (childRank==='genus' ? ([,list])=>list.length : ([,v])=>v.n||0);
     const counts=items.map(countOf);
-    const fr=BASE_R[entry.rank]*FOCUS_SCALE;
-    const {rI,rO}=ringRadii(childRank, counts, fr);
-    const half=rO+30;
+    /* 그릴 상자를 먼저 정한다 — 칸 폭과 높이 상한 중 빡빡한 쪽(정사각형이라 한 값). 링은 이 상자를
+       채우도록 그려지고, 그리고 나서 줄이거나 늘리지 않는다. */
+    const CAP_H=720;
+    const box=Math.max(240, Math.min(diagHost.clientWidth||CAP_H, CAP_H));
+    const {rI,rO}=ringRadii(childRank, counts, BASE_R[entry.rank]*FOCUS_SCALE, box);
+    /* 가운데 원도 구멍 크기를 따라간다 — 구멍이 커졌는데 14px 원만 덩그러니 있으면 허전하다.
+       다만 끝없이 키우지는 않는다(안에 들어갈 것은 이름 두 줄뿐이라). */
+    const fr=Math.max(BASE_R[entry.rank]*FOCUS_SCALE, Math.min(rI*0.34, 58));
+    const half=rO+RING_PAD;
 
     diagHost.innerHTML=`<svg class="taxatree" width="${2*half}" height="${2*half}" viewBox="-${half} -${half} ${2*half} ${2*half}" `+
       `role="img" aria-label="${esc(entry.label)} 분류 체계도"><g class="ttfocus"></g><g class="ttring"></g><g class="ttlabels"></g></svg>`+
@@ -5773,14 +5800,10 @@ function renderTaxaTree(group, hostId, infoId){
     }
     function hideCallout(){ calloutLine.style.display='none'; calloutBox.style.display='none'; }
 
-    /* 컨테이너 폭·최대 높이(둘 다)에 맞춰 기본 크기를 정한다 — 정사각형이라 둘 중 더 빡빡한 쪽이 기준.
-       예전에는 원래 크기(1배)를 넘기지 않아, 자식이 몇 개 안 되는 링(포유류 목 등)이 넓어진 칸 한가운데
-       조그맣게 떠 있었다. 이제 남는 자리가 있으면 키운다 — 다만 자식이 두엇뿐일 때 화면을 다 채우도록
-       늘리면 우스꽝스러워지므로 상한을 둔다. 큰 링(목 259개 등)은 여전히 줄여서 화면 안에 넣는다. */
-    const CAP_H=720, MAX_UP=3, native=2*half;
-    const fitScale=Math.min(MAX_UP, (diagHost.clientWidth||native)/native, CAP_H/native);
-    svg.style.width=(native*fitScale).toFixed(1)+'px';
-    svg.style.height=(native*fitScale).toFixed(1)+'px';
+    // 이미 상자에 맞춰 그렸으므로 여기서 다시 줄이거나 늘리지 않는다(위 ringRadii 참조).
+    const native=2*half;
+    svg.style.width=native.toFixed(1)+'px';
+    svg.style.height=native.toFixed(1)+'px';
     // 확대 기준점을 중심이 아니라 12시(링의 중간 반지름) 쪽으로 — 중심 기준으로 키우면 정작 보고 싶은
     // 링(중심에서 먼 쪽)이 오히려 화면 밖으로 밀려난다. 회전으로 원하는 웨지를 12시로 가져온 다음 휠로
     // 그 자리를 확대하는 조합 — 이 기준점은 회전과 무관하게 화면상 항상 같은 자리(링 반지름 기준)다.
@@ -5796,13 +5819,17 @@ function renderTaxaTree(group, hostId, infoId){
       (path.length>1? ' · 눌러서 상위 분류로 이동':'');
     fc.appendChild(ftitle);
     focusLayer.appendChild(fc);
+    /* 가운데 이름 크기는 구멍 크기를 따라간다 — 예전에는 작게 그린 뒤 전체를 확대해서 저절로 커졌는데,
+       이제 처음부터 최종 크기로 그리므로 고정 11px 로 두면 넓은 구멍 안에서 개미만 해진다. */
+    const fPx=Math.max(13, Math.min(rI*0.15, 30));
     const flabel=document.createElementNS(SVGNS,'text');
-    flabel.setAttribute('y', fr+13);
+    flabel.setAttribute('y', fr+fPx+6); flabel.style.fontSize=fPx.toFixed(1)+'px';
     flabel.textContent=fnm.ko||fnm.la;
     focusLayer.appendChild(flabel);
     if(fnm.ko&&fnm.la){                                  // 한글 아래 학명 한 줄
       const fla=document.createElementNS(SVGNS,'text');
-      fla.setAttribute('y', fr+25); fla.setAttribute('class','la');
+      fla.setAttribute('y', fr+fPx*2+9); fla.setAttribute('class','la');
+      fla.style.fontSize=(fPx*0.78).toFixed(1)+'px';
       fla.textContent=fnm.la;
       focusLayer.appendChild(fla);
     }
@@ -5850,8 +5877,9 @@ function renderTaxaTree(group, hostId, infoId){
     // 확대해도 글자는 화면에서 늘 비슷한 크기로 두고 웨지만 넓어지게 — 배율만큼 SVG 안의 글자를
     // 줄여서 다시 재면 같은 웨지에 더 긴 이름이 들어간다. 그래서 배율을 올릴수록 잘려 있던 이름과
     // 학명이 차례로 다 나온다. 기본 배율에선 웨지에 맞춰 잡은 원래 크기(10px)를 넘지 않는다.
+    // 이제 SVG 한 단위가 화면 1px 이라(상자에 맞춰 그린다) 배율만 나누면 화면상 크기가 된다.
     const LABEL_ON_SCREEN=11;
-    const labelFontFor=z=>Math.min(10, LABEL_ON_SCREEN/(fitScale*z));
+    const labelFontFor=z=>Math.min(10, LABEL_ON_SCREEN/z);
     function drawRing(){
       hideCallout();   // 다시 그리는 동안(회전 드래그 등) 옛 웨지를 가리키던 콜아웃이 남지 않게.
       ringLayer.innerHTML=''; labelLayer.innerHTML='';
