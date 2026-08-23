@@ -1312,12 +1312,12 @@
   .rpt-pickbtn:hover:not(:disabled){border-color:#9ec3b2;background:#f2f8f5}
   .rpt-pickbtn:disabled{opacity:.55;cursor:default}
   .rpt-pickbtn.sm{flex:0 0 auto;min-height:38px;font-size:12.5px;padding:7px 12px}
-  /* 카드 안에 접어 두는 한 줄 설정 — 설정 하나에 카드를 통째로 내주면 내용 카드 사이에 끼어 어수선하다 */
-  .setrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:11px;
-    border-top:1px solid var(--line)}
-  .setrow label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;margin:0}
-  .setrow input[type=checkbox]{width:17px;height:17px;flex:none;margin:0}
-  .setrow .muted2{margin-left:auto;font-size:12px}
+  /* 자동 채우기를 되돌리는 길 — 마이페이지에 상시 설정 줄을 두지 않는 대신, 실제로 쓰는 자리(제보 화면)에
+     작은 글씨 한 줄로만 둔다. 한 번 정하면 안 보이길 바란다는 요청과, 켠 것을 끌 수는 있어야 한다는
+     요건을 함께 만족시키는 자리다. */
+  .rpt-geoflip{border:0;background:none;padding:0;margin-top:5px;font:inherit;font-size:11.5px;
+    color:var(--muted);text-decoration:underline;cursor:pointer}
+  .rpt-geoflip:hover{color:var(--accent)}
   /* 아직 동의를 정한 적 없는 계정에게 이 자리에서 한 번 묻는 판 */
   .rpt-ask{border:1px solid #bcd9cd;background:#f2f8f5;border-radius:10px;padding:11px 12px}
   .rpt-ask b{display:block;font-size:13px;color:#015543;margin-bottom:3px}
@@ -4363,29 +4363,57 @@ function paintMyNotif(){
 document.addEventListener('fg-notif', paintMyNotif);
 
 /* ── 첫 로그인 설정 — 알림은 '어디를 다니며 무엇을 보는 사람인가'를 알아야 만들 수 있다.
-     활동 지역과 관심 종을 받기 전에는 닫지 않는다. 나가는 길은 저장 또는 로그아웃뿐이다. ── */
+     활동 지역과 관심 종을 받기 전에는 닫지 않는다. 나가는 길은 저장 또는 로그아웃뿐이다.
+     사진 정보 사용 동의도 여기서 받는다 — 제보할 때마다 물으면 정작 발견을 올리려는 순간에 길이 막힌다.
+     이 기능이 생기기 전에 가입한 계정은 동의만 비어 있으므로, 그때는 이 창을 **동의 하나만** 묻는
+     짧은 모습으로 연다(이미 정해 둔 활동 지역·관심 종을 다시 고르라고 하지 않는다). ── */
 let obOpen=false;
 function onboard(user, ks){
   const ov=document.getElementById('obOverlay'), bd=document.getElementById('obBody');
   if(!ov||!bd||obOpen) return;
   obOpen=true;
   const prof=readProfile(user), chosen=ks.slice();
+  const needBasics = !prof.onboarded || !prof.sgg || !ks.length;
+  const GEO_DESC = '제보할 때 사진에 남아 있는 <b>촬영 위치(GPS)와 촬영일</b>을 읽어 발견 위치·발견일을 '+
+    '자동으로 채웁니다. 사진을 그 자리에서 찍어 올리면 기기의 현재 위치를 씁니다. 읽기는 이 브라우저 '+
+    '안에서만 일어나고, 서버로는 제보에 적은 발견 위치와 발견일만 갑니다. 채워진 값은 언제든 고칠 수 있습니다.';
+
+  if(!needBasics){
+    /* 동의만 묻는 짧은 창 — 두 단추 모두 저장하고 닫히므로 막다른 길이 없다. 한 번 고르면 계정에
+       남아 다시 안 뜬다(마이페이지에 상시 설정 줄을 두지 않는 이유이기도 하다). */
+    bd.innerHTML=`
+      <p class="muted2" style="margin:0 0 14px">한 가지만 정하면 됩니다. 다시 묻지 않습니다.</p>
+      <div class="rpt-f"><label>사진에서 발견 위치·발견일 자동으로 채우기</label>
+        <p class="muted2" style="margin:0;font-size:12.5px;line-height:1.6">${GEO_DESC}</p></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="rpt-submit" id="obGeoYes" style="flex:1">사용하기</button>
+        <button class="btn sec" id="obGeoNo" style="flex:0 0 auto;padding:0 18px">직접 넣기</button>
+      </div>
+      <div class="rpt-msg" id="obMsg"></div>`;
+    const msg=bd.querySelector('#obMsg');
+    const done=async(v,btn)=>{
+      bd.querySelectorAll('button').forEach(b=>b.disabled=true);
+      btn.textContent='저장 중…'; msg.className='rpt-msg';
+      try{ await savePhotoGeo(v); ov.hidden=true; obOpen=false; }
+      catch(e){ bd.querySelectorAll('button').forEach(b=>b.disabled=false);
+        btn.textContent = v?'사용하기':'직접 넣기';
+        msg.className='rpt-msg err'; msg.textContent='저장 실패: '+(e.message||e); }
+    };
+    bd.querySelector('#obGeoYes').onclick=e=>done(true, e.currentTarget);
+    bd.querySelector('#obGeoNo').onclick=e=>done(false, e.currentTarget);
+    ov.hidden=false;
+    return;
+  }
+
   bd.innerHTML=`
-    <p class="muted2" style="margin:0 0 15px">알림을 보내 드리려면 위의 두 가지가 필요합니다. 아래 사진 위치정보는 선택입니다 — 모두 마이페이지에서 언제든 바꿀 수 있습니다.</p>
+    <p class="muted2" style="margin:0 0 15px">알림을 보내 드리려면 위의 두 가지가 필요합니다. 아래 사진 설정은 선택입니다 — 모두 나중에 바꿀 수 있습니다.</p>
     <div class="rpt-f"><label>내 주요 활동 지역 <span class="req">*</span></label><div id="obReg"></div></div>
     <div class="rpt-f"><label>관심 종 <span class="req">*</span> <span class="muted2" style="font-weight:400">— 한 종 이상</span></label><div id="obSp"></div></div>
-    <!-- 사진 위치정보 동의는 여기서 한 번만 받는다 — 제보할 때마다 물으면 정작 발견을 올리려는 순간에
-         길이 막힌다. 제보는 어차피 발견 위치가 필수라, 이 동의는 그 칸을 손으로 찍을지 사진에서 자동으로
-         채울지의 문제다. 그래서 기본값은 켬으로 두되 무엇을 켜는지는 분명히 적는다. -->
     <div class="rpt-f" style="margin-top:2px">
       <label style="display:flex;align-items:flex-start;gap:9px;font-weight:600;cursor:pointer">
         <input type="checkbox" id="obGeo" checked style="margin-top:2px;width:17px;height:17px;flex:none">
-        <span>사진 정보 사용 <span class="muted2" style="font-weight:400">(선택)</span>
-          <span class="muted2" style="display:block;font-weight:400;font-size:12px;margin-top:3px;line-height:1.5">
-            제보할 때 사진에 남아 있는 <b>촬영 위치(GPS)와 촬영일</b>을 읽어 발견 위치·발견일을 자동으로 채웁니다.
-            사진을 그 자리에서 찍어 올리면 기기의 현재 위치를 씁니다. 읽기는 이 브라우저 안에서만 일어나고,
-            서버로는 제보에 적은 발견 위치와 발견일만 갑니다. 끄면 직접 넣으면 됩니다 — 채워진 값은 언제든
-            고칠 수 있고, 이 설정은 마이페이지에서 바꿉니다.</span></span>
+        <span>사진에서 발견 위치·발견일 자동으로 채우기 <span class="muted2" style="font-weight:400">(선택)</span>
+          <span class="muted2" style="display:block;font-weight:400;font-size:12px;margin-top:3px;line-height:1.5">${GEO_DESC}</span></span>
       </label>
     </div>
     <button class="rpt-submit" id="obSave" disabled>저장하고 시작하기</button>
@@ -4425,14 +4453,6 @@ async function myPage(user){
       <button class="btn sec" id="logoutBtn" style="margin-left:auto">로그아웃</button></div>
     <div class="muted2" style="margin:4px 0 6px">관심 종의 새 기록, 내 제보 결과, 활동 지역의 변화를 모아 알려 드립니다. 눌러서 해당 화면으로 이동합니다.</div>
     <ul class="notiflist" id="myNotif"><li class="muted2" style="padding:10px 2px">불러오는 중…</li></ul>
-    <!-- 사진 정보 사용 — 첫 로그인에서 받은 값을 되돌리는 자리. 한 줄짜리 설정이라 카드를 따로
-         만들지 않고 여기 접어 둔다(카드로 뺐더니 내용 카드 사이에 설정 하나가 끼어 어수선했다).
-         설명은 이 화면이 쓰는 방식대로 물음표에 넣는다 — 문단으로 깔면 매번 읽히기만 한다. -->
-    <div class="setrow">
-      <label><input type="checkbox" id="geoOptIn"${prof.photoGeo?' checked':''}>
-        <span>사진에서 발견 위치·발견일 자동으로 채우기</span></label>
-      <button type="button" class="qtip" aria-label="설명 보기" data-tip="제보할 때 사진에 남아 있는 촬영 위치(GPS)와 촬영일을 읽어 발견 위치·발견일을 채웁니다. 사진을 그 자리에서 찍어 올리면 기기의 현재 위치를 씁니다. 읽기는 이 브라우저 안에서만 일어나고, 서버로는 제보에 적은 발견 위치와 발견일만 갑니다. 채워진 값은 언제든 고칠 수 있습니다.">?</button>
-    </div>
   </div>
   <div class="authcard" id="regCard" style="max-width:none;margin-top:14px">
     <div class="cardhd"><h3>내 활동 지역</h3>
@@ -4505,20 +4525,6 @@ async function myPage(user){
     // 목록 첫 곳을 대표로도 적어 둔다 — 한 곳만 읽던 자리가 그대로 동작한다.
     const persist=list=>{ const head=list[0];
       return saveProfile({sggs:list, sggName:head?g.sg[head][0]:'', sido:head?g.sg[head][1]:''}); };
-    /* 사진 정보 사용 — 저장이 끝나면 updateUser 가 인증 이벤트를 일으켜 이 화면이 통째로 다시 그려진다.
-       그래서 결과를 이 카드 안에 적으면 버려진 노드에 쓰게 되어 아무것도 안 보인다(실패까지 조용히
-       묻혔다). 화면 밖에 뜨는 토스트로 알린다 — 체크 상태 자체는 다시 그려질 때 저장된 값에서 온다. */
-    const geo=view.querySelector('#geoOptIn');
-    if(geo) geo.onchange=async()=>{
-      const on=geo.checked;
-      geo.disabled=true;
-      try{ await savePhotoGeo(on);
-        if(window.toast) toast(on ? '사진에서 발견 위치·발견일을 자동으로 채웁니다.' : '자동 채우기를 껐습니다 — 직접 넣어 주세요.');
-      }catch(e){
-        geo.checked=!on; geo.disabled=false;
-        if(window.toast) toast('설정을 저장하지 못했습니다: '+(e.message||e));
-      }
-    };
     function paint(){
       if(!g){ rlist.innerHTML='<div class="muted2" style="margin-top:12px">지역 자료를 불러오지 못했습니다.</div>'; return; }
       const live=codes.filter(c=>g.sg[c]);
@@ -4737,9 +4743,10 @@ async function myPage(user){
     try{ ks=await watchList(); paint(); }
     catch(err){ wlist.innerHTML=`<div class="authmsg err">관심 종 로드 실패: ${esc(err.message||String(err))}</div>`; }
   }
-  // 알림에 필요한 최소 정보가 없으면 첫 설정을 연다. 관심 종을 못 불러온 때(ks===null)는 열지 않는다 —
-  // 이미 추가한 종을 못 본 채로 다시 고르라고 하면 안 된다.
-  if(ks && (!prof.onboarded || !prof.sgg || !ks.length)) onboard(user, ks);
+  /* 알림에 필요한 최소 정보가 없으면 첫 설정을 연다. 관심 종을 못 불러온 때(ks===null)는 열지 않는다 —
+     이미 추가한 종을 못 본 채로 다시 고르라고 하면 안 된다.
+     사진 설정을 정한 적이 없어도(이 기능 이전에 가입) 연다 — 그때는 동의 하나만 묻는 짧은 모습이다. */
+  if(ks && (!prof.onboarded || !prof.sgg || !ks.length || prof.photoGeo===null)) onboard(user, ks);
 }
 
 /* 현상금 보드·지역 리그는 시민과학 탭에 처음 들어올 때 그린다 — switchAxis 가 부른다.
@@ -5141,6 +5148,7 @@ function render(){
       '<div class="rpt-photo-prev" id="rptPhotoPrev" hidden><img id="rptPhotoImg" alt=""><button type="button" id="rptPhotoClear">✕ 제거</button></div>'+
       '<div class="rpt-hint" id="rptPhotoHint" style="margin-top:6px"></div>'+
       '<div id="rptGeoAct" style="margin-top:6px"></div>'+
+      '<div id="rptGeoFlip"></div>'+
       '<span class="rpt-url-toggle" id="rptUrlToggle">사진이 없다면 URL로 제보 →</span>'+
       '<div id="rptUrlWrap" hidden style="margin-top:8px"><input type="url" id="rptUrl" placeholder="https://... (관찰기록 링크)" inputmode="url"></div></div>'+
     '<div class="rpt-f"><label>메모 (선택)</label><textarea id="rptNote" placeholder="개체수·서식환경 등"></textarea></div>'+
@@ -5235,6 +5243,22 @@ function geoAsk(){
   host.querySelector('#geoYes').onclick=()=>done(true);
   host.querySelector('#geoNo').onclick=()=>done(false);
 }
+/* 자동 채우기를 켜고 끄는 작은 줄 — 사진을 올린 뒤에만, 그리고 이미 정한 사람에게만 보인다.
+   마이페이지에 상시 설정 줄을 두지 않기로 했으므로(한 번 정하면 안 보이게) 되돌릴 길은 여기 하나다. */
+function geoFlip(){
+  const host=document.getElementById('rptGeoFlip'); if(!host) return;
+  if(geoOptIn===null){ host.innerHTML=''; return; }
+  host.innerHTML=`<button type="button" class="rpt-geoflip">사진에서 자동으로 채우기 ${geoOptIn?'끄기':'켜기'}</button>`;
+  host.querySelector('button').onclick=async(ev)=>{
+    const b=ev.currentTarget, next=!geoOptIn;
+    b.disabled=true;
+    try{ await savePhotoGeo(next); }catch(_){ /* 저장이 안 돼도 이번 제보에는 적용한다 */ }
+    geoOptIn=next; b.disabled=false; geoFlip();
+    const hint=document.getElementById('rptPhotoHint');
+    if(next && photoFile) await applyPhotoMeta(photoFile, photoSource);
+    else if(hint) hint.textContent='자동 채우기를 껐습니다 — 발견 위치는 지도를 눌러, 발견일은 위 칸에서 직접 넣어 주세요.';
+  };
+}
 // 위치를 못 얻었을 때 손으로 부를 수 있는 길 — 앨범 사진은 자동으로 기기 위치를 쓰면 안 되기 때문(아래 참조)
 function geoButton(label){
   const host=document.getElementById('rptGeoAct'); if(!host) return;
@@ -5300,7 +5324,7 @@ async function onPhotoChange(e, source){
   if(geoOptIn===true){
     await applyPhotoMeta(f, source);
   } else if(geoOptIn===false){
-    hint.textContent='사진 정보 사용이 꺼져 있습니다 — 발견 위치와 발견일을 직접 넣어 주세요(마이페이지에서 켤 수 있습니다).';
+    hint.textContent='사진 정보 사용이 꺼져 있습니다 — 발견 위치와 발견일을 직접 넣어 주세요.';
   } else {
     /* 아직 정한 적 없는 계정(이 기능이 생기기 전에 가입) — 여기서 한 번 물어본다.
        예전에는 이 경우에도 조용히 아무것도 안 읽으면서 "지도를 눌러 지정하세요"만 띄워,
@@ -5308,6 +5332,7 @@ async function onPhotoChange(e, source){
     hint.textContent='사진에서 위치·촬영일을 읽어 채울 수 있습니다 — 아래에서 골라 주세요.';
     geoAsk();
   }
+  geoFlip();
   try{
     photoBlob = await compressPhoto(f);
     img.src = URL.createObjectURL(photoBlob);
