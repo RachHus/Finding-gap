@@ -1312,6 +1312,18 @@
   .rpt-pickbtn:hover:not(:disabled){border-color:#9ec3b2;background:#f2f8f5}
   .rpt-pickbtn:disabled{opacity:.55;cursor:default}
   .rpt-pickbtn.sm{flex:0 0 auto;min-height:38px;font-size:12.5px;padding:7px 12px}
+  /* 카드 안에 접어 두는 한 줄 설정 — 설정 하나에 카드를 통째로 내주면 내용 카드 사이에 끼어 어수선하다 */
+  .setrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:11px;
+    border-top:1px solid var(--line)}
+  .setrow label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;margin:0}
+  .setrow input[type=checkbox]{width:17px;height:17px;flex:none;margin:0}
+  .setrow .muted2{margin-left:auto;font-size:12px}
+  /* 아직 동의를 정한 적 없는 계정에게 이 자리에서 한 번 묻는 판 */
+  .rpt-ask{border:1px solid #bcd9cd;background:#f2f8f5;border-radius:10px;padding:11px 12px}
+  .rpt-ask b{display:block;font-size:13px;color:#015543;margin-bottom:3px}
+  .rpt-ask span{display:block;font-size:12px;color:var(--muted);line-height:1.55}
+  .rpt-askbtns{display:flex;gap:8px;margin-top:9px}
+  .rpt-askbtns .rpt-pickbtn{flex:1 1 0}
   .rpt-photo-prev{display:flex;align-items:center;gap:10px;margin-top:8px}
   .rpt-photo-prev img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #d7ded9}
   /* 허니팟(스팸봇 함정) — display:none 이 아니라 화면 밖으로 밀어낸다: 일부 봇은 display:none·visibility:hidden
@@ -3840,7 +3852,7 @@ else Promise.all([
 
 <!-- 마이페이지(로그인·알림·활동 지역·관심 종·내 제보) — Supabase 설정(config.js)이 있을 때만 활성, 없으면 정적 안내 유지 -->
 <script type="module">
-import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, myDisplayName, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, adminPendingTaxonRefs, setTaxonRefStatus, myTaxonReferences, submitFeedback, siteFeedback, adminPendingFeedback, setFeedbackStatus, deleteFeedback } from './fg_supabase.js';
+import { configured, onAuth, sendMagicLink, signInWithGoogle, signOut, watchList, watchAdd, watchRemove, watchCounts, communityReports, myReports, deleteReport, myDisplayName, myRole, adminPendingReports, setReportStatus, reportPhotoUrl, removeReportPhoto, readProfile, saveProfile, savePhotoGeo, adminPendingTaxonRefs, setTaxonRefStatus, myTaxonReferences, submitFeedback, siteFeedback, adminPendingFeedback, setFeedbackStatus, deleteFeedback } from './fg_supabase.js';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const view=document.getElementById('view-my');
 const spName=k=>{ const sp=(window.__SPIDX__||[]).find(x=>x.k===k); return sp?{n:sp.n||sp.s,s:sp.s||'',t:sp.t||''}:{n:k,s:'',t:''}; };
@@ -4413,6 +4425,14 @@ async function myPage(user){
       <button class="btn sec" id="logoutBtn" style="margin-left:auto">로그아웃</button></div>
     <div class="muted2" style="margin:4px 0 6px">관심 종의 새 기록, 내 제보 결과, 활동 지역의 변화를 모아 알려 드립니다. 눌러서 해당 화면으로 이동합니다.</div>
     <ul class="notiflist" id="myNotif"><li class="muted2" style="padding:10px 2px">불러오는 중…</li></ul>
+    <!-- 사진 정보 사용 — 첫 로그인에서 받은 값을 되돌리는 자리. 한 줄짜리 설정이라 카드를 따로
+         만들지 않고 여기 접어 둔다(카드로 뺐더니 내용 카드 사이에 설정 하나가 끼어 어수선했다).
+         설명은 이 화면이 쓰는 방식대로 물음표에 넣는다 — 문단으로 깔면 매번 읽히기만 한다. -->
+    <div class="setrow">
+      <label><input type="checkbox" id="geoOptIn"${prof.photoGeo?' checked':''}>
+        <span>사진에서 발견 위치·발견일 자동으로 채우기</span></label>
+      <button type="button" class="qtip" aria-label="설명 보기" data-tip="제보할 때 사진에 남아 있는 촬영 위치(GPS)와 촬영일을 읽어 발견 위치·발견일을 채웁니다. 사진을 그 자리에서 찍어 올리면 기기의 현재 위치를 씁니다. 읽기는 이 브라우저 안에서만 일어나고, 서버로는 제보에 적은 발견 위치와 발견일만 갑니다. 채워진 값은 언제든 고칠 수 있습니다.">?</button>
+    </div>
   </div>
   <div class="authcard" id="regCard" style="max-width:none;margin-top:14px">
     <div class="cardhd"><h3>내 활동 지역</h3>
@@ -4428,16 +4448,6 @@ async function myPage(user){
     </div>
     <div id="regList"><div class="muted2" style="margin-top:12px">불러오는 중…</div></div>
     <div id="regStat"></div>
-  </div>
-  <!-- 사진 위치정보 동의 — 첫 로그인에서 받은 값을 여기서 되돌릴 수 있게 한다(같은 metadata 한 칸). -->
-  <div class="authcard" style="max-width:none;margin-top:14px">
-    <h3 style="margin:0 0 4px">사진 정보 사용</h3>
-    <p class="muted2" style="margin:0 0 10px">제보할 때 사진에 남아 있는 <b>촬영 위치(GPS)와 촬영일</b>을 읽어 발견 위치·발견일을 자동으로 채웁니다. 사진을 그 자리에서 찍어 올리면 기기의 현재 위치를 씁니다. 읽기는 이 브라우저 안에서만 일어나고, 서버로는 제보에 적은 발견 위치와 발견일만 갑니다. 채워진 값은 언제든 고칠 수 있습니다.</p>
-    <label style="display:flex;align-items:center;gap:9px;font-weight:600;cursor:pointer">
-      <input type="checkbox" id="geoOptIn" style="width:17px;height:17px;flex:none"${prof.photoGeo?' checked':''}>
-      <span>자동으로 채우기</span>
-      <span class="muted2" id="geoMsg" style="font-weight:400;margin-left:auto"></span>
-    </label>
   </div>
   <div class="authcard" style="max-width:none;margin-top:14px">
     <div class="cardhd"><h3>관심 종의 발견 현황</h3>
@@ -4495,15 +4505,19 @@ async function myPage(user){
     // 목록 첫 곳을 대표로도 적어 둔다 — 한 곳만 읽던 자리가 그대로 동작한다.
     const persist=list=>{ const head=list[0];
       return saveProfile({sggs:list, sggName:head?g.sg[head][0]:'', sido:head?g.sg[head][1]:''}); };
-    /* 사진 위치정보 동의 — 지역 목록과 같은 metadata 한 칸이라 여기서 함께 배선한다.
-       저장이 끝나면 onAuth 가 다시 불려 화면이 새로 그려지므로 체크 상태는 저장된 값에서 다시 온다. */
-    const geo=view.querySelector('#geoOptIn'), geoMsg=view.querySelector('#geoMsg');
+    /* 사진 정보 사용 — 저장이 끝나면 updateUser 가 인증 이벤트를 일으켜 이 화면이 통째로 다시 그려진다.
+       그래서 결과를 이 카드 안에 적으면 버려진 노드에 쓰게 되어 아무것도 안 보인다(실패까지 조용히
+       묻혔다). 화면 밖에 뜨는 토스트로 알린다 — 체크 상태 자체는 다시 그려질 때 저장된 값에서 온다. */
+    const geo=view.querySelector('#geoOptIn');
     if(geo) geo.onchange=async()=>{
-      geo.disabled=true; geoMsg.textContent='저장 중…';
-      try{ await saveProfile({sggs:codes, sggName:prof.sggName, sido:prof.sido, photoGeo:geo.checked});
-        geoMsg.textContent = geo.checked ? '켜짐 — 사진에서 위치·촬영일을 읽습니다.' : '꺼짐 — 직접 넣습니다.';
-      }catch(e){ geo.checked=!geo.checked; geoMsg.textContent='저장 실패: '+(e.message||e); }
-      finally{ geo.disabled=false; }
+      const on=geo.checked;
+      geo.disabled=true;
+      try{ await savePhotoGeo(on);
+        if(window.toast) toast(on ? '사진에서 발견 위치·발견일을 자동으로 채웁니다.' : '자동 채우기를 껐습니다 — 직접 넣어 주세요.');
+      }catch(e){
+        geo.checked=!on; geo.disabled=false;
+        if(window.toast) toast('설정을 저장하지 못했습니다: '+(e.message||e));
+      }
     };
     function paint(){
       if(!g){ rlist.innerHTML='<div class="muted2" style="margin-top:12px">지역 자료를 불러오지 못했습니다.</div>'; return; }
@@ -5055,7 +5069,7 @@ if(configured) onAuth(u=>{ user=u; W.clear();
      좌표와 날짜를 먼저 채워 주고, 사람이 지도 핀으로 고쳐 넣을 수 있다.
      사진은 올리기 전에 브라우저에서 줄인다(원본은 EXIF 를 읽는 데만 쓴다). -->
 <script type="module">
-import { configured, onAuth, submitReport, uploadReportPhoto, readProfile } from './fg_supabase.js';
+import { configured, onAuth, submitReport, uploadReportPhoto, readProfile, savePhotoGeo } from './fg_supabase.js';
 import exifr from 'https://esm.sh/exifr@7';
 const SPIDX = window.__SPIDX__ || [];
 const overlay = document.getElementById('rptOverlay');
@@ -5072,6 +5086,7 @@ let pinFrom = null;
 /* 발견일도 같은 규칙 — 사진에서 채운 날짜는 사진을 바꾸면 버리고, 사람이 고른 날짜는 그대로 둔다.
    'photo'(사진 촬영일) · 'manual'(사람이 고름) · null(기본값 오늘). */
 let dateFrom = null;
+let photoSource = null;                                  // 'album' | 'camera' — 동의를 나중에 켰을 때 같은 규칙으로 다시 처리하기 위해
 // 손가락 화면에서만 '사진 찍기'를 따로 보인다 — capture 속성은 PC 에서 무시돼 단추가 거짓말이 된다.
 const COARSE = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
 
@@ -5198,6 +5213,28 @@ function pinAndZoom(lon, lat, src){
   // 좌표가 정해지면 그 자리로 확대해 눈으로 확인할 수 있게 한다 — 6단계(전국)에 점만 찍히면 맞는지 알 수 없다.
   if(rptMap) rptMap.getView().animate({center:ol.proj.fromLonLat([lon,lat]), zoom:16, duration:420});
 }
+/* 아직 동의를 정한 적 없는 계정에게 이 자리에서 묻는다. 첫 로그인 온보딩에서만 받도록 만들었더니,
+   그 전에 가입한 사람은 값이 없어(null) 아무것도 안 읽히면서 왜 안 되는지도 알 수 없었다.
+   고른 값은 계정에 남으므로 다음부터는 안 묻는다. 이미 사진을 골라 둔 상태면 그 사진에 바로 적용한다. */
+function geoAsk(){
+  const host=document.getElementById('rptGeoAct'); if(!host) return;
+  host.innerHTML=
+    '<div class="rpt-ask"><b>사진에서 자동으로 채울까요?</b>'+
+    '<span>사진에 남아 있는 촬영 위치와 촬영일을 읽어 발견 위치·발견일을 채웁니다. '+
+    '읽기는 이 브라우저 안에서만 일어나고, 채워진 값은 고칠 수 있습니다.</span>'+
+    '<div class="rpt-askbtns"><button type="button" class="rpt-pickbtn sm" id="geoYes">사용하기</button>'+
+    '<button type="button" class="rpt-pickbtn sm" id="geoNo">직접 넣기</button></div></div>';
+  const done=async(v)=>{
+    host.querySelectorAll('button').forEach(b=>b.disabled=true);
+    try{ await savePhotoGeo(v); }catch(_){ /* 저장이 안 돼도 이번 제보에는 적용한다 */ }
+    geoOptIn=v; host.innerHTML='';
+    const hint=document.getElementById('rptPhotoHint');
+    if(v && photoFile) await applyPhotoMeta(photoFile, photoSource);
+    else if(hint) hint.textContent='발견 위치는 지도를 눌러, 발견일은 위 칸에서 직접 넣어 주세요.';
+  };
+  host.querySelector('#geoYes').onclick=()=>done(true);
+  host.querySelector('#geoNo').onclick=()=>done(false);
+}
 // 위치를 못 얻었을 때 손으로 부를 수 있는 길 — 앨범 사진은 자동으로 기기 위치를 쓰면 안 되기 때문(아래 참조)
 function geoButton(label){
   const host=document.getElementById('rptGeoAct'); if(!host) return;
@@ -5212,11 +5249,48 @@ function geoButton(label){
       hint.textContent='위치를 가져오지 못했습니다. 지도를 눌러 직접 지정하세요.'; }
   };
 }
+/* 사진에서 위치·촬영일을 읽어 채우는 부분만 따로 뗀다 — 사진을 고른 뒤에 동의를 켰을 때
+   이미 고른 그 사진에 대해 다시 돌릴 수 있어야 하기 때문(아래 geoAsk 참조). */
+async function applyPhotoMeta(f, source){
+  const hint=document.getElementById('rptPhotoHint');
+  if(dateFrom!=='manual'){
+    const shot=await readShotDate(f);
+    const dEl=document.getElementById('rptDate');
+    if(shot && dEl){ dEl.value=shot; dEl.classList.add('auto'); dateFrom='photo'; }
+  }
+  const gps=await readGps(f);
+  if(gps){
+    pinAndZoom(gps.lon, gps.lat, 'photo');
+    hint.textContent='사진에 남아 있는 촬영 위치를 넣었습니다. 지도에서 확인·수정할 수 있어요.';
+  } else if(source==='camera'){
+    /* 그 자리에서 찍은 사진은 브라우저를 거치면 GPS 가 안 남는 기기가 많다 — 대신 지금 서 있는
+       자리를 쓴다. 방금 찍었으니 사진의 위치와 같다고 봐도 되는 유일한 경우다. */
+    hint.textContent='사진에 위치정보가 없어 현재 위치를 확인하는 중…';
+    const g=await deviceGeo();
+    if(g){ pinAndZoom(g.lon, g.lat, 'device');
+      hint.textContent=`기기의 현재 위치를 넣었습니다(오차 약 ${Math.round(g.acc||0)}m). 지도에서 고칠 수 있어요.`; }
+    else { hint.textContent='위치를 가져오지 못했습니다. 지도를 눌러 발견 위치를 지정하세요.';
+      geoButton('현재 위치 다시 시도'); }
+  } else {
+    /* 앨범 사진은 언제 어디서 찍힌 것인지 알 수 없다 — 지금 내 자리를 자동으로 넣으면 틀린 좌표를
+       조용히 만들어 낸다. 그래서 자동으로는 안 쓰고, 사람이 "여기서 봤다"고 누를 때만 쓴다. */
+    hint.textContent='사진에 위치정보가 없습니다. 지도를 눌러 발견 위치를 지정하세요.';
+    geoButton('지금 내 위치로 지정');
+  }
+  noteDate();
+}
+// 날짜를 채웠으면 위치 안내 뒤에 한 줄 덧붙인다 — 사람이 모르는 사이에 바뀌어 있으면 안 된다
+function noteDate(){
+  if(dateFrom!=='photo') return;
+  const hint=document.getElementById('rptPhotoHint');
+  const dv=(document.getElementById('rptDate')||{}).value||'';
+  if(hint) hint.textContent += ` 발견일은 사진의 촬영일(${dv})로 넣었습니다.`;
+}
 async function onPhotoChange(e, source){
   const f=e.target.files[0];
   const hint=document.getElementById('rptPhotoHint'), prev=document.getElementById('rptPhotoPrev'),
         img=document.getElementById('rptPhotoImg'), act=document.getElementById('rptGeoAct');
-  photoFile=f||null; photoBlob=null;
+  photoFile=f||null; photoBlob=null; photoSource=source;
   if(act) act.innerHTML='';
   if(pinFrom && pinFrom!=='manual') clearPin();      // 앞 사진에서 자동으로 찍힌 핀은 이 사진 것이 아니다
   if(dateFrom==='photo') resetDate();                 // 날짜도 마찬가지 — 앞 사진의 촬영일이 남으면 안 된다
@@ -5224,41 +5298,15 @@ async function onPhotoChange(e, source){
   hint.textContent='사진 처리 중…';
   /* 사진에 남은 정보(위치·촬영일) 자동 채우기는 동의한 경우에만 한다. 꺼져 있으면 열어 보지도 않는다. */
   if(geoOptIn===true){
-    /* 촬영일 먼저 — 위치보다 실패할 일이 적고, 사람이 이미 날짜를 골랐다면 건드리지 않는다.
-       기본값(오늘)은 아직 아무도 고르지 않은 상태이므로 사진의 날짜로 덮어도 된다. */
-    if(dateFrom!=='manual'){
-      const shot=await readShotDate(f);
-      const dEl=document.getElementById('rptDate');
-      if(shot && dEl){ dEl.value=shot; dEl.classList.add('auto'); dateFrom='photo'; }
-    }
-    const gps=await readGps(f);
-    if(gps){
-      pinAndZoom(gps.lon, gps.lat, 'photo');
-      hint.textContent='사진에 남아 있는 촬영 위치를 넣었습니다. 지도에서 확인·수정할 수 있어요.';
-    } else if(source==='camera'){
-      /* 그 자리에서 찍은 사진은 브라우저를 거치면 GPS 가 안 남는 기기가 많다 — 대신 지금 서 있는
-         자리를 쓴다. 방금 찍었으니 사진의 위치와 같다고 봐도 되는 유일한 경우다. */
-      hint.textContent='사진에 위치정보가 없어 현재 위치를 확인하는 중…';
-      const g=await deviceGeo();
-      if(g){ pinAndZoom(g.lon, g.lat, 'device');
-        hint.textContent=`기기의 현재 위치를 넣었습니다(오차 약 ${Math.round(g.acc||0)}m). 지도에서 고칠 수 있어요.`; }
-      else { hint.textContent='위치를 가져오지 못했습니다. 지도를 눌러 발견 위치를 지정하세요.';
-        geoButton('현재 위치 다시 시도'); }
-    } else {
-      /* 앨범 사진은 언제 어디서 찍힌 것인지 알 수 없다 — 지금 내 자리를 자동으로 넣으면 틀린 좌표를
-         조용히 만들어 낸다. 그래서 자동으로는 안 쓰고, 사람이 "여기서 봤다"고 누를 때만 쓴다. */
-      hint.textContent='사진에 위치정보가 없습니다. 지도를 눌러 발견 위치를 지정하세요.';
-      geoButton('지금 내 위치로 지정');
-    }
+    await applyPhotoMeta(f, source);
+  } else if(geoOptIn===false){
+    hint.textContent='사진 정보 사용이 꺼져 있습니다 — 발견 위치와 발견일을 직접 넣어 주세요(마이페이지에서 켤 수 있습니다).';
   } else {
-    hint.textContent = geoOptIn===false
-      ? '사진 정보 사용이 꺼져 있습니다 — 발견 위치와 발견일을 직접 넣어 주세요(마이페이지에서 켤 수 있습니다).'
-      : '지도를 눌러 발견 위치를 지정하세요.';
-  }
-  // 날짜를 채웠으면 위치 안내 뒤에 한 줄 덧붙인다 — 사람이 모르는 사이에 바뀌어 있으면 안 된다
-  if(dateFrom==='photo'){
-    const dv=(document.getElementById('rptDate')||{}).value||'';
-    hint.textContent += ` 발견일은 사진의 촬영일(${dv})로 넣었습니다.`;
+    /* 아직 정한 적 없는 계정(이 기능이 생기기 전에 가입) — 여기서 한 번 물어본다.
+       예전에는 이 경우에도 조용히 아무것도 안 읽으면서 "지도를 눌러 지정하세요"만 띄워,
+       사진에서 자동으로 채울 수 있다는 것 자체를 알 길이 없었다. */
+    hint.textContent='사진에서 위치·촬영일을 읽어 채울 수 있습니다 — 아래에서 골라 주세요.';
+    geoAsk();
   }
   try{
     photoBlob = await compressPhoto(f);
