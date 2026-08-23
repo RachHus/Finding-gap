@@ -58,8 +58,12 @@ export async function watchCounts() {
 export function readProfile(user) {
   const m = (user && user.user_metadata) || {};
   const list = Array.isArray(m.fg_sggs) ? m.fg_sggs.filter(Boolean) : (m.fg_sgg ? [m.fg_sgg] : []);
+  /* photoGeo: 사진의 위치정보(EXIF GPS)와 기기 위치를 발견 위치 자동 입력에 쓸지 — 로그인 첫 설정에서
+     받아 두고 마이페이지에서 바꾼다. 값이 없던 예전 계정은 '아직 안 정함'(null)으로 읽어, 제보 화면이
+     한 번 물어볼 수 있게 한다(false 로 뭉개면 동의한 적 없는데 거절한 것처럼 굳는다). */
   return { sgg: m.fg_sgg || list[0] || '', sggName: m.fg_sgg_name || '', sido: m.fg_sido || '',
-           sggs: list, onboarded: !!m.fg_onboarded };
+           sggs: list, onboarded: !!m.fg_onboarded,
+           photoGeo: (typeof m.fg_photo_geo === 'boolean') ? m.fg_photo_geo : null };
 }
 export async function saveProfile(p) {
   if (!sb) throw new Error('not configured');
@@ -67,7 +71,9 @@ export async function saveProfile(p) {
   const { data, error } = await sb.auth.updateUser({ data: {
     fg_sggs: list,
     // 목록 첫 곳은 대표 지역으로도 적어 둔다 — 한 곳만 읽던 자리가 그대로 동작한다.
-    fg_sgg: list[0] || null, fg_sgg_name: p.sggName || null, fg_sido: p.sido || null, fg_onboarded: true
+    fg_sgg: list[0] || null, fg_sgg_name: p.sggName || null, fg_sido: p.sido || null, fg_onboarded: true,
+    // boolean 일 때만 넣는다 — 안 넣으면 updateUser 가 기존 값을 그대로 두므로 다른 화면의 저장이 이 값을 지우지 않는다.
+    ...(typeof p.photoGeo === 'boolean' ? { fg_photo_geo: p.photoGeo } : {})
   } });
   if (error) throw error;
   return data ? data.user : null;
