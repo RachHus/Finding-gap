@@ -356,10 +356,8 @@
   .st{display:inline-flex;align-items:center;gap:4px;font-size:12px}
   .dot{width:7px;height:7px;border-radius:999px;display:inline-block}
   .dot-pt{width:9px;height:9px;background:#FF2E63;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}     /* 발견 지점 */
-  /* 서식지 후보 표식 — 지도에 별표로 그리므로 범례·표에서도 같은 모양이라야 지도와 이어진다.
-     .dot 의 border-radius 를 되돌리지 않으면 clip-path 와 겹쳐 별 끝이 뭉개진다(뒤에 두어 덮는다). */
-  .starmk{border-radius:0;background:#4B3FD6;border:0;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
-    clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+  /* 서식지 후보 표식 — 지도에 네모로 그리므로 범례·표에서도 같은 네모라야 지도와 이어진다. */
+  .starmk{border-radius:0;background:#4B3FD6;border:0;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
   .dot-cand{width:11px;height:11px}
   .num{font-variant-numeric:tabular-nums;text-align:right}
   /* 관심도 셀: 미니 막대 + 수치 */
@@ -502,9 +500,27 @@
   .gaplegend{display:flex;flex-wrap:wrap;align-items:center;gap:5px 12px;font-size:11px;color:#5a635d;margin-bottom:7px}
   .gaplegend .lgi{display:inline-flex;align-items:center;gap:5px}
   .gaplegend .lgi i{width:11px;height:11px;border-radius:2px;display:inline-block;flex:none}
-  .gaplegend .lgi i.starmk{border-radius:0}                 /* 별 끝이 모서리 곡률에 잘리지 않게 */
-  .gaptbl tbody tr{cursor:pointer}
-  .gaptbl tbody tr:hover td{background:#f1f6f3}
+  .gaplegend .lgi i.starmk{border-radius:0}                 /* 네모 모서리가 곡률에 잘리지 않게 */
+  .gaplegend .lgi.warn{color:#B3261E;font-weight:600}
+  .tierlab{font-weight:600;color:#3b463f;margin-right:2px}
+  .gapmaplegend{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;font-size:11px;color:#5a635d;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+  .gapmaplegend .gml-g{display:inline-flex;align-items:center;gap:5px}
+  .gapmaplegend .gml-g>b{font-weight:600;color:#3b463f}
+  .gapmaplegend .gml-h{color:#8b948e;margin:0 3px 0 -1px}
+  .gapmaplegend .starmk{width:11px;height:11px;display:inline-block;flex:none;margin-right:1px}
+  .gapmaplegend .sqhollow{display:inline-block;flex:none;background:transparent;border:1.5px solid #999;margin-right:1px}
+  .gapmaplegend .cur{font-weight:700;color:#3b463f;text-decoration:underline}
+  /* 칸 등급 켜기·끄기 — 후보가 수만 칸일 때 "어디부터"를 좁히는 유일한 손잡이라 표 바로 위에 둔다. */
+  .tierbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 9px;margin:0 0 8px;font-size:11px;color:#5a635d}
+  .tierchip{appearance:none;display:inline-flex;align-items:center;gap:5px;border:1px solid #e0e6e2;
+    background:#f7faf8;border-radius:999px;padding:4px 10px;min-height:30px;cursor:pointer;
+    font:inherit;font-size:11px;color:#3b463f;font-variant-numeric:tabular-nums}
+  .tierchip i{width:11px;height:11px;flex:none}
+  .tierchip.on{border-color:#9ec3b2;background:#eef4f0;font-weight:600}
+  .tierchip:not(.on){color:#8b948e}
+  .tierchip:hover{border-color:#9ec3b2}
+  .gaptbl tbody tr[onclick]{cursor:pointer}
+  .gaptbl tbody tr[onclick]:hover td{background:#f1f6f3}
   .rdl{border:1px solid var(--accent);background:#fff;color:var(--accent);font:600 12px 'Pretendard Variable',system-ui,sans-serif;padding:5px 11px;border-radius:7px;cursor:pointer}
   .rdl:hover{background:var(--accent);color:#fff}
   /* 종 카드 — 발견지점 기후 및 고도 막대 */
@@ -744,10 +760,10 @@
     /* 국명 없는 종: td1이 학명(.sci) → td2 학명 중복 숨김(:has 미지원 브라우저는 기존대로) */
     #tbl tbody tr.rowlink td:nth-child(1):has(.sci)+td:nth-child(2){display:none}
 
-    /* 발견지역표/적합지표(3열): 카드 대신 콤팩트 유지 + 가로 스크롤 폴백 */
-    .regtbl,.gaptbl{font-size:12px}
-    .regtbl th,.gaptbl th{padding:6px 7px}
-    .regtbl td,.gaptbl td{padding:5px 7px;word-break:break-word}
+    /* 발견지역표(4열까지): 카드 대신 콤팩트 유지 + 가로 스크롤 폴백 */
+    .regtbl{font-size:12px}
+    .regtbl th{padding:6px 7px}
+    .regtbl td{padding:5px 7px;word-break:break-word}
     .mytb th:nth-child(2),.mytb td:nth-child(2){display:none}
     .mytb .act button{min-height:44px;padding:9px 11px}
     .txfilter button{min-height:44px}
@@ -934,8 +950,9 @@
         <div id="mapB"><div class="mapmsg" id="mapMsgB">종을 검색·선택하면 발견 지역(시도)이 지도에 표시됩니다.</div></div>
         <div class="legend"><span>기록</span><span>적음</span><span class="ramp"></span><span>많음</span>
           <span class="dot dot-pt" style="margin-left:10px"></span><span>발견 지점(1km)</span>
-          <span class="dot dot-cand starmk" style="margin-left:10px"></span><span>서식지 후보(1km)</span>
+          <span class="dot dot-cand starmk" id="legCandMk" style="margin-left:10px"></span><span id="legCandTx">서식지 후보(1km)</span>
           <span style="margin-left:8px" id="legCapB" class="muted"></span></div>
+        <div class="gapmaplegend" id="gapMapLeg" hidden></div>
       </div>
       <div id="sCard"></div>
     </div>
@@ -1113,11 +1130,11 @@
   </div>
 </div>
 
-<!-- 근거의 세기(신뢰 등급) 설명 — 등급 글자를 눌러서 연다. 서식지 후보를 얼마나 믿을지 판단하려면
+<!-- 신뢰도 설명 — 등급 글자를 눌러서 연다. 서식지 후보를 얼마나 믿을지 판단하려면
      "어떻게 쟀는지"와 "그 방법이 무엇을 못 보는지"를 같이 알아야 한다. -->
 <div class="rpt-overlay" id="gradeOverlay" hidden>
   <div class="rpt-modal grade-modal" role="dialog" aria-modal="true" aria-labelledby="gradeTitle">
-    <div class="rpt-hd"><h3 id="gradeTitle">근거의 세기는 어떻게 쟀나요</h3><button class="x" id="gradeClose" type="button" aria-label="닫기">&times;</button></div>
+    <div class="rpt-hd"><h3 id="gradeTitle">후보를 얼마나 믿을 수 있나요</h3><button class="x" id="gradeClose" type="button" aria-label="닫기">&times;</button></div>
     <div class="rpt-bd" id="gradeBody"></div>
   </div>
 </div>
@@ -1450,7 +1467,7 @@
   .lnkbtn{appearance:none;border:0;background:none;padding:0;font:inherit;color:#1E5631;
     text-decoration:underline;cursor:pointer}
   .lnkbtn:hover{color:#0f3a1e}
-  @media(max-width:880px){ .gradebtn{min-height:44px;padding:4px 12px} }
+  @media(max-width:880px){ .gradebtn,.tierchip{min-height:44px;padding:4px 12px} }
 
   /* 바로가기 띠 — 오른쪽 끝(스크롤바 옆)에 붙는다. fixed 라 스크롤과 무관하게 늘 같은 자리에 있어
      어느 화면에서든 같은 손동작으로 닿는다. 화면 세로 가운데에 두어 지도의 네 귀퉁이 컨트롤
@@ -1714,16 +1731,22 @@ let ENVM=null, WMASK=null, AQSET=null;                                 // 모형
 let gapLayer=null, gapSource=null, gapBtnEl=null;                      // 후보셀 Canvas2D Vector 레이어(모드 B)
 let cellLayer=null, cellSource=null, CELLN=0;                          // 발견 1km 격자 중심점(모드 B·일반종)
 let meLayer=null, meSource=null;                                       // 내 위치 표시점
-const GAP_COL='#4B3FD6';                                               // 서식지 후보 — 남보라(발견 지점 핑크와 색상 자체가 갈린다)
-const GAP_OPA=0.85;
+const GAP_COL='#4B3FD6';                                               // 종을 고르기 전 — 후보 컨트롤·아이콘의 기본색(남보라)
 const _hexA=(h,a)=>{ const n=parseInt(h.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; };
-/* 교차검증 AUC → 신뢰 등급. 등급을 함께 보이지 않으면 전국에 고루 사는 종에서 "후보 4만칸" 이
-   촘촘한 근거처럼 읽힌다. 자를 TSS 에서 AUC 로 바꾼 것은 TSS 가 분포 넓이에 딸려 움직이기 때문이다
-   — 넓게 사는 종은 모형이 나빠서가 아니라 갈라낼 것이 적어서 TSS 가 깎인다(로그 점유칸과
-   ρ=-0.492, AUC 는 -0.099). 공간 블록 교차검증으로 대조해 보면 화면에 실제로 뜨는 것(상위 10%
-   후보의 정밀도)도 AUC 가 더 잘 예고한다. 경계는 AUC 관례값(0.9/0.8/0.7/0.6)이다. */
-const GAP_GRADE=[[0.9,'A','매우 높음'],[0.8,'B','높음'],[0.7,'C','보통'],[0.6,'D','낮음'],[-1,'E','매우 낮음']];
-function gradeOf(auc){ return GAP_GRADE.find(g=>auc>=g[0])||GAP_GRADE[GAP_GRADE.length-1]; }
+/* 후보는 두 가지를 한꺼번에 말해야 한다 — 이 종의 모형을 얼마나 믿을 수 있는가(종마다 하나),
+   그리고 그 칸이 얼마나 잘 맞는가(칸마다 다르다). 하나로 뭉치면 전국에 고루 사는 종의 "후보
+   4만칸"이 촘촘한 근거처럼 읽힌다. 그래서 색은 신뢰도, 진하기와 크기는 칸 점수로 나눠 싣는다.
+   신뢰도를 교차검증 AUC 로 재는 것은 TSS 가 분포 넓이에 딸려 움직이기 때문이다 — 넓게 사는
+   종은 모형이 나빠서가 아니라 갈라낼 것이 적어서 TSS 가 깎인다(로그 점유칸과 ρ=-0.492,
+   AUC 는 -0.099). 공간 블록 교차검증으로 대조해도 화면에 실제로 뜨는 것(상위 10% 후보의
+   정밀도)을 AUC 가 더 잘 예고한다. 경계는 AUC 관례값 0.8·0.6 이다. */
+const GAP_CONF=[[0.8,3,'높음','#1B8A3A'],[0.6,2,'중간','#D9A400'],[-1,1,'낮음','#B3261E']];
+function confOf(auc){ return GAP_CONF.find(c=>auc>=c[0])||GAP_CONF[GAP_CONF.length-1]; }
+function confCol(c){ const x=GAP_CONF.find(z=>z[1]===c); return x?x[3]:GAP_COL; }
+/* 칸 점수는 종마다 척도가 달라 값끼리 견줄 수 없다. 그래서 이 종의 임계값과 전국 점수의
+   99.9 분위 사이를 셋으로 나눈다. 위쪽 끝을 가장 높은 칸 하나로 잡으면 그 한 칸이 척도를
+   끌어당겨 나머지가 모두 맨 아래 등급으로 몰린다 — 72종을 재 보니 5종에서 실제로 그랬다. */
+const GAP_FIT=[null,{t:'낮음',o:.42,r:3.2},{t:'중간',o:.72,r:4.1},{t:'높음',o:.95,r:5}];
 /* 변수 이름을 화면에 그대로 내면(bio18) 아무 뜻도 전달되지 않는다. 학술 용어를 풀어 쓰되
    괄호에 원래 이름을 남긴다 — 자료를 내려받아 대조하는 사람이 이어 볼 수 있어야 한다. */
 const VAR_LABEL={dem:['고도','땅의 높이'], ndvi:['식생','잎이 얼마나 우거지는가'],
@@ -1850,8 +1873,8 @@ function computeCandidate(sp){                            // 적합·미발견 �
   const S=GRID.scale, cid=GRID.cid, lon=GRID.lon, lat=GRID.lat, sg=GRID.sg;
   const occ=new Set();
   if(oc){ for(let j=0;j<oc.c.length;j++) occ.add(oc.c[j]); }
-  const x=new Array(nv), cells=[], numBySg=new Map();
-  let fit=0;
+  const x=new Array(nv), cx=[], cy=[], cs=[], csg=[], all=new Float32Array(cid.length);
+  let fit=0, nAll=0;
   for(let i=0;i<cid.length;i++){
     let ok=true;
     for(let c=0;c<nv;c++){                                // 값 → 배율 환원 → 학습 당시 관측범위로 자르기
@@ -1866,25 +1889,67 @@ function computeCandidate(sp){                            // 적합·미발견 �
       let f=tm.sq?x[tm.i]*x[tm.i]:x[tm.i];
       if(f<tm.lo) f=tm.lo; else if(f>tm.hi) f=tm.hi;
       link+=f*tm.b; }
-    if(1-Math.exp(-Math.exp(link))<thr) continue;         // cloglog 점수가 이 종의 임계값에 못 미침
+    const sc=1-Math.exp(-Math.exp(link));                 // cloglog 점수
+    all[nAll++]=sc;                                       // 위쪽 끝을 잡을 분위수는 판정 전 전국 점수로 잰다
+    if(sc<thr) continue;                                  // 이 종의 임계값에 못 미침
     if(wet&&!(wet[i>>3]>>(i&7)&1)) continue;              // 물길이 없는 칸 — 수생종은 여기서 뺀다
     fit++;
     if(occ.has(cid[i])) continue;                         // 이미 기록이 있는 칸 — 발견 격자가 그린다
-    numBySg.set(sg[i], (numBySg.get(sg[i])||0)+1);
-    cells.push([lon[i]/S.lon, lat[i]/S.lat]);
+    cx.push(lon[i]/S.lon); cy.push(lat[i]/S.lat); cs.push(sc); csg.push(sg[i]);
+  }
+  const srt=all.slice(0,nAll).sort();                     // 형식배열 정렬은 수치 정렬이다
+  const p999=nAll?srt[Math.min(nAll-1, Math.floor(nAll*0.999))]:1;
+  const span=Math.max(p999-thr, 1e-9);
+  const cells=new Array(cx.length), tierN=[0,0,0], bySg=new Map();
+  for(let j=0;j<cx.length;j++){
+    const u=(cs[j]-thr)/span, g=u>=2/3?3:u>=1/3?2:1;      // 위쪽 끝을 넘는 칸은 자연히 맨 위 등급이 된다
+    cells[j]=[cx[j], cy[j], g]; tierN[g-1]++;
+    let t=bySg.get(csg[j]); if(!t){ t=[0,0,0]; bySg.set(csg[j], t); }
+    t[g-1]++;
   }
   const ratios=[];
-  numBySg.forEach((num,sgi)=>{ const denom=GRID.sgn[sgi]||0, code=GRID.sgcodes[sgi];
-    ratios.push({code, num, denom, ratio:denom?num/denom:0}); });
-  return {gated:false, n, cells, ratios, count:cells.length, fit, auc:m.auc, mn:m.n, wet:!!wet, vars:m.v};
+  bySg.forEach((t,sgi)=>{ ratios.push({code:GRID.sgcodes[sgi], denom:GRID.sgn[sgi]||0, t}); });
+  return {gated:false, n, cells, ratios, count:cells.length, tierN, fit,
+    auc:m.auc, conf:confOf(m.auc)[1], mn:m.n, wet:!!wet, vars:m.v};
+}
+let gapTierOn=[true,true,true];                           // 칸 등급 표시(기준 근처·보통·잘 맞음)
+let gapLowOn=false;                                       // 신뢰도 낮은 종의 후보를 펼쳐 볼지
+function gapHidden(res){                                  // 신뢰도가 낮은 종은 눌러서 펼치기 전까지 그리지 않는다
+  return !!(res && !res.gated && res.conf===1 && !gapLowOn);
+}
+function gapShownCount(res){                              // 켜 둔 등급만 센다 — 화면에 없는 것을 세어 주지 않는다
+  if(!res||res.gated||!res.tierN||gapHidden(res)) return 0;
+  let t=0; for(let g=0;g<3;g++) if(gapTierOn[g]) t+=res.tierN[g];
+  return t;
 }
 function updateGapMap(res){                               // 후보셀 → Vector 소스
   if(!gapSource) return;
   gapSource.clear();
-  if(res && !res.gated && res.cells && res.cells.length){
-    gapSource.addFeatures(res.cells.map(([lo,la])=>
-      new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([lo,la])))));
+  if(!res||res.gated||!res.cells||!res.cells.length||gapHidden(res)) return;
+  const fs=[];                                            // 약한 등급부터 얹는다 — 겹칠 때 잘 맞는 칸이 위에 온다
+  for(let g=1;g<=3;g++){
+    if(!gapTierOn[g-1]) continue;
+    for(let j=0;j<res.cells.length;j++){ const c=res.cells[j];
+      if(c[2]!==g) continue;
+      const f=new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([c[0],c[1]])));
+      f.set('g',g); fs.push(f);
+    }
   }
+  gapSource.addFeatures(fs);
+}
+/* 색(신뢰도) × 크기·진하기(칸 점수) × 배율 조합을 만들어 두고 돌려쓴다 — 후보가 수만 칸이라
+   셀마다 스타일을 새로 만들면 확대할 때마다 눈에 띄게 밀린다. 배율(res)이 바뀔 때만 새로 만든다. */
+const _gapSty={};
+function gapStyle(conf,g,res){
+  const f=GAP_FIT[g]||GAP_FIT[3];
+  const rb=res?Math.round(res):0, k=conf+'-'+g+'-'+rb, hit=_gapSty[k]; if(hit) return hit;
+  /* 높음(g3)은 화면상 1km 격자에 가깝게, 그 아래로 변 길이 4:2:1(면적 16:4:1).
+     위도 37.5°에서 1km 격자의 화면 폭 ≈ (1000/cosφ)/res ≈ 1261/res px. angle=π/4 로 마름모를 정사각형으로 세운다. */
+  const cell=res?1261/res:5, side=cell*0.92*(g>=3?1:g>=2?0.5:0.25);
+  const rad=Math.max(1, side*0.70710678);
+  return (_gapSty[k]=new ol.style.Style({image:new ol.style.RegularShape({
+    points:4, radius:rad, angle:Math.PI/4,
+    fill:new ol.style.Fill({color:_hexA(confCol(conf), f.o)})})}));
 }
 /* 일반종의 발견 위치는 시군구를 통째로 칠하는 것보다 1km 격자가 실제에 가깝다 — 후보 추정에 쓰는 단위와도 같다.
    멸종위기종은 정밀한 위치가 채집으로 이어질 수 있어 지금처럼 지역 단위로만 둔다.
@@ -1934,7 +1999,8 @@ function syncCellLayer(){
 }
 /* 후보도 1km 단위라 발견 격자와 같은 줌 문턱을 쓴다. 문턱이 다르면 전국 줌에서 후보만 떠서
    "여기는 후보뿐, 기록은 없다"로 읽히는데, 실제로는 기록 격자가 아직 안 켜졌을 뿐이다. */
-function gapArmed(){ return !!(gapOn && mapMode==='B' && selSpecies && GAPRES && !GAPRES.gated); }
+function gapArmed(){ return !!(gapOn && mapMode==='B' && selSpecies && GAPRES && !GAPRES.gated
+  && !gapHidden(GAPRES) && gapShownCount(GAPRES)>0); }
 function applyGapVis(){                                   // 바뀌었는지 돌려준다 — 범례를 다시 그릴지 부르는 쪽이 정한다
   if(!gapLayer) return false;
   const on=gapArmed() && cellZoomOK();
@@ -1955,8 +2021,23 @@ function toggleGap(){
   else _gapJustOn=true;
   renderSpView(); refreshSpeciesMap();
 }
-let gapSortDir=-1;                                        // 적합지 비율표 정렬(기본 비율 내림차순)
-function gapTable(res){
+/* 등급을 껐다 켜는 것이 이 화면의 핵심이다 — 후보가 수만 칸이면 "어디부터 가 볼까"에 답이 안 된다.
+   지도와 표가 같은 선택을 따라야 하므로 둘 다 다시 그린다. 셋을 모두 끄면 무엇을 껐는지조차
+   화면에 남지 않으므로 마지막 하나는 꺼지지 않게 둔다. */
+function toggleTier(g){
+  gapTierOn[g-1]=!gapTierOn[g-1];
+  if(!gapTierOn.some(Boolean)) gapTierOn[g-1]=true;
+  rerenderGap(); updateGapMap(GAPRES); applyGapVis(); refreshSpeciesMap();
+}
+function toggleLowConf(){
+  gapLowOn=!gapLowOn;
+  rerenderGap(); updateGapMap(GAPRES); applyGapVis(); refreshSpeciesMap();
+  const rh=document.getElementById('regHost'); if(rh&&selSpecies) rh.outerHTML=speciesRegionTable(selSpecies);
+  // 펼치기를 눌렀는데 줌 문턱 아래라 아무것도 안 뜨면 버튼이 안 먹은 것으로 보인다 — 켠 직후와 같은 규칙.
+  if(gapLowOn && map && GAPRES && !GAPRES.gated && GAPRES.cells && GAPRES.cells.length && !cellZoomOK())
+    map.getView().setZoom(CELL_MIN_Z);
+}
+function gapPanel(res){                                   // 서식지 후보 컨트롤(등급 필터·신뢰도) — 시군구별 수치는 발견 지역 표에 병기한다
   if(res.gated) return `<div id="gapHost"><span class="muted">${res.sea
     ? '바다에 사는 종이라 서식지 후보를 만들지 않았습니다. 이 서비스의 격자는 육지만 덮고 있어서, 바다에 사는 종의 서식지를 나타낼 수 있는 칸이 없습니다.'
     : res.nc<10
@@ -1965,52 +2046,63 @@ function gapTable(res){
       ? '발견 지점은 충분하지만 환경 조건으로 서식지를 가려내는 모형이 성립하지 않았습니다. 물에서 사는 종은 기후·지형·식생과 하천의 크기만으로는 수질·유속처럼 실제로 자리를 가르는 조건을 담아내기 어렵습니다.'
       : '발견 지점은 충분하지만 환경 조건으로 서식지를 가려내는 모형이 성립하지 않아 서식지 후보를 제공하지 않습니다.'}</span></div>`;
   if(!res.ratios.length) return `<div id="gapHost"><span class="muted">현재 조사자료 기준 새로운 서식지 후보 지역이 없습니다.</span></div>`;
-  const rows=res.ratios.map(r=>({...r,
-    sido:shortSido(RNAME.sido[String(r.code).slice(0,2)]||''),
-    sigungu:RNAME.sigungu[r.code]||r.code})).sort((a,b)=> (a.ratio-b.ratio)*gapSortDir || b.num-a.num);
-  const body=rows.map(r=>`<tr onclick="zoomSigungu('${r.code}')" title="지도에서 이 시군구로 이동">`+
-    `<td>${r.sido}</td><td>${r.sigungu}</td>`+
-    `<td class="num">${(r.ratio*100).toFixed(1)}%</td></tr>`).join('');
-  const g=gradeOf(res.auc);
+  const cf=GAP_CONF.find(c=>c[1]===res.conf)||GAP_CONF[1], col=cf[3];
+  const badge=`<button type="button" class="gradebtn" onclick="openGradeHelp()" `+
+    `title="신뢰도를 어떻게 쟀는지 보기">신뢰도 ${cf[2]}<span aria-hidden="true">ⓘ</span></button>`;
+  if(gapHidden(res)) return `<div id="gapHost">`+
+    `<div class="gaplegend"><span class="lgi"><i class="starmk" style="background:${col}"></i>`+
+      `서식지 후보 ${nf(res.count)}칸</span><span class="muted">· 1km 격자 ·</span>${badge}</div>`+
+    `<div class="envnote">이 종은 환경 조건만으로 서식지와 아닌 곳을 가려내는 힘이 약해(교차검증 점수 ${res.auc.toFixed(2)}) `+
+      `후보가 전국에 넓게 잡힙니다. 그대로 지도에 뿌리면 조사를 엉뚱한 곳으로 이끌 수 있어 기본으로는 그리지 않습니다. `+
+      `<button type="button" class="lnkbtn" onclick="toggleLowConf()">그래도 후보 보기</button> · `+
+      `<button type="button" class="lnkbtn" onclick="openGradeHelp()">신뢰도는 어떻게 쟀나요?</button></div>`+
+  `</div>`;
+  const chips=[3,2,1].map(g=>{ const f=GAP_FIT[g], on=gapTierOn[g-1];
+    return `<button type="button" class="tierchip${on?' on':''}" aria-pressed="${on}" onclick="toggleTier(${g})" `+
+      `title="${f.t} 칸 켜기·끄기"><i class="starmk" style="background:${col};opacity:${on?f.o:.22}"></i>`+
+      `${f.t} ${nf(res.tierN[g-1])}</button>`; }).join('');
   return `<div id="gapHost">`+
     `<div class="gaplegend">`+
-      `<span class="lgi"><i class="starmk" style="background:${GAP_COL}"></i>서식지 후보 ${nf(res.count)}칸</span>`+
-      `<span class="muted">· 1km 격자 ·</span>`+
-      `<button type="button" class="gradebtn" onclick="openGradeHelp()" `+
-        `title="근거의 세기를 어떻게 쟀는지 보기">근거 ${g[2]}(${g[1]})<span aria-hidden="true">ⓘ</span></button></div>`+
-    `<div class="regtbl-wrap"><table class="regtbl gaptbl"><thead><tr>`+
-      `<th>시도</th><th>시군구</th>`+
-      `<th onclick="gapSortDir*=-1;rerenderGap()" class="num" title="적합지 비율로 정렬">적합지 비율${gapSortDir<0?' ▼':' ▲'}</th>`+
-    `</tr></thead><tbody>${body}</tbody></table></div>`+
-    `<div class="regtbl-foot"><span class="muted">${nf(rows.length)}개 시군구 · 행 클릭=해당 시군구로 이동</span></div>`+
+      `<span class="lgi"><i class="starmk" style="background:${col}"></i>서식지 후보 ${nf(gapShownCount(res))}칸</span>`+
+      `<span class="muted">· 1km 격자 ·</span>${badge}`+
+      (res.conf===1?`<span class="lgi warn">참고용 <button type="button" class="lnkbtn" onclick="toggleLowConf()">숨기기</button></span>`:'')+
+    `</div>`+
+    `<div class="tierbar"><span class="tierlab">서식지 후보 확률</span>${chips}<span class="muted">눌러서 켜고 끕니다 · 칸이 클수록 확률이 높습니다</span></div>`+
     `<div class="envnote">이 종의 발견지점과 전국 환경(기후·고도·식생)을 대조해 학습한 적합 모형이 적합하다고 본 곳 중, 아직 발견기록이 없는 1km 지역입니다. `+
       (res.wet?`물에서 사는 종이라 하천의 크기(차수)까지 함께 학습했고, 하천이 지나는 칸만 남겼습니다. `:'')+
-      `근거의 세기는 <b>${g[2]}(${g[1]})</b> 입니다 — 낮을수록 후보 범위가 넓게 잡히니 참고 자료로만 보십시오. `+
-      `<button type="button" class="lnkbtn" onclick="openGradeHelp()">근거는 어떻게 쟀나요?</button> 실제 서식을 보장하지 않습니다.</div>`+
+      `색은 이 종 모형의 <b>신뢰도(${cf[2]})</b>를, 크기는 그 칸의 <b>서식지 후보 확률</b>을 나타냅니다. 시군구별 적합지(높음) 비율은 위 발견 지역 표에서 볼 수 있습니다. `+
+      `<button type="button" class="lnkbtn" onclick="openGradeHelp()">신뢰도는 어떻게 쟀나요?</button> 실제 서식을 보장하지 않습니다.</div>`+
   `</div>`;
 }
-/* 근거의 세기(신뢰 등급) 설명. 등급 글자만 보이면 "A 는 맞고 D 는 틀렸다"로 읽힌다 —
-   실제로는 후보가 좁게 잡혔느냐 넓게 잡혔느냐에 가깝다. 재는 방법과 그 방법의 한계를
+/* 후보를 얼마나 믿을 수 있나 — 신뢰도 설명. 등급 글자만 보이면 "높음은 맞고 낮음은 틀렸다"로
+   읽힌다. 실제로는 후보가 좁게 잡혔느냐 넓게 잡혔느냐에 가깝다. 재는 방법과 그 방법의 한계를
    같은 자리에서 밝힌다. 한계를 숨기면 낯선 지역의 후보를 실제보다 믿게 된다. */
-const GRADE_MEAN={A:'서식지와 아닌 곳을 뚜렷이 가릅니다', B:'대체로 잘 가릅니다', C:'방향은 맞지만 후보가 넉넉합니다',
-  D:'대략적인 경향만 보여 줍니다', E:'동전 던지기와 크게 다르지 않습니다'};
+const CONF_MEAN={'높음':'서식지와 아닌 곳을 뚜렷이 가릅니다', '중간':'방향은 맞지만 후보가 넉넉합니다',
+  '낮음':'가려내는 힘이 약해 후보가 전국에 넓게 잡힙니다'};
 function openGradeHelp(){
   const ov=document.getElementById('gradeOverlay'), bd=document.getElementById('gradeBody');
   if(!ov||!bd) return;
   const r=GAPRES&&!GAPRES.gated?GAPRES:null;
-  const g=r?gradeOf(r.auc):null;
-  const rows=GAP_GRADE.map((x,i)=>{
-    const lo=x[0]<0?0:x[0], hi=i?GAP_GRADE[i-1][0]:1;      // 아래 등급의 상한 = 위 등급의 하한
-    return `<tr class="${g&&g[1]===x[1]?'on':''}"><td class="gl">${x[1]}</td><td>${x[2]}</td>`+
-      `<td class="num">${lo.toFixed(1)}~${hi.toFixed(1)}</td><td>${GRADE_MEAN[x[1]]}</td></tr>`;
+  const cf=r?(GAP_CONF.find(c=>c[1]===r.conf)||null):null;
+  const rows=GAP_CONF.map((c,i)=>{
+    const lo=c[0]<0?0:c[0], hi=i?GAP_CONF[i-1][0]:1;      // 아래 등급의 상한 = 위 등급의 하한
+    return `<tr class="${cf&&cf[1]===c[1]?'on':''}"><td class="gl" style="color:${c[3]}">${c[2]}</td>`+
+      `<td class="num">${lo.toFixed(1)}~${hi.toFixed(1)}</td><td>${CONF_MEAN[c[2]]}</td></tr>`;
+  }).join('');
+  const fsz={1:4,2:8,3:16};
+  const fits=[3,2,1].map(g=>{ const f=GAP_FIT[g];
+    return `<tr><td class="gl"><i class="starmk" style="background:${cf?cf[3]:GAP_COL};opacity:${f.o};`+
+      `width:${fsz[g]}px;height:${fsz[g]}px;display:inline-block;vertical-align:middle;margin-right:6px"></i>${f.t}</td>`+
+      `<td>${g===3?'임계값과 위쪽 끝 사이에서 위쪽 3분의 1':g===2?'가운데 3분의 1':'임계값 바로 위 3분의 1'}</td></tr>`;
   }).join('');
   const vlist=r&&r.vars?r.vars.map(v=>{ const L=VAR_LABEL[v]||[v,'']
       ; return `<li><b>${L[0]}</b>${L[1]?` — ${L[1]}`:''} <span class="faint">(${v})</span></li>`; }).join(''):'';
   bd.innerHTML=
-    (r?`<p class="gnow">지금 보고 있는 종의 근거는 <b>${g[2]}(${g[1]})</b> · 점수 ${r.auc.toFixed(2)} 입니다.</p>`:'')+
+    (r?`<p class="gnow">지금 보고 있는 종의 신뢰도는 <b>${cf[2]}</b> · 점수 ${r.auc.toFixed(2)} 입니다.</p>`:'')+
     `<h4>한 줄로</h4>`+
-    `<p>서식지 후보를 뽑은 모형이 <b>얼마나 잘 맞히는지</b>를 A부터 E까지 다섯 단계로 나타낸 값입니다.</p>`+
-    `<h4>어떻게 쟀나요</h4>`+
+    `<p>지도의 <b>색</b>은 이 종의 모형을 얼마나 믿을 수 있는지(<b>신뢰도</b>)를, <b>크기</b>는 그 칸의 <b>서식지 후보 확률</b>을 나타냅니다. `+
+      `색은 종마다 하나로 정해지고, 크기는 칸마다 다릅니다.</p>`+
+    `<h4>신뢰도는 어떻게 쟀나요</h4>`+
     `<ol class="gsteps">`+
       `<li>이 종이 발견된 지점을 네 묶음으로 나눕니다.</li>`+
       `<li>세 묶음만 보여 주고 모형을 학습시킵니다. 남은 한 묶음은 감춥니다.</li>`+
@@ -2021,26 +2113,30 @@ function openGradeHelp(){
     `<h4>점수는 무엇인가요</h4>`+
     `<p><b>감춰 둔 발견 지점 한 곳</b>과 <b>전국에서 아무렇게나 고른 한 곳</b>을 나란히 놓고, 모형이 어느 쪽을 더 서식지답다고 하는지 봅니다. `+
       `맞히는 비율이 곧 점수입니다. 1에 가까울수록 잘 가려내고, <b>0.5는 동전 던지기</b>와 같습니다.</p>`+
-    `<h4>등급 읽는 법</h4>`+
-    `<div class="gtbl-wrap"><table class="gtbl"><thead><tr><th>등급</th><th>근거</th><th class="num">점수</th><th>뜻</th></tr></thead>`+
+    `<div class="gtbl-wrap"><table class="gtbl"><thead><tr><th>신뢰도</th><th class="num">점수</th><th>뜻</th></tr></thead>`+
       `<tbody>${rows}</tbody></table></div>`+
-    `<p class="faint">이 점수는 <b>어느 쪽이 더 서식지다운가</b>를 가리는 실력만 봅니다. 지도에서 후보를 자르는 선의 위치는 종마다 따로 정하는데, 그 선은 `+
-      `발견 지점을 놓치지 않으면서 엉뚱한 곳을 덜 짚는 지점으로 잡습니다. 등급은 선을 어디에 그었는지와 무관하게 모형 자체의 실력을 나타냅니다.</p>`+
-    `<h4>등급이 낮으면 틀린 건가요?</h4>`+
+    `<h4>크기 — 서식지 후보 확률</h4>`+
+    `<p>모형은 칸마다 점수를 매기고, 종마다 정한 <b>기준선</b>을 넘는 칸만 후보로 남깁니다. 기준선은 발견 지점을 놓치지 않으면서 `+
+      `엉뚱한 곳을 덜 짚는 자리로 잡습니다. 남은 칸들도 점수가 제각각이라, 기준선부터 <b>전국 점수의 위쪽 끝</b>까지를 셋으로 나눠 크기를 달리했습니다.</p>`+
+    `<div class="gtbl-wrap"><table class="gtbl"><tbody>${fits}</tbody></table></div>`+
+    `<p class="faint">점수의 크기는 종마다 척도가 달라 서로 견줄 수 없습니다. 크기는 <b>같은 종 안에서만</b> 견주는 값입니다. `+
+      `위쪽 끝을 가장 높은 칸 하나로 잡으면 그 한 칸이 척도를 끌어당겨 나머지가 모두 작아지므로, 위에서 0.1% 지점을 끝으로 씁니다.</p>`+
+    `<h4>신뢰도가 낮으면 틀린 건가요?</h4>`+
     `<p>틀렸다기보다 <b>가려내는 힘이 약하다</b>는 뜻입니다. 전국 어디에나 사는 종, 발견 기록이 몇 곳 안 되는 종은 환경 조건만으로 자리를 좁히기 어렵습니다. `+
-      `그래도 후보를 감추지는 않습니다 — 감추면 정보가 가장 부족한 종부터 화면에서 사라지고, 그런 종이야말로 조사가 필요한 종이기 때문입니다. `+
-      `등급이 낮은 종의 후보는 "여기 있다"가 아니라 "이쯤을 먼저 살펴볼 만하다"로 읽어 주십시오.</p>`+
+      `신뢰도가 낮은 종은 후보가 전국에 넓게 잡혀 조사를 엉뚱한 곳으로 이끌 수 있어 <b>기본으로는 지도에 그리지 않습니다.</b> `+
+      `다만 감춰 두지도 않습니다 — 정보가 가장 부족한 종이야말로 조사가 필요한 종이기 때문에, 표 아래 버튼으로 언제든 펼쳐 볼 수 있습니다. `+
+      `그때의 후보는 "여기 있다"가 아니라 "이쯤을 먼저 살펴볼 만하다"로 읽어 주십시오.</p>`+
     `<h4>이 점수의 한계</h4>`+
     `<p>지점을 네 묶음으로 나눌 때 <b>무작위로</b> 나눕니다. 그래서 같은 계곡에서 몇백 미터 떨어진 두 지점이 각각 '학습'과 '시험'으로 갈릴 수 있습니다. `+
       `시험이 그만큼 쉬워지는 셈이라, 이 점수는 <b>한 번도 조사되지 않은 낯선 지역</b>을 맞히는 실력보다 후하게 나옵니다. `+
-      `기존 조사지에서 멀리 떨어진 곳을 볼 때는 등급을 한 칸 낮춰 보시는 편이 안전합니다.</p>`+
+      `기존 조사지에서 멀리 떨어진 곳을 볼 때는 신뢰도를 한 칸 낮춰 보시는 편이 안전합니다.</p>`+
     (vlist?`<h4>이 종의 모형이 쓴 환경 조건</h4><ul class="gvars">${vlist}</ul>`+
       `<p class="faint">발견 지점이 많을수록 더 많은 조건을 씁니다(10곳 3개 · 30곳 4개 · 60곳 5개 · 100곳 이상 6개). `+
       `지점이 적은데 조건을 많이 주면 모형이 그 몇 곳의 우연한 특징까지 외워 버립니다.`+
       (r&&r.wet?` 물에서 사는 종은 여기에 하천 차수를 하나 더 받고, 판정이 끝난 뒤 하천이 지나지 않는 칸을 뺍니다.`:'')+`</p>`:'')+
     `<h4>후보를 어디까지 믿어야 하나요</h4>`+
     `<p>서식지 후보는 <b>실제 서식을 보장하지 않습니다.</b> 환경 조건이 비슷하다는 것뿐이고, 먹이·경쟁·이동 경로·사람의 활동은 들어 있지 않습니다. `+
-      `찾아볼 만한 곳을 좁히는 용도로 보시고, 등급이 높은 종부터 확인하시는 편이 효율적입니다.</p>`;
+      `찾아볼 만한 곳을 좁히는 용도로 보시고, 신뢰도가 높은 종의 진한 칸부터 확인하시는 편이 효율적입니다.</p>`;
   ov.hidden=false;
   const x=document.getElementById('gradeClose'); if(x) x.focus();
 }
@@ -2051,7 +2147,7 @@ function closeGradeHelp(){ const ov=document.getElementById('gradeOverlay'); if(
   ov.addEventListener('click',e=>{ if(e.target===ov) closeGradeHelp(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!ov.hidden) closeGradeHelp(); });
 })();
-function rerenderGap(){ const h=document.getElementById('gapHost'); if(h&&GAPRES) h.outerHTML=gapTable(GAPRES); }
+function rerenderGap(){ const h=document.getElementById('gapHost'); if(h&&GAPRES) h.outerHTML=gapPanel(GAPRES); }
 function zoomSigungu(code){                               // 표 행 클릭 → 해당 시군구로 지도 이동
   if(!map||!LAYERS.sigungu) return;
   if(regLevel!=='sigungu' && typeof setRegLevel==='function') setRegLevel('sigungu');
@@ -2066,14 +2162,15 @@ function renderSpView(){
   const sp=selSpecies;
   syncCellLayer();
   host.innerHTML=speciesRegionTable(sp)+(gapOn
-    ? `<div class="spsub">서식지 후보 · 시군구별 적합지 비율</div>`+
+    ? `<div class="spsub">서식지 후보</div>`+
       `<div id="gapHost"><span class="muted">서식지 후보를 계산하는 중…</span></div>` : '');
   refreshSpeciesMap();                                    // 멸종위기종은 격자를 안 켜므로 여기서 범례를 채워야 한다
   if(!gapOn) return;
   ensureGap(()=>loadCells(sp.t, ()=>loadModel(sp.t, ()=>{
     if(!gapOn||selSpecies!==sp){ _gapJustOn=false; return; }   // 그 사이 종이 바뀌거나 후보를 껐으면 폐기
     const res=computeCandidate(sp); GAPRES=res;
-    const h=document.getElementById('gapHost'); if(h) h.outerHTML=gapTable(res);
+    const h=document.getElementById('gapHost'); if(h) h.outerHTML=gapPanel(res);
+    const rh=document.getElementById('regHost'); if(rh) rh.outerHTML=speciesRegionTable(sp);
     updateGapMap(res);
     /* 후보는 1km 단위라 줌 문턱(CELL_MIN_Z) 아래에서는 안 그린다 — 예전에는 켜도 아무것도 안 뜨고
        "더 확대하면 보입니다" 안내만 남아, 확대가 Ctrl+휠인 것까지 알아야 후보에 닿을 수 있었다.
@@ -2082,7 +2179,7 @@ function renderSpView(){
        없으니 건드리지 않는다. 애니메이션 없이 즉시 — zoomToFeature 와 같은 이유. */
     if(_gapJustOn){
       _gapJustOn=false;
-      if(map && !res.gated && res.cells && res.cells.length && !cellZoomOK()) map.getView().setZoom(CELL_MIN_Z);
+      if(map && !res.gated && !gapHidden(res) && res.cells && res.cells.length && !cellZoomOK()) map.getView().setZoom(CELL_MIN_Z);
     }
     applyGapVis(); refreshSpeciesMap();
   })));
@@ -2091,8 +2188,9 @@ function renderSpView(){
 /* ═══════ 공유 지도(모드 A·B 재사용, setTarget 전환) ═══════ */
 /* 밀도 램프: 옅은 노랑(낮음)→연두(중간)→진초록(높음). 값의 크기를 그대로 읽으므로
    발견이든 미발견이든 짙을수록 많다 — 지표에 따라 방향이 뒤집히지 않는다.
-   지점(핑크)·후보(남보라)는 이 초록 계열에도, 배경지도의 시가지 베이지·분홍에도 없는 색을 쓰고
-   흰 테두리를 둘러 배경에서 떼어 놓는다 — 예전엔 둘 다 주황 계열이라 시가지 위에서 묻혔다. */
+   지점(핑크)은 이 초록 계열에도, 배경지도의 시가지 베이지·분홍에도 없는 색을 쓰고
+   흰 테두리를 둘러 배경에서 떼어 놓는다 — 예전엔 주황 계열이라 시가지 위에서 묻혔다.
+   후보 칸의 색은 종 모형의 신뢰도가 정한다(GAP_CONF·gapStyle). */
 /* 밀도 램프 두 벌 — 둘 다 옅은 노랑에서 시작해 짙어진다("적음"은 지표가 달라도 같은 색이라야
    자연스럽다). 뜻을 가르는 것은 짙은 쪽이다: 발견은 초록(있다), 미발견은 붉은(없다 = 찾아가 볼 데).
    예전에는 두 지표가 같은 초록 하나를 써서, 미발견 종이 가장 많은 곳이 가장 진한 초록으로 칠해졌다 —
@@ -2200,13 +2298,10 @@ function initMap(){
   sidoLayer=LAYERS.sido;
   layers.push(LAYERS.sido, LAYERS.sigungu);
   /* 후보셀 — 발견 격자와 나란히 보여야 하므로 경계 채움보다 위에 얹는다(아래 두면 채움에 묻힌다).
-     별 모양은 범례·표의 표식과 같게 맞춘 것이고, 원인 발견 지점과 형태만으로도 갈린다. */
+     네모는 범례·표의 표식과 같게 맞춘 것이고, 원인 발견 지점과 형태만으로도 갈린다. */
   gapSource=new ol.source.Vector();                      // WebGLPoints 는 이 지도서 미합성 → Canvas2D Vector
-  const _gapSty=new ol.style.Style({image:new ol.style.RegularShape({
-    points:5, radius:5.4, radius2:2.3, angle:0,
-    fill:new ol.style.Fill({color:_hexA(GAP_COL, GAP_OPA)}),
-    stroke:new ol.style.Stroke({color:'rgba(255,255,255,0.95)', width:1.1})})});
-  gapLayer=new ol.layer.Vector({source:gapSource, visible:false, style:_gapSty});
+  gapLayer=new ol.layer.Vector({source:gapSource, visible:false,
+    style:(f,res)=>gapStyle(GAPRES?GAPRES.conf:2, f.get('g')||3, res)});
   layers.push(gapLayer);
   cellSource=new ol.source.Vector();                     // 발견 격자 — 경계 채움에 가려지므로 경계보다 위에 얹는다
   cellLayer=new ol.layer.Vector({source:cellSource, visible:false,
@@ -2634,7 +2729,7 @@ function addGapToggle(){
       'title="서식지 후보 켜기·끄기" aria-label="서식지 후보">'+
       '<i class="starmk"></i><span class="gb-lbl">서식지 후보</span></button>'+
     '<button type="button" class="qtip" aria-label="서식지 후보 설명" '+
-      'data-tip="선택한 종의 발견지점과 전국 환경(기후·고도·식생)을 대조해 학습한 적합 모형이 적합하다고 본 곳 중, 아직 발견기록이 없는 1km 지역입니다. 근거의 세기는 종마다 달라 표 아래에 함께 밝힙니다. 실제 서식을 보장하지 않으며, 찾아볼 만한 곳을 좁히는 용도입니다.">?</button>';
+      'data-tip="선택한 종의 발견지점과 전국 환경(기후·고도·식생)을 대조해 학습한 적합 모형이 적합하다고 본 곳 중, 아직 발견기록이 없는 1km 지역입니다. 표식의 색은 이 종 모형의 신뢰도를, 크기는 그 칸의 서식지 후보 확률을 나타냅니다. 실제 서식을 보장하지 않으며, 찾아볼 만한 곳을 좁히는 용도입니다.">?</button>';
   gapBtnEl=wrap.querySelector('.gapbtn');
   gapBtnEl.addEventListener('click',toggleGap);
   mapTopEl.appendChild(wrap);
@@ -3102,7 +3197,21 @@ function refreshSpeciesMap(){
   if(legCapB){
     const nm=selSpecies?(selSpecies.n||selSpecies.s):'';
     // 후보 칸수는 실제로 그려질 때만 붙인다 — 화면에 없는 것을 세어 주면 어디를 보라는 말인지 알 수 없다
-    const cand=(gapLayer&&gapLayer.getVisible()&&GAPRES&&!GAPRES.gated)?` · 서식지 후보 ${nf(GAPRES.count)}칸`:'';
+    const cand=(gapLayer&&gapLayer.getVisible()&&GAPRES&&!GAPRES.gated)?` · 서식지 후보 ${nf(gapShownCount(GAPRES))}칸`:'';
+    const mk=document.getElementById('legCandMk'), tx=document.getElementById('legCandTx');
+    if(mk&&tx){ const c=(GAPRES&&!GAPRES.gated)?(GAP_CONF.find(z=>z[1]===GAPRES.conf)||null):null;
+      mk.style.background=c?c[3]:GAP_COL;
+      tx.textContent=c?`서식지 후보(1km) · 신뢰도 ${c[2]}`:'서식지 후보(1km)'; }
+    const gml=document.getElementById('gapMapLeg');
+    if(gml){ const gc=(gapLayer&&gapLayer.getVisible()&&GAPRES&&!GAPRES.gated)?(GAP_CONF.find(z=>z[1]===GAPRES.conf)||null):null;
+      if(gc){ const cc=gc[3];
+        const cS=GAP_CONF.map(z=>`<i class="starmk" style="background:${z[3]}"></i><span${z[1]===gc[1]?' class="cur"':''}>${z[2]}</span>`).join('');
+        const psz={1:4,2:8,3:16};
+        const pS=[1,2,3].map(g=>`<i class="sqhollow" style="width:${psz[g]}px;height:${psz[g]}px;border-color:${cc}"></i>${GAP_FIT[g].t}`).join('');
+        gml.innerHTML=`<span class="gml-g"><b>모형 신뢰도</b><span class="gml-h">색</span>${cS}</span>`+
+          `<span class="gml-g"><b>서식지 후보 확률</b><span class="gml-h">크기</span>${pS}</span>`;
+        gml.hidden=false; }
+      else gml.hidden=true; }
     if(selSpecies && cellsShown())
       legCapB.textContent=`${nm} · ${sy0}–${sy1} 발견 1km 격자 ${nf(CELLN)}칸${cand}`;
     else if(selSpecies && cellsPending())
@@ -3132,6 +3241,7 @@ function regSortRows(rows){                               // 발견지역 표 �
   const r=rows.slice();
   r.sort((a,b)=>{
     let d = regSortKey==='c' ? a.c-b.c
+          : regSortKey==='g' ? (a.g||0)-(b.g||0)
           : String(a[regSortKey]||'').localeCompare(String(b[regSortKey]||''),'ko');
     return d*regSortDir || b.c-a.c || a.sido.localeCompare(b.sido,'ko');
   });
@@ -3139,22 +3249,35 @@ function regSortRows(rows){                               // 발견지역 표 �
 }
 function sortRegBy(k){                                    // 헤더 클릭 → 정렬(같은 열 재클릭=방향 반전)
   if(regSortKey===k) regSortDir*=-1;
-  else { regSortKey=k; regSortDir=(k==='c')?-1:1; }      // 수치=내림차순 먼저, 텍스트=오름차순 먼저
+  else { regSortKey=k; regSortDir=(k==='c'||k==='g')?-1:1; }   // 수치=내림차순 먼저, 텍스트=오름차순 먼저
   const host=document.getElementById('regHost');
   if(host && selSpecies) host.outerHTML=speciesRegionTable(selSpecies);
 }
 function speciesRegionTable(sp){
-  const rows=regSortRows(speciesSigungu(sp,sy0,sy1));
+  /* 후보가 켜져 있으면 시군구별 적합지 비율(확률 높음 등급의 후보 칸 비율)을 열로 병기하고,
+     행 클릭으로 그 시군구에 지도를 맞춘다 — 예전 후보 표가 하던 일을 이 표가 이어받았다.
+     비율이 없는 시군구는 그 등급의 후보 칸이 없다는 뜻이라 0%로 적는다. */
+  const showGap=gapOn && GAPRES && !GAPRES.gated && selSpecies===sp && !gapHidden(GAPRES) && GAPRES.ratios.length>0;
+  if(!showGap && regSortKey==='g'){ regSortKey='c'; regSortDir=-1; }
+  const gapBySg=showGap?new Map(GAPRES.ratios.map(r=>[r.code, r.denom?r.t[2]/r.denom:0])):null;
+  const base=speciesSigungu(sp,sy0,sy1);
+  const rows=regSortRows(showGap?base.map(r=>({...r, g:isUnknownReg(r.sg)?null:(gapBySg.get(r.sg)||0)})):base);
   if(!rows.length) return `<div id="regHost"><span class="muted">${sy0}–${sy1} 조사자료에서 관측 기록이 없습니다(발견공백).</span></div>`;
   const total=rows.reduce((s,r)=>s+r.c,0);
   const ar=k=>regSortKey===k?`<span class="ar on">${regSortDir<0?'▼':'▲'}</span>`:`<span class="ar off">↕</span>`;
-  const body=rows.map(r=>`<tr><td>${r.sido}</td><td>${r.sigungu}</td><td class="num">${nf(r.c)}</td></tr>`).join('');
-  return `<div id="regHost"><div class="regtbl-wrap"><table class="regtbl"><thead><tr>`+
+  const body=rows.map(r=>{
+    const click=showGap&&!isUnknownReg(r.sg)?` onclick="zoomSigungu('${r.sg}')" title="지도에서 이 시군구로 이동"`:'';
+    const gapCell=!showGap?'':r.g==null?`<td class="num muted">—</td>`:`<td class="num">${(r.g*100).toFixed(1)}%</td>`;
+    return `<tr${click}><td>${r.sido}</td><td>${r.sigungu}</td><td class="num">${nf(r.c)}</td>${gapCell}</tr>`;
+  }).join('');
+  return `<div id="regHost"><div class="regtbl-wrap"><table class="regtbl${showGap?' gaptbl':''}"><thead><tr>`+
       `<th onclick="sortRegBy('sido')" title="시도명으로 정렬">시도${ar('sido')}</th>`+
       `<th onclick="sortRegBy('sigungu')" title="시군구명으로 정렬">시군구${ar('sigungu')}</th>`+
-      `<th onclick="sortRegBy('c')" class="num" title="발견수로 정렬">발견수${ar('c')}</th></tr></thead>`+
+      `<th onclick="sortRegBy('c')" class="num" title="발견수로 정렬">발견수${ar('c')}</th>`+
+      (showGap?`<th onclick="sortRegBy('g')" class="num" title="이 시군구에서 서식지 확률이 가장 높은 등급의 후보 칸 비율로 정렬">적합지 비율(높음)${ar('g')}</th>`:'')+
+      `</tr></thead>`+
       `<tbody>${body}</tbody></table></div>`+
-    `<div class="regtbl-foot"><span class="muted">${nf(rows.length)}개 시군구 · 합계 ${nf(total)}</span>`+
+    `<div class="regtbl-foot"><span class="muted">${nf(rows.length)}개 시군구 · 합계 ${nf(total)}${showGap?' · 행 클릭=해당 시군구로 이동':''}</span>`+
     `<button class="rdl" data-gate="login" onclick="downloadSpeciesRegions()">CSV 다운로드</button></div></div>`;
 }
 function downloadSpeciesRegions(){
@@ -3443,7 +3566,7 @@ window.fgApplyDeepLink=function(p){
   setMode('A');
   /* 고른 지역으로 화면도 옮긴다 — 선택만 바꾸고 지도를 그대로 두면 "종로구 알려줘"에 종로구가
      칠해지기만 하고 화면은 전국에 남아, 어디가 칠해졌는지 눈으로 찾아야 했다. 지역 검색(pickRegion)과
-     후보 표 행 클릭(zoomSigungu)은 이미 그 지역으로 움직인다 — 같은 규칙으로 맞춘다. */
+     발견 지역 표 행 클릭(zoomSigungu)은 이미 그 지역으로 움직인다 — 같은 규칙으로 맞춘다. */
   zoomToRegionCode(qs, qsg);
 };
 
