@@ -5144,6 +5144,8 @@ function render(){
         '<button type="button" class="rpt-pickbtn" id="rptPick">🖼 '+(COARSE?'앨범에서 고르기':'사진 고르기')+'</button>'+
       '</div>'+
       '<input type="file" id="rptPhoto" accept="image/*" hidden>'+
+      /* accept 를 일부러 안 단다 — 안드로이드가 갤러리 대신 파일(문서) 고르개를 열게 하려는 것 */
+      '<input type="file" id="rptPhotoFile" hidden>'+
       (COARSE?'<input type="file" id="rptPhotoCam" accept="image/*" capture="environment" hidden>':'')+
       '<div class="rpt-photo-prev" id="rptPhotoPrev" hidden><img id="rptPhotoImg" alt=""><button type="button" id="rptPhotoClear">✕ 제거</button></div>'+
       '<div class="rpt-hint" id="rptPhotoHint" style="margin-top:6px"></div>'+
@@ -5158,8 +5160,10 @@ function render(){
   initMap();
   const su=document.getElementById('rptSubmit');
   su.onclick=doSubmit;
-  const fPick=document.getElementById('rptPhoto'), fCam=document.getElementById('rptPhotoCam');
+  const fPick=document.getElementById('rptPhoto'), fCam=document.getElementById('rptPhotoCam'),
+        fFile=document.getElementById('rptPhotoFile');
   fPick.addEventListener('change', e=>onPhotoChange(e,'album'));
+  if(fFile) fFile.addEventListener('change', e=>onPhotoChange(e,'album'));
   document.getElementById('rptPick').onclick=()=>fPick.click();
   if(fCam){
     fCam.addEventListener('change', e=>onPhotoChange(e,'camera'));
@@ -5174,12 +5178,24 @@ function render(){
 }
 
 // ── 사진: EXIF GPS 자동 위치 + 클라이언트 압축(원본 EXIF는 재인코딩 시 제거됨) ──
+const inKorea=(lat,lon)=>isFinite(lat)&&isFinite(lon)&&lat>=33&&lat<=43&&lon>=124&&lon<=132;   // 서버 제약과 같은 범위
+/* 좌표 읽기를 두 갈래로 시도한다 — exifr.gps() 는 편의 함수라 일부 파일에서 조용히 빈손으로 돌아온다.
+   그때는 전체 파싱으로 한 번 더 본다(GPS 블록이 표준 위치에 없거나 제조사 배치가 다른 사진이 있다).
+   국내 범위를 벗어나면 안 쓴다 — 잘못 읽힌 값이 지도를 엉뚱한 데로 끌고 가는 것보다 없는 편이 낫다. */
 async function readGps(file){
-  try{
-    const gps = await exifr.gps(file);
-    if(gps && isFinite(gps.latitude) && isFinite(gps.longitude)) return {lat:gps.latitude, lon:gps.longitude};
-  }catch(_){}
-  return null;
+  let lat, lon;
+  try{ const g = await exifr.gps(file); if(g){ lat=g.latitude; lon=g.longitude; } }catch(_){}
+  if(!isFinite(lat)||!isFinite(lon)){
+    try{ const m = await exifr.parse(file, {gps:true}); if(m){ lat=m.latitude; lon=m.longitude; } }catch(_){}
+  }
+  if(!isFinite(lat)||!isFinite(lon)) return null;            // 좌표가 아예 없다
+  if(!inKorea(lat, lon)) return {outside:true, lat, lon};    // 있긴 한데 국내 밖 — 없는 것과 이유가 다르다
+  return {lat, lon};
+}
+// 사진에 EXIF 자체가 있었는지 — 위치만 없는 것인지 아예 아무 정보도 없는 것인지 갈라 말해 주기 위해
+async function hasExif(file){
+  try{ const m = await exifr.parse(file, ['Make','Model','DateTimeOriginal','CreateDate','Orientation']);
+    return !!(m && Object.keys(m).length); }catch(_){ return false; }
 }
 /* 촬영일 — 셔터가 눌린 시각(DateTimeOriginal)이 우선이고, 없으면 파일이 만들어진 시각을 쓴다.
    ModifyDate 는 안 쓴다 — 사진을 나중에 손본 시각이라 발견일이 아니다. */
@@ -5260,9 +5276,19 @@ function geoFlip(){
   };
 }
 // 위치를 못 얻었을 때 손으로 부를 수 있는 길 — 앨범 사진은 자동으로 기기 위치를 쓰면 안 되기 때문(아래 참조)
-function geoButton(label){
+/* 안드로이드에는 사진을 고르는 길이 둘이다 — 갤러리(MediaStore)와 파일(문서 고르개).
+   accept="image/*" 를 달면 갤러리 쪽으로 몰리는데, 그 경로는 위치가 가려진 사본을 준다.
+   accept 를 떼면 파일 쪽으로 갈 수 있고 원본이 그대로 올 여지가 있다 — 확실치 않아서 상시로
+   내밀지 않고, 실제로 위치를 못 읽었을 때만 "다시 골라 보기"로 권한다. 되면 그게 우회로고,
+   안 돼도 잃을 것이 없다. PC 에서는 어차피 원본이 오므로 이 자리가 뜰 일이 드물다. */
+function geoButton(label, offerFile){
   const host=document.getElementById('rptGeoAct'); if(!host) return;
-  host.innerHTML=`<button type="button" class="rpt-pickbtn sm" id="rptUseHere">📍 ${label}</button>`;
+  host.innerHTML=`<div class="rpt-pick">`+
+    (offerFile?`<button type="button" class="rpt-pickbtn sm" id="rptFilePick">📂 파일에서 다시 골라 보기</button>`:'')+
+    `<button type="button" class="rpt-pickbtn sm" id="rptUseHere">📍 ${label}</button></div>`+
+    (offerFile?`<div class="rpt-hint" style="margin-top:5px">갤러리 대신 <b>파일</b>에서 고르면 위치가 남아 있을 수 있습니다.</div>`:'');
+  const fp=host.querySelector('#rptFilePick');
+  if(fp) fp.onclick=()=>{ const el=document.getElementById('rptPhotoFile'); if(el) el.click(); };
   host.querySelector('#rptUseHere').onclick=async(ev)=>{
     const b=ev.currentTarget; b.disabled=true; b.textContent='위치 확인 중…';
     const g=await deviceGeo();
@@ -5283,9 +5309,15 @@ async function applyPhotoMeta(f, source){
     if(shot && dEl){ dEl.value=shot; dEl.classList.add('auto'); dateFrom='photo'; }
   }
   const gps=await readGps(f);
-  if(gps){
+  if(gps && gps.outside){
+    /* 좌표는 있는데 국내 밖이다 — 해외에서 찍은 사진이거나 좌표가 잘못 적힌 사진.
+       "위치가 없다"고 하면 사실과 다르므로 무엇을 봤는지 그대로 말한다(서버도 이 범위 밖은 안 받는다). */
+    hint.textContent=`이 사진의 촬영 위치(${gps.lat.toFixed(4)}, ${gps.lon.toFixed(4)})는 국내 범위 밖이라 쓰지 않았습니다. 지도를 눌러 발견 위치를 지정하세요.`;
+    geoButton('지금 내 위치로 지정');
+  } else if(gps){
     pinAndZoom(gps.lon, gps.lat, 'photo');
-    hint.textContent='사진에 남아 있는 촬영 위치를 넣었습니다. 지도에서 확인·수정할 수 있어요.';
+    // 지도만 움직이면 눈치채기 어렵다 — 읽은 좌표를 숫자로도 적는다
+    hint.textContent=`사진에 남아 있는 촬영 위치(${gps.lat.toFixed(5)}, ${gps.lon.toFixed(5)})를 넣었습니다. 지도에서 확인·수정할 수 있어요.`;
   } else if(source==='camera'){
     /* 그 자리에서 찍은 사진은 브라우저를 거치면 GPS 가 안 남는 기기가 많다 — 대신 지금 서 있는
        자리를 쓴다. 방금 찍었으니 사진의 위치와 같다고 봐도 되는 유일한 경우다. */
@@ -5297,9 +5329,16 @@ async function applyPhotoMeta(f, source){
       geoButton('현재 위치 다시 시도'); }
   } else {
     /* 앨범 사진은 언제 어디서 찍힌 것인지 알 수 없다 — 지금 내 자리를 자동으로 넣으면 틀린 좌표를
-       조용히 만들어 낸다. 그래서 자동으로는 안 쓰고, 사람이 "여기서 봤다"고 누를 때만 쓴다. */
-    hint.textContent='사진에 위치정보가 없습니다. 지도를 눌러 발견 위치를 지정하세요.';
-    geoButton('지금 내 위치로 지정');
+       조용히 만들어 낸다. 그래서 자동으로는 안 쓰고, 사람이 "여기서 봤다"고 누를 때만 쓴다.
+       왜 없는지도 갈라 말한다. 촬영일은 읽혔는데 위치만 없다면 사진에 애초에 안 담겼거나 기기가
+       앨범에서 넘길 때 가린 것이고(안드로이드는 앨범 사진의 위치를 앱 권한 없이는 가려서 준다 —
+       웹페이지는 그 권한을 못 받는다), 아무 정보도 없으면 내려받거나 편집한 사진이다.
+       "위치정보가 없습니다"만 띄우면 앱이 고장 난 것처럼 보인다. */
+    const had = dateFrom==='photo' || await hasExif(f);
+    hint.textContent = had
+      ? '이 사진에는 촬영 위치가 없습니다 — 기기가 앨범에서 넘길 때 위치를 가렸거나, 찍을 때 위치 기록이 꺼져 있던 사진입니다.'
+      : '이 사진에는 촬영 정보가 남아 있지 않습니다 — 내려받았거나 편집을 거친 사진일 수 있습니다.';
+    geoButton('지금 내 위치로 지정', had);
   }
   noteDate();
 }
@@ -5353,6 +5392,7 @@ function clearPhoto(){
   if(dateFrom==='photo') resetDate();
   document.getElementById('rptPhoto').value='';
   const cam=document.getElementById('rptPhotoCam'); if(cam) cam.value='';
+  const fil=document.getElementById('rptPhotoFile'); if(fil) fil.value='';
   document.getElementById('rptPhotoPrev').hidden=true;
   document.getElementById('rptPhotoHint').textContent='';
   const act=document.getElementById('rptGeoAct'); if(act) act.innerHTML='';
@@ -5433,9 +5473,14 @@ function setPin(lon,lat,src){
 }
 
 function clearPin(){
+  /* 자동으로 찍혔던 핀을 지울 때는 지도도 전국으로 되돌린다 — 핀만 지우면 앞 사진의 자리에 확대된
+     화면이 그대로 남아, 아무것도 안 골랐는데 고른 것처럼 보인다(실측으로 걸렸다). 사람이 직접 찍은
+     핀은 애초에 이 함수로 안 들어온다(호출부에서 걸러진다). */
+  const wasAuto = pinFrom && pinFrom!=='manual';
   pinFrom=null; latlon=null;
   if(pinSrc) pinSrc.clear();
   const cc=document.getElementById('rptCoord'); if(cc) cc.textContent='';
+  if(wasAuto && rptMap) rptMap.getView().animate({center:ol.proj.fromLonLat([127.8,36.3]), zoom:6, duration:300});
   updateSubmit();
 }
 function validUrl(u){ return /^https?:\/\/.+/i.test(u); }
