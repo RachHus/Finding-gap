@@ -56,7 +56,8 @@
       지워진다. 이 파일을 고치고 `python 5_App/build_dist.py --osm-only --out docs`.
     · 적색목록 색은 RL_FILL 이 유일한 출처다. CSS 토큰으로 옮기지 않는다.
     · 지도 조작 — 맨 휠은 페이지 스크롤, 확대는 Ctrl/⌘+휠이나 두 손가락,
-      중심은 한반도 밖으로 나가지 않는다. 셋 다 일부러 그렇게 한 것이다.
+      옮기기는 끌기(손가락 하나로도 된다), 중심은 한반도 밖으로 나가지 않는다.
+      넷 다 일부러 그렇게 한 것이다.
     · 종별 검색은 분류군과 무관하다. sTaxon 은 빈 값을 유지한다.
     · 화면에 나가는 글에 작업 과정의 말("대문"·"차트N" 같은)을 쓰지 않는다.
   ══════════════════════════════════════════════════════════════════════════
@@ -471,6 +472,8 @@
   @media(hover:none){.wheel-hint{display:none}}
   .reg-toggle button+button{border-left:1px solid #e3e8e5}
   .reg-toggle button.poly{min-width:44px;text-align:center;letter-spacing:.3px}
+  /* 전국 보기 앞의 한반도 실루엣 — 글자를 읽기 전에 무엇을 되돌리는 단추인지 짚어준다. */
+  .reg-toggle button .kr-ico{vertical-align:-2px;margin-right:5px;flex:none;opacity:.8}
   .regtbl-wrap{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px}
   .regtbl{width:100%;border-collapse:collapse;font-size:13px}
   .regtbl thead th{position:sticky;top:0;background:#f4f6f4;text-align:left;padding:6px 10px;font-weight:600;color:#3b463f;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -715,11 +718,11 @@
     #map .ol-rotate button,#mapB .ol-rotate button{min-width:44px;min-height:44px}
     .map-ctrls{flex-wrap:wrap;justify-content:flex-end}
     .reg-toggle button{min-height:44px;display:inline-flex;align-items:center}
-    /* 서식지 후보도 별표만 남긴다 — 첫 줄에 이름까지 실으면 검색칸이 남지 않는다.
-       뜻은 바로 옆 물음표가 설명하고, 켜진 상태는 상자 색이 알린다. */
-    .gap-ctrl .gapbtn{min-height:44px;min-width:44px;justify-content:center;padding:6px}
-    .gap-ctrl .gapbtn .gb-lbl{display:none}
+    /* 서식지 후보는 좁은 화면에서도 이름을 남긴다 — 별표만으로는 누르기 전에 무엇인지 알 수 없다.
+       대신 좌우 여백을 줄이고 검색칸의 기준폭을 116px 로 낮춰, 띠는 두 줄 그대로 유지한다. */
+    .gap-ctrl .gapbtn{min-height:44px;min-width:0;padding:6px 10px}
     .gap-ctrl .gapbtn i{width:15px;height:15px}
+    .regsearch{flex:1 1 116px}
 
     /* 범례: 줄바꿈 허용 + 컬러바 축소 */
     .legend{flex-wrap:wrap;gap:6px 8px}
@@ -2378,12 +2381,16 @@ window.KOREA_EXTENT=KOREA_EXTENT;                         // const 는 전역 �
 /* 지도가 페이지 한가운데 놓이므로, 지도 위에서 휠을 굴리면 페이지가 내려가야 한다.
    기본 설정은 휠을 지도 확대에 써 버리고 커서 쪽으로 당겨 확대하기 때문에,
    페이지를 내리려던 사용자가 최대 배율로 엉뚱한 곳(적도 부근)까지 끌려간다.
-   → 확대는 Ctrl(⌘)+휠, 터치는 두 손가락. 맨휠·한 손가락은 페이지 스크롤에 그대로 넘긴다. */
+   → 확대는 Ctrl(⌘)+휠, 터치는 두 손가락. 맨휠은 페이지 스크롤에 그대로 넘긴다.
+   다만 끌어서 옮기기는 한 손가락에도 연다 — 휠도 마우스도 없는 화면에서 이걸 막으면
+   지도를 옮길 방법이 남지 않는다. 지도 위·아래 여백으로 페이지는 계속 내릴 수 있고,
+   탭은 끌기로 판정되지 않으므로(움직임이 임계값을 넘어야 끌기다) 지역 선택도 그대로다. */
 function mapInteractions(){
   return ol.interaction.defaults.defaults({mouseWheelZoom:false, dragPan:false}).extend([
     new ol.interaction.MouseWheelZoom({condition:ol.events.condition.platformModifierKeyOnly}),
     new ol.interaction.DragPan({condition(e){
-      return this.getPointerCount()===2 || (e.originalEvent&&e.originalEvent.pointerType)!=='touch';
+      const touch=(e.originalEvent&&e.originalEvent.pointerType)==='touch';
+      return !touch || this.getPointerCount()===2 || ol.events.condition.primaryAction(e);
     }})
   ]);
 }
@@ -2712,7 +2719,10 @@ function addRegToggle(){                                  // 지도 안 컨트�
     '<button type="button" data-l="sigungu" aria-pressed="false" title="시군구 단위로 지역 경계를 나눕니다">시군구</button>';
   lvl.addEventListener('click',ev=>{ const b=ev.target.closest('button'); if(b) setRegLevel(b.dataset.l); });
   const hv=document.createElement('div'); hv.className='reg-toggle';
-  hv.innerHTML='<button type="button" title="지도를 전국 범위로 되돌립니다">전국</button>';
+  hv.innerHTML='<button type="button" title="지도를 전국 범위로 되돌립니다" aria-label="전국 보기">'+
+    '<svg class="kr-ico" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'+
+    '<path d="M6.3 5.1 9.2 2.7 13.6 3.4 15.4 6 16.7 9.4 16.1 12.3 17.2 15.2 14.5 17.9 11.3 18.4 9.1 16.3 8.7 13.1 6.7 11.5 7.7 8.4Z"/>'+
+    '<ellipse cx="9.9" cy="20.9" rx="1.5" ry=".85"/></svg>전국 보기</button>';
   hv.addEventListener('click',resetMapView);
   const pv=document.createElement('div'); pv.className='reg-toggle';
   pv.setAttribute('role','group'); pv.setAttribute('aria-label','지역 경계 표시');
@@ -2723,8 +2733,8 @@ function addRegToggle(){                                  // 지도 안 컨트�
   regToggleEl=lvl; polyToggleEl=pv;
 }
 /* 서식지 후보 켜기 — 지역 검색칸 바로 옆(종별 화면에서만 보인다). 발견 지점과 겹쳐 보는 층이라
-   지도 밖 버튼으로 화면을 가르지 않는다. 좁은 화면에서는 이름을 접고 별표만 남기므로
-   이름을 title·aria-label 에도 싣는다.
+   지도 밖 버튼으로 화면을 가르지 않는다. 좁은 화면에서도 이름을 남기고,
+   음성 안내를 위해 title·aria-label 에도 같은 이름을 싣는다.
    설명(?)을 옆에 붙이는 이유: "후보"라는 말만으로는 무엇을 근거로 뽑았는지 알 수 없다. */
 function addGapToggle(){
   const wrap=document.createElement('div'); wrap.className='ol-unselectable gap-ctrl';
