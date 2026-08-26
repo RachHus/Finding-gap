@@ -180,8 +180,9 @@ export async function myRole() {
 // 관리자 전용 — RLS(role='admin')로 비관리자는 빈 결과. 검토 대기 제보 목록.
 export async function adminPendingReports() {
   if (!sb) return [];
+  // photo_path 가 빠져 있어 검토 화면에 사진이 안 떴다 — 사진 없이는 동정이 맞는지 판단할 수 없다.
   const { data, error } = await sb.from('reports')
-    .select('id,ktsn,korean_name,scientific_name,taxon_group,url,lat,lon,observed_date,note,status,fills_gap,sigungu,created_at')
+    .select('id,ktsn,korean_name,scientific_name,taxon_group,url,photo_path,lat,lon,observed_date,note,status,fills_gap,sigungu,created_at')
     .eq('status', 'pending').order('created_at', { ascending: true });
   if (error) throw error;
   return data || [];
