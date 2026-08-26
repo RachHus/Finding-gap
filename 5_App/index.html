@@ -1332,6 +1332,11 @@
   .rpt-pickbtn:hover:not(:disabled){border-color:#9ec3b2;background:#f2f8f5}
   .rpt-pickbtn:disabled{opacity:.55;cursor:default}
   .rpt-pickbtn.sm{flex:0 0 auto;min-height:38px;font-size:12.5px;padding:7px 12px}
+  /* 끌어놓기 판 — 단추 아래에 얇게 둔다. 이것만으로 올릴 수 있다고 오해하지 않도록 "~해도 됩니다"
+     라고 적고, 크기도 단추보다 작게 잡는다(주 경로는 위의 단추다). */
+  .rpt-drop{margin-top:8px;border:1.5px dashed var(--line);border-radius:10px;padding:12px;
+    text-align:center;font-size:12.5px;color:var(--muted);transition:border-color .12s,background .12s}
+  .rpt-drop.on{border-color:var(--accent);background:#f2f8f5;color:#015543;font-weight:600}
   /* 자동 채우기를 되돌리는 길 — 마이페이지에 상시 설정 줄을 두지 않는 대신, 실제로 쓰는 자리(제보 화면)에
      작은 글씨 한 줄로만 둔다. 한 번 정하면 안 보이길 바란다는 요청과, 켠 것을 끌 수는 있어야 한다는
      요건을 함께 만족시키는 자리다. */
@@ -1348,7 +1353,11 @@
   .rpt-ask span{display:block;font-size:12px;color:var(--muted);line-height:1.55}
   .rpt-askbtns{display:flex;gap:8px;margin-top:9px}
   .rpt-askbtns .rpt-pickbtn{flex:1 1 0}
+  /* display 를 정해 둔 클래스는 브라우저 기본 [hidden]{display:none} 을 이긴다 — 제거를 눌러도
+     사진이 화면에 남아 있었다(속 상태는 비었는데 눈에는 보이는 어긋남). 이 파일의 다른 감춤
+     요소들과 같은 방식으로 막는다. */
   .rpt-photo-prev{display:flex;align-items:center;gap:10px;margin-top:8px}
+  .rpt-photo-prev[hidden]{display:none}
   .rpt-photo-prev img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #d7ded9}
   /* 허니팟(스팸봇 함정) — display:none 이 아니라 화면 밖으로 밀어낸다: 일부 봇은 display:none·visibility:hidden
      필드는 건너뛰고 채우지 않는데, 이 방식은 그런 봇도 걸리게 한다. tabindex=-1 로 실사용자 탭 순서에서는 빠진다. */
@@ -5279,6 +5288,9 @@ function render(){
         (COARSE?'<button type="button" class="rpt-pickbtn" id="rptShoot">📷 사진 찍기</button>':'')+
         '<button type="button" class="rpt-pickbtn" id="rptPick">🖼 '+(COARSE?'앨범에서 고르기':'사진 고르기')+'</button>'+
       '</div>'+
+      /* 끌어놓기는 손가락 화면에서는 뜻이 없다(끌어올 창이 없다) — 마우스가 있는 화면에서만 낸다.
+         PC 는 파일을 그대로 넘겨 EXIF 가 살아 있으므로, 앨범에서 고른 것과 같은 길로 보낸다. */
+      (COARSE?'':'<div class="rpt-drop" id="rptDrop">사진을 여기로 끌어놓아도 됩니다</div>')+
       '<input type="file" id="rptPhoto" accept="image/*" hidden>'+
       (COARSE?'<input type="file" id="rptPhotoCam" accept="image/*" capture="environment" hidden>':'')+
       '<div class="rpt-photo-prev" id="rptPhotoPrev" hidden><img id="rptPhotoImg" alt=""><button type="button" id="rptPhotoClear">✕ 제거</button></div>'+
@@ -5301,6 +5313,7 @@ function render(){
     document.getElementById('rptShoot').onclick=()=>fCam.click();
   }
   document.getElementById('rptPhotoClear').onclick = clearPhoto;
+  wireDrop();
   document.getElementById('rptDate').addEventListener('input',updateSubmit);
   // 사람이 날짜를 고치면 '사진에서 자동으로 채움' 표시를 뗀다 — 이제 사람이 정한 값이다
   document.getElementById('rptDate').addEventListener('input',function(){ dateFrom='manual'; this.classList.remove('auto'); });
@@ -5388,6 +5401,30 @@ function geoAsk(){
   };
   host.querySelector('#geoYes').onclick=()=>done(true);
   host.querySelector('#geoNo').onclick=()=>done(false);
+}
+/* 끌어놓기 — 브라우저 기본 동작(파일을 새 탭으로 여는 것)을 막고 첫 이미지 파일만 받는다.
+   dragover 를 막지 않으면 drop 이 아예 안 온다. dragleave 는 자식 위로 옮겨갈 때도 오므로
+   들어온 횟수를 세어(depth) 진짜로 판을 벗어났을 때만 표시를 끈다. */
+function wireDrop(){
+  const z=document.getElementById('rptDrop'); if(!z) return;
+  let depth=0;
+  const off=()=>{ depth=0; z.classList.remove('on'); };
+  z.addEventListener('dragenter', e=>{ e.preventDefault(); depth++; z.classList.add('on'); });
+  z.addEventListener('dragover',  e=>{ e.preventDefault(); if(e.dataTransfer) e.dataTransfer.dropEffect='copy'; });
+  z.addEventListener('dragleave', e=>{ e.preventDefault(); if(--depth<=0) off(); });
+  z.addEventListener('drop', e=>{
+    e.preventDefault(); off();
+    const fs=(e.dataTransfer&&e.dataTransfer.files)||[];
+    const f=[...fs].find(x=>/^image\//.test(x.type));
+    if(!f){ const h=document.getElementById('rptPhotoHint');
+      if(h) h.textContent = fs.length ? '이미지 파일만 올릴 수 있습니다.' : '파일을 찾지 못했습니다 — 사진 파일을 끌어놓아 주세요.';
+      return; }
+    /* 고르개 입력에도 같은 파일을 심어 둔다 — 안 그러면 '제거'를 눌러 입력을 비울 때 끌어놓은
+       사진과 상태가 어긋난다. DataTransfer 를 못 쓰는 브라우저면 그냥 건너뛴다(처리에는 지장 없다). */
+    try{ const dt=new DataTransfer(); dt.items.add(f);
+      const el=document.getElementById('rptPhoto'); if(el) el.files=dt.files; }catch(_){}
+    handlePhoto(f, 'album');
+  });
 }
 /* 자동 채우기를 켜고 끄는 작은 줄 — 사진을 올린 뒤에만, 그리고 이미 정한 사람에게만 보인다.
    마이페이지에 상시 설정 줄을 두지 않기로 했으므로(한 번 정하면 안 보이게) 되돌릴 길은 여기 하나다. */
@@ -5485,8 +5522,8 @@ function noteDate(){
   const dv=(document.getElementById('rptDate')||{}).value||'';
   if(hint) hint.textContent += ` 발견일은 사진의 촬영일(${dv})로 넣었습니다.`;
 }
-async function onPhotoChange(e, source){
-  const f=e.target.files[0];
+function onPhotoChange(e, source){ return handlePhoto(e.target.files[0], source); }
+async function handlePhoto(f, source){
   const hint=document.getElementById('rptPhotoHint'), prev=document.getElementById('rptPhotoPrev'),
         img=document.getElementById('rptPhotoImg'), act=document.getElementById('rptGeoAct');
   photoFile=f||null; photoBlob=null; photoSource=source;
