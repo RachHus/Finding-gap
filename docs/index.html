@@ -4029,18 +4029,41 @@ async function renderTrending(){
 // ── ② 시민 제보(reports) 렌더 — 공개 피드 + 마이데이터 내 제보 공용 ──
 const _RSTATUS={pending:['검토 중','#9a7b2f','#f5eede'], approved:['승인','#015543','#e7f1ee']};
 function statusBadge(s){ const m=_RSTATUS[s]||_RSTATUS.pending; return `<span class="dbadge" style="background:${m[2]};color:${m[1]}">${m[0]}</span>`; }
-function reportLine(r,mine){
+/* 검토 화면(admin=true)에는 판단 근거를 다 보여준다 — 사진과 좌표가 없으면 동정이 맞는지,
+   그 자리에서 나올 만한 종인지 알 수 없다. 좌표는 원시 행에만 있고 공개 피드에는 안 나가므로
+   이 줄에서만 쓴다. 지도는 OpenStreetMap 으로 새 창을 연다 — 이 앱의 지도는 종·지역을 그리는
+   구조라 임의의 점 하나를 띄우는 길이 없다. */
+function reportLine(r,mine,admin){
   const nm=r.korean_name||r.scientific_name||r.ktsn;
   const sci=(r.scientific_name&&r.scientific_name!==nm)?`<span class="sci">${esc(r.scientific_name)}</span>`:'';
   const gap=r.fills_gap?`<span class="dbadge" style="background:#e7f1ee;color:var(--accent)">공백 메움</span>`:'';
   const who=mine?'':(r.reporter?' · '+esc(r.reporter):' · 익명');
   const link=/^https?:\/\//i.test(r.url||'')?`<a class="muted2" href="${esc(r.url)}" target="_blank" rel="noopener nofollow ugc" style="margin-left:8px">근거 →</a>`:'';
-  const del=mine?`<button class="rm" title="삭제">✕ 삭제</button>`:'';
+  /* 승인된 제보는 지우는 단추를 안 낸다 — 이미 지역 리그 승점·선수 순위·공개 스냅샷에 반영된
+     뒤라 지우면 그 값들이 소리 없이 줄어든다(정책도 서버에서 막는다: permissions_hardening.sql).
+     검토 전이거나 반려된 것은 그대로 물릴 수 있다. */
+  const del=(mine && r.status!=='approved')?`<button class="rm" title="삭제">✕ 삭제</button>`
+    :(mine?`<span class="muted2" style="margin-left:8px;font-size:11.5px">검토를 통과해 자료에 반영됨</span>`:'');
   const note=r.note?`<div class="fnote">${esc(r.note)}</div>`:'';
   const photoUrl=r.photo_path?reportPhotoUrl(r.photo_path):null;
-  const photo=photoUrl?`<div class="fphoto"><img src="${esc(photoUrl)}" alt="" loading="lazy"></div>`:'';
+  /* 사진이 안 열리면 그 사실을 적는다 — 빈 자리로 두면 검토자가 "사진 없는 제보"로 오해하고
+     근거 없이 승인할 수 있다(Storage 에서 지워졌거나 경로가 어긋난 경우). */
+  const photo=photoUrl
+    ? `<div class="fphoto"><img src="${esc(photoUrl)}" alt="" loading="lazy" `+
+      `onerror="this.replaceWith(Object.assign(document.createElement('span'),`+
+      `{className:'muted2',textContent:'사진을 불러오지 못했습니다'}))"></div>`
+    : (mine||admin ? `<div class="fnote muted2">사진 없음</div>` : '');
+  let where='';
+  if(admin && isFinite(r.lat) && isFinite(r.lon)){
+    const g=window.__REGGAP__, sgg=(g&&g.sg&&g.sg[r.sigungu])||null;
+    const nmSgg=sgg?`${esc(sgg[0])}${g.sido&&g.sido[sgg[1]]?' · '+esc(shortSido(g.sido[sgg[1]])):''}`:(r.sigungu?esc(r.sigungu):'시군구 미확인');
+    const la=(+r.lat).toFixed(5), lo=(+r.lon).toFixed(5);
+    where=`<div class="fnote">${nmSgg} · ${la}, ${lo}`+
+      ` <a href="https://www.openstreetmap.org/?mlat=${la}&mlon=${lo}#map=15/${la}/${lo}" target="_blank" rel="noopener"`+
+      ` style="margin-left:6px;color:var(--accent);font-weight:600">지도에서 보기 →</a></div>`;
+  }
   return `<span class="nm">${esc(nm)}</span> ${sci} ${statusBadge(r.status)}${gap}`+
-    `<span class="fmeta">${esc(r.observed_date||'')}${who}</span>${link}${del}${photo}${note}`;
+    `<span class="fmeta">${esc(r.observed_date||'')}${who}</span>${link}${del}${photo}${where}${note}`;
 }
 function taxonRefLine(r){                                  // 분류 이력 제보 한 줄(관리자 검토 큐 전용)
   const nm=r.korean_name||r.scientific_name||r.ktsn;
@@ -4723,7 +4746,7 @@ async function myPage(user){
       if(!rows.length){ al.innerHTML='<li class="muted2">검토 대기 제보가 없습니다.</li>'; return; }
       al.innerHTML='';
       rows.forEach(r=>{ const li=document.createElement('li');
-        li.innerHTML=reportLine(r,false)+
+        li.innerHTML=reportLine(r,false,true)+
           `<span class="admbtns"><button class="btn sm" data-a="approved">승인</button><button class="btn sm rej" data-a="rejected">거부</button></span>`;
         li.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{ b.disabled=true;
           try{ const {error}=await setReportStatus(r.id,b.dataset.a); if(error) throw error; li.remove();
