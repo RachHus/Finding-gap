@@ -5,13 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Finding gap — 국가 생물종 발견공백</title><link rel="icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!-- 검색결과에 뜨는 설명. og:description 만 있어서 구글이 본문에서 아무 문장이나 긁어 쓰고 있었다 —
+     이 화면은 지도 앱이라 JS 실행 없이 읽히는 본문이 1,173자뿐이고 긁을 만한 문장이 없다. -->
+<meta name="description" content="국가생물종목록(KTSN) 39,972종을 252개 시군구에 대조해, 아직 발견 기록이 없는 종을 지도와 표로 봅니다. 서식지 후보 예측·분류 체계도·시민과학 제보를 무료로 제공합니다.">
+<!-- 대표 주소를 하나로 못박는다. og:url 은 /index.html, sitemap 은 디렉터리 주소라 갈려 있었고,
+     같은 화면이 두 주소로 세어지면 평가가 나뉜다. sitemap 쪽(디렉터리)에 맞춘다. -->
+<link rel="canonical" href="https://rachhus.github.io/Finding-gap/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Finding gap">
 <meta property="og:title" content="Finding gap — 국가 생물종 발견공백">
 <meta property="og:description" content="국가생물종목록(KTSN) 기준으로 아직 발견되지 않은 종을 분류군·지역·시기로 조회합니다.">
 <meta property="og:image" content="https://rachhus.github.io/Finding-gap/og.png?v=2">
-<meta property="og:url" content="https://rachhus.github.io/Finding-gap/index.html">
+<meta property="og:url" content="https://rachhus.github.io/Finding-gap/">
 <meta name="twitter:card" content="summary_large_image">
+<!-- 구조화 데이터. 검색결과에 사이트 이름이 "GitHub Pages documentation" 으로 뜨고 있었다 —
+     rachhus.github.io 루트에서 추론한 값이다. 서브디렉터리라 100% 보장은 없지만, 지금은 신호
+     자체가 없어 구글이 추측하는 중이므로 WebSite 로 이름을 명시한다.
+     Dataset 은 Google Dataset Search 노출을 노린다 — 이 서비스가 실제로 공개 데이터셋을 다루므로
+     과장이 아니다. 숫자는 자산에서 실측한 값(종 39,972 · 시군구 252 · 분류군 9). -->
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+{"@type":"WebSite","@id":"https://rachhus.github.io/Finding-gap/#website",
+ "url":"https://rachhus.github.io/Finding-gap/","name":"Finding gap",
+ "alternateName":"발견공백","inLanguage":"ko",
+ "description":"국가생물종목록(KTSN) 기준으로 아직 발견되지 않은 종을 분류군·지역·시기로 조회하는 공개 웹 서비스."},
+{"@type":"WebApplication","@id":"https://rachhus.github.io/Finding-gap/#app",
+ "name":"Finding gap — 국가 생물종 발견공백","url":"https://rachhus.github.io/Finding-gap/",
+ "applicationCategory":"BrowserApplication","operatingSystem":"All","inLanguage":"ko",
+ "isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"KRW"},
+ "featureList":["지역·분류군별 발견공백 조회","서식지 후보 예측(종분포모형)","분류 체계도 탐색","자연어 질의","시민과학 제보","생물 동정 퀴즈"]},
+{"@type":"Dataset","@id":"https://rachhus.github.io/Finding-gap/#dataset",
+ "name":"한국 생물종 발견공백 (지역·분류군별)","url":"https://rachhus.github.io/Finding-gap/",
+ "description":"국가생물종목록(KTSN) 39,972종을 252개 시군구·9개 분류군에 대조해 산출한 발견/휴면/미발견 집계. 국립생물자원관·국립생태원 EcoBank·국립공원공단·GBIF 관측 기록을 시군구 및 1km 격자 수준으로 사전집계한 값.",
+ "inLanguage":"ko","isAccessibleForFree":true,
+ "spatialCoverage":{"@type":"Place","name":"대한민국"},
+ "keywords":["생물다양성","발견공백","국가생물종목록","KTSN","종분포","생태조사"],
+ "creator":{"@type":"Organization","name":"Finding gap"}}
+]}</script>
 <!--
   ══ 이 파일에 대하여 ══════════════════════════════════════════════════════════
 
@@ -216,6 +245,10 @@
   .authmsg.ok{background:#eef6f0;color:#2c6a4f;border:1px solid #cfe6d8}
   .authmsg.err{background:#fbeeea;color:#9a3412;border:1px solid #f1d2c6}
   footer a{min-height:44px;display:inline-flex;align-items:center;padding:10px 0;margin-right:6px}
+  /* 푸터 링크 줄 — 스크립트가 지우지 않는 정적 영역이라 여기에 색을 준다 */
+  .footnav{display:flex;flex-wrap:wrap;gap:0 16px;margin-bottom:2px}
+  .footnav a{color:#015543;font-weight:600;text-decoration:none}
+  .footnav a:hover{text-decoration:underline}
 
   /* ══ 지도 서비스(구 service.html) 스타일 ══ */
   /* 토큰과 기본 규칙(:root·*·body·a·header h1)은 맨 위 공통 블록에 한 벌만 둔다. */
@@ -1101,7 +1134,17 @@
     </div>
   </section>
 
-  <footer id="foot"></footer>
+  <!-- 지역·분류군 요약으로 가는 길은 정적 HTML 로 둔다. 예전에는 이 링크가 스크립트 문자열
+       안에만 있어서, JS 를 실행하지 않는 검색 봇에게는 대문에서 그쪽으로 가는 길이 아예 없었다
+       (실측: 랜딩 페이지 154장이 한 장도 색인되지 않았다). sitemap 에 적혀 있어도 아무도 링크하지
+       않은 페이지는 크롤 우선순위가 바닥이다. 아래 #footmeta 만 스크립트가 채운다. -->
+  <footer id="foot">
+    <nav class="footnav">
+      <a href="regions/index.html">지역·분류군별 발견공백 요약 →</a>
+      <a href="quiz.html">생물 동정 연습 퀴즈</a>
+    </nav>
+    <div id="footmeta"></div>
+  </footer>
 </div>
 
 <!-- 해치 패턴 정의(범주색 빗금) -->
@@ -3530,7 +3573,7 @@ function boot(){
   tblCnt.textContent='관측자료 불러오는 중…';
   loadTaxon(curTaxon, ()=>{ recompute(); renderTable(); if(sidoLayer)sidoLayer.changed(); });
   initMap();
-  foot.innerHTML=`<a href="regions/index.html" style="color:#015543;font-weight:600;text-decoration:none">지역·분류군별 발견공백 요약 →</a><br>배경지도 © VWorld / © OpenStreetMap 기여자 · 종 상세 © 국립생물자원관 한반도의 생물다양성 · 출처 ${OMETA.citation||'KTSN·EcoBank·국립공원'}<br>`+
+  document.getElementById('footmeta').innerHTML=`배경지도 © VWorld / © OpenStreetMap 기여자 · 종 상세 © 국립생물자원관 한반도의 생물다양성 · 출처 ${OMETA.citation||'KTSN·EcoBank·국립공원'}<br>`+
     `${TAXA.length}개 분류군 · 생성 ${OMETA.generated||'-'} · 종 검색 ${nf(SPIDX.length)}종 · 갱신주기 ${OMETA.update_cycle==='6mo'?'6개월':(OMETA.update_cycle||'6개월')}. 발견공백 = 국가생물종목록 − 관측(동적).`;
   if(p.get('taxon')||p.get('sido')||p.get('sigungu')) setMode('A');
   // 딥링크 ?sp=<ktsn> — 마이데이터 관심 종에서 진입(모드 B로 해당 종 카드 열기)
@@ -3848,8 +3891,7 @@ function renderFoot(){
   const gen=(window.__SPSTATE__||{}).generated||'-';
   const totRec=TAXA_ALL.reduce((a,t)=>a+(t.n_records||0),0);
   const nData=TAXA_ALL.filter(t=>t.has_data).length;
-  document.getElementById('foot').innerHTML=
-    `<a href="regions/index.html" style="color:#015543;font-weight:600;text-decoration:none">지역·분류군별 발견공백 요약 →</a><br>`+
+  document.getElementById('footmeta').innerHTML=
     `출처: 국가생물종목록(KTSN) · 국립생태원 EcoBank · 국립공원공단 생물자원현황 · GBIF<br>`+
     `생성 ${gen} · 좌표계 EPSG:4326 · 갱신주기 6개월 · 누적관측 ${nf(totRec)} · ${nData}개 분류군 데이터<br>`+
     `gap = 국가생물종목록(마스터) − 관측(동적 complement). 데이터는 정기 수집으로 갱신됩니다.`;
