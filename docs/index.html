@@ -396,6 +396,14 @@
   .num{font-variant-numeric:tabular-nums;text-align:right}
   /* 관심도 셀: 미니 막대 + 수치 */
   td.ivcell{white-space:nowrap}
+  /* 종 목록 사진 칸 — 34px 고정. 사진이 늦게 도착해도 칸 크기가 안 변해야 표가 안 흔들린다.
+     사진이 없는 종은 분류군 아이콘을 옅게 깔아 자리를 지킨다(보유율이 38~83%로 갈린다). */
+  th.thumbcol,td.thumbcol{width:44px;padding-left:10px;padding-right:0}
+  .thumb{width:34px;height:34px;border-radius:6px;object-fit:cover;display:block;background:#f1f4f2}
+  .thumb.none{display:flex;align-items:center;justify-content:center;opacity:.34}
+  .thumb.none .chip{width:34px;height:34px;border-radius:6px}
+  @media(max-width:560px){ th.thumbcol,td.thumbcol{width:34px;padding-left:6px}
+    .thumb,.thumb.none .chip{width:28px;height:28px} }
   .ivbar{display:inline-block;vertical-align:middle;width:34px;height:5px;background:#eef1f0;border-radius:3px;overflow:hidden;margin-right:5px}
   .ivbar>span{display:block;height:100%;background:#6a9a86}
   @media(min-width:881px){                                /* 데스크톱: 6열이 좁은 패널(~570px)에 들어가도록 이름열 말줄임(전체는 hover·종페이지) */
@@ -3059,6 +3067,7 @@ function renderTable(){
   tblCnt.textContent=`발견 ${nf(foundN)} · 미발견 ${nf(gapN)} / 총 ${nf(all.length)}종 — 표시: ${metric==='found'?'발견':'미발견'} ${nf(rows.length)}종`;
   const ar=k=>sortKey===k?`<span class="ar on">${sortDir<0?'▼':'▲'}</span>`:`<span class="ar off">↕</span>`;
   const head=`<thead><tr>
+    <th scope="col" class="thumbcol" aria-label="사진"></th>
     <th scope="col" onclick="sortBy('n')" title="국명으로 정렬">국명${ar('n')}</th>
     <th scope="col" onclick="sortBy('s')" title="학명으로 정렬">학명${ar('s')}</th>
     <th scope="col" onclick="sortBy('g')" title="멸종위기 야생생물 등급으로 정렬(I급 먼저)">멸종위기종${ar('g')}</th>
@@ -3068,17 +3077,52 @@ function renderTable(){
   const shown=rows.slice(0,ROWCAP);
   const body=shown.map(x=>
     `<tr class="rowlink" onclick="openSpecies('${x.k}')" title="종별 검색으로 보기 →">`+
+      `<td class="thumbcol">${thumbCell(x)}</td>`+
       `<td title="${(x.n||x.s).replace(/"/g,'&quot;')}">${x.n||'<span class="sci">'+x.s+'</span>'}</td><td title="${x.s.replace(/"/g,'&quot;')}"><span class="sci">${x.s}</span></td>`+
       `<td>${egBadge(x.g)}</td><td>${rlBadge(x.r)}</td><td class="num ivcell">${ivCell(x.iv)}</td><td class="num">${x.c||''}</td></tr>`
   ).join('');
   const more=rows.length>ROWCAP
-    ? `<tr><td colspan="6" style="padding:10px;color:#888;background:#fbfbfa;white-space:normal">상위 ${nf(ROWCAP)}행만 표시 — 전체 ${nf(rows.length)}종은 CSV 다운로드로 확인하세요.</td></tr>`
+    ? `<tr><td colspan="7" style="padding:10px;color:#888;background:#fbfbfa;white-space:normal">상위 ${nf(ROWCAP)}행만 표시 — 전체 ${nf(rows.length)}종은 CSV 다운로드로 확인하세요.</td></tr>`
     : '';
   // 하나도 안 걸리면 머리글만 남아, 자료가 없는 건지 조건을 잘못 고른 건지 알 수 없다.
   const none=rows.length ? ''
-    : `<tr><td colspan="6" style="padding:14px;color:#888;background:#fbfbfa;white-space:normal">${metric==='found'?'이 조건에서 발견된 종이 없습니다.':'이 조건에서 미발견 종이 없습니다.'} 연도 범위나 지역 선택을 바꿔 보세요.</td></tr>`;
+    : `<tr><td colspan="7" style="padding:14px;color:#888;background:#fbfbfa;white-space:normal">${metric==='found'?'이 조건에서 발견된 종이 없습니다.':'이 조건에서 미발견 종이 없습니다.'} 연도 범위나 지역 선택을 바꿔 보세요.</td></tr>`;
   tbl.innerHTML=head+'<tbody>'+body+none+more+'</tbody>';
   syncSortBar();
+  /* 사진 자산(rep_<T>.js)은 표를 그린 뒤에 받는다 — 곤충류가 698KB 라 이걸 기다리면 표가 그만큼
+     늦게 뜬다. 도착하면 사진 칸만 다시 채우므로 정렬·스크롤 위치가 흐트러지지 않는다. */
+  if(curTaxon && !repReady(curTaxon)) loadRep(curTaxon, fillThumbs);
+}
+/* 목록의 사진 한 칸. 자산이 아직 없거나 그 종에 사진이 없으면 분류군 아이콘을 옅게 깔아 자리를
+   지킨다 — 사진 보유율이 분류군마다 크게 달라(관속식물 83% · 곤충류 38%) 빈 네모가 줄줄이 남으면
+   표가 흐트러져 보인다. data-k 는 자산이 늦게 도착했을 때 이 칸을 다시 찾기 위한 표식이다. */
+/* 표의 행 객체(tableRows)에는 분류군 필드가 없다 — 이 표는 언제나 한 분류군만 그리므로
+   curTaxon 을 쓴다. x.t 로 찾다가 undefined 가 되어 사진이 한 장도 안 붙었었다. */
+function thumbCell(x){
+  const t=curTaxon;
+  const r=repReady(t)?repOf({k:x.k, t}):null;
+  if(!r) return `<span class="thumb none" data-k="${x.k}">${chipHTML(t,13)}</span>`;
+  return `<img class="thumb" src="${r.url}" alt="" loading="lazy" decoding="async" width="34" height="34"`+
+    ` title="${(r.by||'').replace(/"/g,'&quot;')}" data-k="${x.k}" onerror="thumbFallback(this)">`;
+}
+// 사진 주소가 깨졌을 때 자리채움으로 되돌린다 — 빈 네모가 남으면 행 높이가 들쭉날쭉해진다
+function thumbFallback(img){
+  const sp=document.createElement('span');
+  sp.className='thumb none'; sp.innerHTML=chipHTML(curTaxon,13);
+  img.replaceWith(sp);
+}
+// 자산이 늦게 도착했을 때 — 이미 그려진 빈 칸만 사진으로 바꾼다(표 전체를 다시 그리지 않는다)
+function fillThumbs(){
+  document.querySelectorAll('#tbl .thumb.none[data-k]').forEach(el=>{
+    const r=repOf({k:el.dataset.k, t:curTaxon});
+    if(!r) return;
+    const img=new Image(34,34);
+    img.className='thumb'; img.loading='lazy'; img.decoding='async';
+    img.alt=''; img.title=r.by||''; img.dataset.k=el.dataset.k;
+    img.onerror=()=>thumbFallback(img);
+    img.src=r.url;
+    el.replaceWith(img);
+  });
 }
 function sortBy(k){ if(sortKey===k)sortDir*=-1; else {sortKey=k;sortDir=(k==='n'||k==='s')?1:-1;} renderTable(); }
 /* 좁은 화면용 정렬 컨트롤. 표 머리글과 같은 상태(sortKey·sortDir)를 다루므로,
