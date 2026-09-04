@@ -19,6 +19,8 @@ R 실행의 Windows 함정(공백경로·인용)은 subprocess 리스트 + `-e s
   season    : python/build_season.py → species_season.csv (조사노력 보정)
   model     : 3_ETL/R/model_species.R → model_store/ (종별 maxnet 적합)
   model_data: 5_App/build_model_data.py → env_model.js·model_<T>.js·season_<T>.js
+  mcp_data  : 7_MCP/build_mcp_data.py → fg_mcp.sqlite (MCP·대화형 참조본)
+  fg_load   : Supabase fg_* 재적재 — obff(load_reference.py)+hmqd(char-app load_fg_remote.py)
   dist      : 5_App/build_dist.py --osm-only --out docs → docs/ 정적 배포본
 
 전체 6개월 갱신 체인(관측 ETL은 DATA_PIPELINE.md 3-A 참조):
@@ -171,6 +173,33 @@ def step_dist():
     need(REPO / "docs" / "index.html", "docs/index.html")
 
 
+def step_mcp_data():
+    """MCP·대화형 참조 SQLite 재구움 — 관측 롤업(species_region)·종 마스터가 바뀌면 함께 새로 굽는다."""
+    sh([sys.executable, REPO / "7_MCP" / "build_mcp_data.py"], cwd=REPO)
+    need(REPO / "7_MCP" / "data" / "fg_mcp.sqlite", "fg_mcp.sqlite")
+
+
+def step_fg_load():
+    """대화형 백엔드 fg_* 재적재 — obff(5_App chat)와 hmqd(char-app char-chat) 둘 다.
+    한쪽이 실패해도 다른 쪽은 마저 시도하되, 실패가 있으면 예외로 끝낸다 —
+    조용히 exit 0 이면 스케줄러가 성공으로 오판해 옛 데이터가 무기한 방치된다."""
+    errs = []
+    try:
+        sh([sys.executable, APP / "supabase" / "load_reference.py"], cwd=REPO)
+    except Exception as e:
+        errs.append(f"obff: {e}")
+        print(f"  (경고) obff fg_* 적재 실패: {e}")
+    hmqd = REPO / "char-app" / "scripts" / "load_fg_remote.py"
+    if hmqd.exists():
+        try:
+            sh([sys.executable, hmqd], cwd=REPO)
+        except Exception as e:
+            errs.append(f"hmqd: {e}")
+            print(f"  (경고) hmqd fg_* 적재 실패: {e}")
+    if errs:
+        raise RuntimeError("fg_* 적재 실패 — 해당 백엔드가 옛 데이터로 남았다: " + "; ".join(errs))
+
+
 STEPS = [  # 순서 = 의존관계
     ("sentinel", "NDVI/NDWI zip→평문 .tif 캐시(.ovr 제외)", step_sentinel),
     ("env_layers", "env_layers.R (점추출·1km 집계·env_grid·PNG)", step_env_layers),
@@ -184,13 +213,17 @@ STEPS = [  # 순서 = 의존관계
     ("season", "build_season.py (종별 12개월 점수, 조사노력 보정)", step_season),
     ("model", "model_species.R (종별 maxnet 증분 적합 + 4겹 CV)", step_model),
     ("model_data", "build_model_data.py (env_model.js·model_<T>.js·season_<T>.js)", step_model_data),
+    ("mcp_data", "7_MCP/build_mcp_data.py (fg_mcp.sqlite 재구움)", step_mcp_data),
+    ("fg_load", "Supabase fg_* 재적재 (obff load_reference + hmqd load_fg_remote)", step_fg_load),
     ("dist", "build_dist.py --osm-only --out docs (배포본)", step_dist),
 ]
 # dist 는 명시 요청 시만. 나머지가 발견공백 A + 관찰 추천도 데이터 재빌드 체인.
 # season 은 observations.sqlite 의 obs_month 만 쓰므로 앞 단계와 독립이다(관측 ETL 이후면 언제든).
 # model 은 species_cells·env_grid_model 이후여야 한다.
+# mcp_data→fg_load 는 대화형 백엔드(fg_*) 동기화 — 6개월 갱신 때 지도(bin)와 대화가 같은 판이 되게 한다.
 DEFAULT = ["sentinel", "env_layers", "species_cells", "cell_sigungu", "ndwi_sp", "cell_water",
-           "env_data", "gap_data", "env_grid_model", "season", "model", "model_data"]
+           "env_data", "gap_data", "env_grid_model", "season", "model", "model_data",
+           "mcp_data", "fg_load"]
 
 
 def main():
